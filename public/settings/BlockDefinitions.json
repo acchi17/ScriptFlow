@@ -7,37 +7,147 @@
           "name": "Add",
           "command": "Add",
           "parameters": [
-            { "prmType": "input", "name": "NumberA", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "input", "name": "NumberB", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "output", "name": "Result", "dataType": "integer", "ctrlType": "integer_spinner" }
-          ]
-        },
-        {
-          "name": "Sub",
-          "command": "Sub",
-          "parameters": [
-            { "prmType": "input", "name": "NumberA", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "input", "name": "NumberB", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "output", "name": "Result", "dataType": "integer", "ctrlType": "integer_spinner" }
-          ]
-        },
-        {
-          "name": "Mul",
-          "command": "Mul",
-          "parameters": [
-            { "prmType": "input", "name": "NumberA", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "input", "name": "NumberB", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "output", "name": "Result", "dataType": "integer", "ctrlType": "integer_spinner" }
+            {
+              "name": "NumberA",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "NumberB",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "Result",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "items": [],
+              "prmType": "output"
+            }
           ]
         },
         {
           "name": "DivMod",
           "command": "DivMod",
           "parameters": [
-            { "prmType": "input", "name": "NumberA", "dataType": "integer", "ctrlType": "integer_spinner", "default": 0, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "input", "name": "NumberB", "dataType": "integer", "ctrlType": "integer_spinner", "default": 1, "min": -999, "max": 999, "step": 1 },
-            { "prmType": "output", "name": "Result", "dataType": "integer", "ctrlType": "integer_spinner" },
-            { "prmType": "output", "name": "Mod", "dataType": "integer", "ctrlType": "integer_spinner" }
+            {
+              "name": "NumberA",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "NumberB",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 1,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "Result",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "items": [],
+              "prmType": "output"
+            },
+            {
+              "name": "Mod",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "items": [],
+              "prmType": "output"
+            }
+          ]
+        },
+        {
+          "name": "Mul",
+          "command": "Mul",
+          "parameters": [
+            {
+              "name": "NumberA",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "NumberB",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "Result",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "items": [],
+              "prmType": "output"
+            }
+          ]
+        },
+        {
+          "name": "Sub",
+          "command": "Sub",
+          "parameters": [
+            {
+              "name": "NumberA",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "NumberB",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "default": 0,
+              "min": -999,
+              "max": 999,
+              "step": 1,
+              "items": [],
+              "prmType": "input"
+            },
+            {
+              "name": "Result",
+              "dataType": "integer",
+              "ctrlType": "integer_spinner",
+              "items": [],
+              "prmType": "output"
+            }
           ]
         }
       ]
