@@ -189,7 +189,7 @@ export default {
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background-image: var(--param-badge-unlinked-image);
+  background-image: var(--unlink-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -197,7 +197,7 @@ export default {
 }
 
 .link-button.connected {
-  background-image: var(--param-badge-linked-image);
+  background-image: var(--linked-icon-image);
   background-color: var(--param-badge-linked-color);
 }
 

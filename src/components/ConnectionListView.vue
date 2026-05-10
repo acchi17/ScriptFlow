@@ -87,7 +87,7 @@ export default {
   height: 20px;
   width: 20px;
   background-color: transparent;
-  background-image: var(--entry-button-unlink-image);
+  background-image: var(--close-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
@@ -105,11 +105,11 @@ export default {
 }
 
 .item-prefix.dir-output {
-  background-image: var(--right-arrow-linked-image);
+  background-image: var(--right-2-arrow-icon-image);
 }
 
 .item-prefix.dir-input {
-  background-image: var(--left-arrow-linked-image);
+  background-image: var(--left-2-arrow-icon-image);
 }
 
 .item-param-name {

@@ -92,7 +92,8 @@ export default {
 }
 
 .recipe-header {
-  height: 24px;
+  height: 36px;
+  padding: 4px;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -164,14 +165,14 @@ export default {
 }
 
 .recipe-run-btn {
-  background-image: var(--recipe-run-button-image);
+  background-image: var(--play-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
 }
 
 .recipe-clear-btn {
-  background-image: var(--recipe-clear-button-image);
+  background-image: var(--trash-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
