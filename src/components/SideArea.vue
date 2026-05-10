@@ -29,7 +29,7 @@ export default {
 
 <style scoped>
 .side-area {
-  height: 100vh;
+  height: calc(100vh - var(--menu-bar-height));
   width: var(--left-side-width);
   display: flex;
   flex-direction: column;

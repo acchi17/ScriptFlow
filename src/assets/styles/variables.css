@@ -3,6 +3,7 @@
   --app-font-family: -apple-system, BlinkMacSystemFont, sans-serif, "Segoe UI";
 
   /* Base-layout styles */
+  --menu-bar-height: 48px;
   --main-bg-color: #f0f0f0;
   --left-side-bg-color: #f0f0f0;
   --popup-bg-color: #fafafa;

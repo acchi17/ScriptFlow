@@ -46,7 +46,7 @@ export default {
 
 <style scoped>
 .main-area {
-  height: 100vh;
+  height: calc(100vh - var(--menu-bar-height));
   display: flex;
   flex-direction: column;
   background-color: var(--main-bg-color);

@@ -1,22 +1,27 @@
 <template>
   <div id="app">
-    <div class="left">
-      <SideArea />
-    </div>
-    <div class="center">
-      <MainArea />
+    <MenuArea />
+    <div class="row-content">
+      <div class="left">
+        <SideArea />
+      </div>
+      <div class="center">
+        <MainArea />
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import { onMounted, onBeforeUnmount, inject } from 'vue'
+import MenuArea from './components/MenuArea.vue'
 import MainArea from './components/MainArea.vue'
 import SideArea from './components/SideArea.vue'
 
 export default {
   name: 'App',
   components: {
+    MenuArea,
     MainArea,
     SideArea
   },
@@ -59,16 +64,22 @@ export default {
   box-sizing: border-box;
 }
 
-/* Root application container with 3-column layout */
+/* Root application container */
 #app {
   font-family: var(--app-font-family);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  width: 100%;
   height: 100vh;
-  overflow: hidden;
+  width: 100%;
   display: flex;
-  gap: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Row below the menu bar */
+.row-content {
+  display: flex;
+  flex: 1;
 }
 
 /* Left sidebar - contains drag-drop items */
