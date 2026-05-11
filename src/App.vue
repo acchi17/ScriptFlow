@@ -3,31 +3,39 @@
     <MenuArea />
     <div class="row-content">
       <div class="left">
-        <SideArea />
+        <SideArea @open-setting="showBlockSetting = true" />
       </div>
       <div class="center">
         <MainArea />
       </div>
+      <BlockSettingView
+        v-if="showBlockSetting"
+        class="block-setting-overlay"
+        @close="showBlockSetting = false"
+      />
     </div>
   </div>
 </template>
 
 <script>
-import { onMounted, onBeforeUnmount, inject } from 'vue'
+import { onMounted, onBeforeUnmount, inject, ref } from 'vue'
 import MenuArea from './components/MenuArea.vue'
 import MainArea from './components/MainArea.vue'
 import SideArea from './components/SideArea.vue'
+import BlockSettingView from './components/BlockSettingView.vue'
 
 export default {
   name: 'App',
   components: {
     MenuArea,
     MainArea,
-    SideArea
+    SideArea,
+    BlockSettingView,
   },
   setup() {
     // Get injected service instance
     const entryExecutionService = inject('entryExecutionService')
+    const showBlockSetting = ref(false)
 
     // Define event handler function
     function handleBeforeUnload() {
@@ -51,6 +59,8 @@ export default {
         entryExecutionService.terminate()
       }
     })
+
+    return { showBlockSetting }
   }
 }
 </script>
@@ -80,6 +90,13 @@ export default {
 .row-content {
   display: flex;
   flex: 1;
+  position: relative;
+}
+
+.block-setting-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
 }
 
 /* Left sidebar - contains drag-drop items */

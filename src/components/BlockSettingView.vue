@@ -13,33 +13,89 @@
         @click="selectCategory(cat.name)"
       >{{ cat.name }}</button>
     </div>
-    <div class="block-list">
-      <div
-        v-for="blockName in activeBlockList"
-        :key="blockName"
-        class="block-row"
-        :class="{ selected: selectedBlock === blockName }"
-        @click.stop="selectedBlock = blockName"
-      >
-        <span class="block-name">{{ blockName }}</span>
-        <div v-if="selectedBlock === blockName" class="action-buttons">
-          <button
-            class="action-btn up-btn"
-            :class="{ disabled: isFirst(blockName) }"
-            @click.stop="onMoveUp(blockName)"
-          ></button>
-          <button
-            class="action-btn down-btn"
-            :class="{ disabled: isLast(blockName) }"
-            @click.stop="onMoveDown(blockName)"
-          ></button>
-          <button class="action-btn setting-btn" @click.stop="$emit('edit-block', blockName)"></button>
-          <button class="action-btn delete-btn" @click.stop="onDelete(blockName)"></button>
+    <div class="body">
+      <div class="block-list">
+        <div
+          v-for="blockName in activeBlockList"
+          :key="blockName"
+          class="block-row"
+          :class="{ selected: selectedBlock === blockName }"
+          @click.stop="selectedBlock = blockName"
+        >
+          <span class="block-name">{{ blockName }}</span>
+          <div v-if="selectedBlock === blockName" class="action-buttons">
+            <button
+              class="action-btn up-btn"
+              :class="{ disabled: isFirst(blockName) }"
+              @click.stop="onMoveUp(blockName)"
+            ></button>
+            <button
+              class="action-btn down-btn"
+              :class="{ disabled: isLast(blockName) }"
+              @click.stop="onMoveDown(blockName)"
+            ></button>
+            <button class="action-btn setting-btn" @click.stop="$emit('edit-block', blockName)"></button>
+            <button class="action-btn delete-btn" @click.stop="onDelete(blockName)"></button>
+          </div>
+        </div>
+        <div class="add-row" @click.stop>
+          <span>+</span>
         </div>
       </div>
-      <div class="add-row" @click.stop>
-        <span>+</span>
-      </div>
+
+      <template v-if="selectedBlock">
+        <div class="param-section">
+          <div class="param-section-header">Input</div>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Data type</th>
+                <th>UI type</th>
+                <th>Initial value</th>
+                <th>Step</th>
+                <th>Min</th>
+                <th>Max</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="param in inputParams" :key="param.name">
+                <td>{{ param.name }}</td>
+                <td>{{ formatDataType(param.dataType) }}</td>
+                <td>{{ formatCtrlType(param.ctrlType) }}</td>
+                <td>{{ param.default ?? '' }}</td>
+                <td>{{ param.step ?? '' }}</td>
+                <td>{{ param.min ?? '' }}</td>
+                <td>{{ param.max ?? '' }}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="add-row" @click.stop><span>+</span></div>
+        </div>
+
+        <div class="param-section">
+          <div class="param-section-header">Output</div>
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Data type</th>
+                <th>Comment</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="param in outputParams" :key="param.name">
+                <td>{{ param.name }}</td>
+                <td>{{ formatDataType(param.dataType) }}</td>
+                <td></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="add-row" @click.stop><span>+</span></div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -66,6 +122,27 @@ export default {
       );
       return cat ? [...cat.blocks] : [];
     });
+
+    const selectedBlockDef = computed(() =>
+      selectedBlock.value ? entryDefinitionService.blockDefinitions[selectedBlock.value] ?? null : null
+    );
+    const inputParams = computed(() => selectedBlockDef.value?.parameters?.input ?? []);
+    const outputParams = computed(() => selectedBlockDef.value?.parameters?.output ?? []);
+
+    function formatDataType(dt) {
+      return dt ? dt.charAt(0).toUpperCase() + dt.slice(1) : '';
+    }
+
+    function formatCtrlType(ct) {
+      const map = {
+        'integer_spinner': 'Spin',
+        'real_spinner': 'Spin',
+        'check_box': 'Check',
+        'combo_box': 'Combo',
+        'text_box': 'Text',
+      };
+      return map[ct] ?? (ct || '');
+    }
 
     function selectCategory(name) {
       activeCategory.value = name;
@@ -110,6 +187,10 @@ export default {
       activeCategory,
       activeBlockList,
       selectedBlock,
+      inputParams,
+      outputParams,
+      formatDataType,
+      formatCtrlType,
       selectCategory,
       isFirst,
       isLast,
@@ -184,9 +265,13 @@ export default {
   color: #333;
 }
 
-.block-list {
+.body {
   flex: 1;
   overflow-y: auto;
+}
+
+.block-list {
+  padding-bottom: 4px;
 }
 
 .block-row {
@@ -270,5 +355,41 @@ export default {
 .add-row:hover {
   color: #333;
   background-color: rgba(0, 0, 0, 0.04);
+}
+
+.param-section {
+  border-top: var(--base-outline-border, 1px solid #ccc);
+  padding: 8px 0;
+}
+
+.param-section-header {
+  padding: 4px 12px 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.param-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.param-table th,
+.param-table td {
+  padding: 4px 8px;
+  border: var(--base-outline-border, 1px solid #ccc);
+  color: #333;
+  white-space: nowrap;
+}
+
+.param-table th {
+  background-color: rgba(0, 0, 0, 0.04);
+  font-weight: 600;
+  text-align: left;
+}
+
+.param-table td {
+  background-color: #fff;
 }
 </style>

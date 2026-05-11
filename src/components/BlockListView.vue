@@ -1,7 +1,7 @@
 <template>
   <div class="block-list-view" @click="clearState">
     <div class="block-list-header">
-      <span class="block-list-title">Block List</span>
+      <!-- <span class="block-list-title">Block List</span> -->
       <button class="setting-icon" @click.stop="$emit('open-setting')"></button>
     </div>
     <div
