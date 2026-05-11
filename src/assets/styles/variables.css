@@ -2,6 +2,16 @@
   /* App-wide styles */
   --app-font-family: -apple-system, BlinkMacSystemFont, sans-serif, "Segoe UI";
 
+  /* Icon images */
+  --play-icon-image: url('@/assets/images/play-icon-gray-256.png');
+  --trash-icon-image: url('@/assets/images/trash-icon-gray-256.png');
+  --linked-icon-image: url('@/assets/images/linked-icon-gray-256.png');
+  --unlink-icon-image: url('@/assets/images/unlink-icon-gray-256.png');
+  --left-2-arrow-icon-image: url('@/assets/images/left-2-arrow-gray-96.png');
+  --right-2-arrow-icon-image: url('@/assets/images/right-2-arrow-gray-96.png');
+  --close-icon-image: url('@/assets/images/close-icon-gray-96.png');
+  --setting-icon-image: url('@/assets/images/setting-icon-gray-256.png');
+
   /* Base-layout styles */
   --menu-bar-height: 48px;
   --main-bg-color: #f0f0f0;
@@ -19,8 +29,6 @@
   /* Recipe-rlated styles */
   --recipe-bg-color: #f5f5f5;
   --recipe-bg-line-color: #ccc;
-  --recipe-run-button-image: url('@/assets/images/play-button-noframe-gray-96.png');
-  --recipe-clear-button-image: url('@/assets/images/trash-icon-gray-96.png');
 
   /* Block-related styles */
   --block-bg-color: #f0f0f0;
@@ -68,7 +76,6 @@
   /* Entry button images */
   --entry-button-play-image: url('@/assets/images/play-button-gray-96.png');
   --entry-button-delete-image: url('@/assets/images/close-button-gray-96.png');
-  --entry-button-unlink-image: url('@/assets/images/close-button-noframe-gray-96.png');
 
   /* Entry empty object styles */
   --entry-spacer-width: 20px;
@@ -93,12 +100,6 @@
   --param-badge-bg-color-real: #93c5fd;
   --param-badge-bg-color-string: #fcd34d;
   --param-badge-bg-color-image: #a5b4fc;
-
-  /* Parameter link styles */
-  --param-badge-linked-image: url('../images/linked-icon-gray-256.png');
-  --param-badge-unlinked-image: url('../images/unlink-icon-gray-256.png');
-  --left-arrow-linked-image: url('../images/left-2-arrow-gray-96.png');
-  --right-arrow-linked-image: url('../images/right-2-arrow-gray-96.png');
 
   /* Connection view styles */
   --connection-lane-width: 96px;

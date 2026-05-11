@@ -1,7 +1,7 @@
 <template>
   <div class="side-area" :class="{ 'executing': isExecuting }">
     <div class="top-item">
-      <BlockListView />
+      <BlockListView @open-setting="$emit('open-setting')" />
     </div>
     <div class="bottom-item">
       <EntryView />
@@ -16,9 +16,10 @@ import { useSystemState } from '../composables/useSystemState';
 
 export default {
   name: 'SideArea',
+  emits: ['open-setting'],
   components: {
     BlockListView,
-    EntryView
+    EntryView,
   },
   setup() {
     const { isExecuting } = useSystemState()
@@ -29,6 +30,7 @@ export default {
 
 <style scoped>
 .side-area {
+  position: relative;
   height: calc(100vh - var(--menu-bar-height));
   width: var(--left-side-width);
   display: flex;
@@ -52,4 +54,5 @@ export default {
   display: flex;
   overflow-y: auto;
 }
+
 </style>

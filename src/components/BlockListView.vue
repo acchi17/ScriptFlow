@@ -1,5 +1,9 @@
 <template>
   <div class="block-list-view" @click="clearState">
+    <div class="block-list-header">
+      <!-- <span class="block-list-title">Block List</span> -->
+      <button class="setting-icon" @click.stop="$emit('open-setting')"></button>
+    </div>
     <div
       v-for="blockName in blockNames"
       :key="blockName"
@@ -18,6 +22,7 @@ import { useSystemState } from '../composables/useSystemState';
 
 export default {
   name: 'BlockListView',
+  emits: ['open-setting'],
 
   setup() {
     // Inject EntryDefinitionService
@@ -65,7 +70,34 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
+}
+
+.block-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+}
+
+.block-list-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.setting-icon {
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  opacity: 0.6;
+  border: none;
+  padding: 0;
+  background: var(--setting-icon-image) center / contain no-repeat;
+  background-color: transparent;
+}
+
+.setting-icon:hover {
+  opacity: 1;
 }
 
 .block-name-item {

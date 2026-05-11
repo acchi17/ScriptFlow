@@ -106,6 +106,52 @@ export default class EntryDefinitionService {
     }
   }
 
+  moveBlockUp(blockName) {
+    const cat = this.blockCategories.find(c => c.blocks.includes(blockName));
+    if (!cat) return false;
+    const idx = cat.blocks.indexOf(blockName);
+    if (idx <= 0) return false;
+    [cat.blocks[idx - 1], cat.blocks[idx]] = [cat.blocks[idx], cat.blocks[idx - 1]];
+    return true;
+  }
+
+  moveBlockDown(blockName) {
+    const cat = this.blockCategories.find(c => c.blocks.includes(blockName));
+    if (!cat) return false;
+    const idx = cat.blocks.indexOf(blockName);
+    if (idx < 0 || idx >= cat.blocks.length - 1) return false;
+    [cat.blocks[idx], cat.blocks[idx + 1]] = [cat.blocks[idx + 1], cat.blocks[idx]];
+    return true;
+  }
+
+  removeBlock(blockName) {
+    for (const cat of this.blockCategories) {
+      const i = cat.blocks.indexOf(blockName);
+      if (i >= 0) { cat.blocks.splice(i, 1); break; }
+    }
+    delete this.blockDefinitions[blockName];
+  }
+
+  async saveBlockDefinitions() {
+    const raw = {
+      categories: this.blockCategories.map(cat => ({
+        name: cat.name,
+        blocks: cat.blocks.map(name => {
+          const def = this.blockDefinitions[name];
+          return {
+            name: def.name,
+            command: def.command,
+            parameters: [
+              ...def.parameters.input.map(p => ({ ...p, prmType: 'input' })),
+              ...def.parameters.output.map(p => ({ ...p, prmType: 'output' }))
+            ]
+          };
+        })
+      }))
+    };
+    await this.platformService.writeBlockDefinitions(raw);
+  }
+
   /**
    * Get all categories
    * @return {Array} Array of categories
