@@ -225,7 +225,6 @@ export default {
   align-items: center;
   justify-content: space-between;
   padding: 8px 12px;
-  border-bottom: var(--base-outline-border, 1px solid #ccc);
 }
 
 .title {
