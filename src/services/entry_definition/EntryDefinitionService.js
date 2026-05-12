@@ -132,6 +132,34 @@ export default class EntryDefinitionService {
     delete this.blockDefinitions[blockName];
   }
 
+  /**
+   * Add a new block to the specified category.
+   * The block's name defaults to 'NewBlock'; if a block with that name
+   * already exists (in any category), a numeric suffix is appended
+   * ('NewBlock1', 'NewBlock2', ...) until a free name is found.
+   * The new block has no input or output parameters.
+   * @param {string} categoryName Category to add the block to
+   * @return {string|null} The new block's name, or null if the category is missing
+   */
+  addBlock(categoryName) {
+    const cat = this.blockCategories.find(c => c.name === categoryName);
+    if (!cat) return null;
+    const base = 'NewBlock';
+    let name = base;
+    let i = 1;
+    while (this.blockDefinitions[name]) {
+      name = `${base}${i++}`;
+    }
+    cat.blocks.push(name);
+    this.blockDefinitions[name] = {
+      name,
+      category: categoryName,
+      command: name,
+      parameters: { input: [], output: [] }
+    };
+    return name;
+  }
+
   async saveBlockDefinitions() {
     const raw = {
       categories: this.blockCategories.map(cat => ({

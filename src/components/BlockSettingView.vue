@@ -38,7 +38,7 @@
             <button class="action-btn delete-btn" @click.stop="onDelete(blockName)"></button>
           </div>
         </div>
-        <div class="add-row" @click.stop>
+        <div class="add-row" @click.stop="onAddBlock">
           <span>+</span>
         </div>
       </div>
@@ -182,6 +182,14 @@ export default {
       persist();
     }
 
+    function onAddBlock() {
+      const newName = entryDefinitionService.addBlock(activeCategory.value);
+      if (newName) {
+        selectedBlock.value = newName;
+        persist();
+      }
+    }
+
     return {
       categories,
       activeCategory,
@@ -197,6 +205,7 @@ export default {
       onMoveUp,
       onMoveDown,
       onDelete,
+      onAddBlock,
     };
   }
 }
