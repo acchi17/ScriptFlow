@@ -141,16 +141,20 @@ export default class EntryDefinitionService {
    * @param {string} categoryName Category to add the block to
    * @return {string|null} The new block's name, or null if the category is missing
    */
-  addBlock(categoryName) {
+  addBlock(categoryName, blockName = null, insertIndex = null) {
     const cat = this.blockCategories.find(c => c.name === categoryName);
     if (!cat) return null;
-    const base = 'NewBlock';
+    const base = blockName ?? 'NewBlock';
     let name = base;
     let i = 1;
     while (this.blockDefinitions[name]) {
       name = `${base}${i++}`;
     }
-    cat.blocks.push(name);
+    if (insertIndex !== null) {
+      cat.blocks.splice(insertIndex, 0, name);
+    } else {
+      cat.blocks.push(name);
+    }
     this.blockDefinitions[name] = {
       name,
       category: categoryName,

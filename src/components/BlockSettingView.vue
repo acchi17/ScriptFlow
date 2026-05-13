@@ -10,13 +10,12 @@
         :active-category="activeCategory"
         :active-block-list="activeBlockList"
         :selected-block="selectedBlock"
-        @category-selected="activeCategory = $event; selectedBlock = null"
+        @category-selected="onCategorySelected"
         @update:selected-block="selectedBlock = $event"
         @move-up="onMoveUp"
         @move-down="onMoveDown"
         @delete="onDelete"
         @add="onAddBlock"
-        @edit-block="$emit('edit-block', $event)"
       />
       <BlockSettingBlockParams
         v-if="selectedBlock"
@@ -35,7 +34,7 @@ import BlockSettingBlockParams from './BlockSettingBlockParams.vue';
 export default {
   name: 'BlockSettingView',
   components: { BlockSettingBlockList, BlockSettingBlockParams },
-  emits: ['close', 'edit-block'],
+  emits: ['close'],
 
   setup() {
     const entryDefinitionService = inject('entryDefinitionService');
@@ -52,7 +51,9 @@ export default {
     const activeCategory = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
     );
-    const selectedBlock = ref(null);
+    const selectedBlock = ref(
+      entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
+    );
 
     const activeBlockList = computed(() => {
       refreshTrigger.value;
@@ -77,6 +78,11 @@ export default {
       }
     }
 
+    function onCategorySelected(catName) {
+      activeCategory.value = catName;
+      selectedBlock.value = activeBlockList.value[0] ?? null;
+    }
+
     function onMoveUp(blockName) {
       entryDefinitionService.moveBlockUp(blockName);
       bumpRefresh();
@@ -97,7 +103,10 @@ export default {
     }
 
     function onAddBlock() {
-      const newName = entryDefinitionService.addBlock(activeCategory.value);
+      const insertIndex = selectedBlock.value !== null
+        ? activeBlockList.value.indexOf(selectedBlock.value) + 1
+        : null;
+      const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
       if (newName) {
         bumpRefresh();
         selectedBlock.value = newName;
@@ -112,6 +121,7 @@ export default {
       selectedBlock,
       inputParams,
       outputParams,
+      onCategorySelected,
       onMoveUp,
       onMoveDown,
       onDelete,
