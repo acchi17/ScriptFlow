@@ -17,24 +17,27 @@
       @click.stop="$emit('update:selected-block', blockName)"
     >
       <span class="block-name">{{ blockName }}</span>
-      <div v-if="selectedBlock === blockName" class="action-buttons">
-        <button
-          class="action-btn up-btn"
-          :class="{ disabled: isFirst(blockName) }"
-          @click.stop="$emit('move-up', blockName)"
-        ></button>
-        <button
-          class="action-btn down-btn"
-          :class="{ disabled: isLast(blockName) }"
-          @click.stop="$emit('move-down', blockName)"
-        ></button>
-        <button class="action-btn setting-btn" @click.stop="$emit('edit-block', blockName)"></button>
-        <button class="action-btn delete-btn" @click.stop="$emit('delete', blockName)"></button>
-      </div>
     </div>
-    <div class="add-row" @click.stop="$emit('add')">
-      <span>+</span>
+  </div>
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <button
+        class="tool-btn up-btn"
+        :class="{ disabled: !selectedBlock || isFirst(selectedBlock) }"
+        @click.stop="$emit('move-up', selectedBlock)"
+      ></button>
+      <button
+        class="tool-btn down-btn"
+        :class="{ disabled: !selectedBlock || isLast(selectedBlock) }"
+        @click.stop="$emit('move-down', selectedBlock)"
+      ></button>
+      <button class="tool-btn add-btn" @click.stop="$emit('add')">+</button>
     </div>
+    <button
+      class="tool-btn delete-btn"
+      :class="{ disabled: !selectedBlock }"
+      @click.stop="$emit('delete', selectedBlock)"
+    ></button>
   </div>
 </template>
 
@@ -47,7 +50,7 @@ export default {
     activeBlockList: { type: Array, required: true },
     selectedBlock: { type: String, default: null },
   },
-  emits: ['category-selected', 'update:selected-block', 'move-up', 'move-down', 'delete', 'add', 'edit-block'],
+  emits: ['category-selected', 'update:selected-block', 'move-up', 'move-down', 'delete', 'add'],
   setup(props) {
     function isFirst(blockName) {
       return props.activeBlockList[0] === blockName;
@@ -115,15 +118,23 @@ export default {
   flex: 1;
 }
 
-.action-buttons {
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  border-top: var(--base-outline-border, 1px solid #ccc);
+}
+
+.toolbar-left {
   display: flex;
   align-items: center;
   gap: 4px;
 }
 
-.action-btn {
-  width: 20px;
-  height: 20px;
+.tool-btn {
+  width: 24px;
+  height: 24px;
   border: none;
   cursor: pointer;
   opacity: 0.6;
@@ -132,13 +143,16 @@ export default {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+  font-size: 18px;
+  line-height: 1;
+  color: #555;
 }
 
-.action-btn:hover:not(.disabled) {
+.tool-btn:hover:not(.disabled) {
   opacity: 1;
 }
 
-.action-btn.disabled {
+.tool-btn.disabled {
   opacity: 0.25;
   cursor: default;
   pointer-events: none;
@@ -154,24 +168,7 @@ export default {
   transform: rotate(90deg);
 }
 
-.setting-btn {
-  background-image: var(--setting-icon-image);
-}
-
 .delete-btn {
   background-image: var(--trash-icon-image);
-}
-
-.add-row {
-  padding: 6px 12px;
-  font-size: 18px;
-  color: #888;
-  cursor: pointer;
-  user-select: none;
-}
-
-.add-row:hover {
-  color: #333;
-  background-color: rgba(0, 0, 0, 0.04);
 }
 </style>
