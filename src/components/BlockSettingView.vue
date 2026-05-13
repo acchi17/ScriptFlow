@@ -110,22 +110,32 @@ export default {
   setup() {
     const entryDefinitionService = inject('entryDefinitionService');
 
-    const categories = computed(() => entryDefinitionService.blockCategories);
+    // entryDefinitionService is a plain (non-reactive) instance; bump this ref
+    // after any structural mutation so dependent computeds re-evaluate.
+    const refreshTrigger = ref(0);
+    const bumpRefresh = () => { refreshTrigger.value++; };
+
+    const categories = computed(() => {
+      refreshTrigger.value;
+      return entryDefinitionService.blockCategories;
+    });
     const activeCategory = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
     );
     const selectedBlock = ref(null);
 
     const activeBlockList = computed(() => {
+      refreshTrigger.value;
       const cat = entryDefinitionService.blockCategories.find(
         c => c.name === activeCategory.value
       );
       return cat ? [...cat.blocks] : [];
     });
 
-    const selectedBlockDef = computed(() =>
-      selectedBlock.value ? entryDefinitionService.blockDefinitions[selectedBlock.value] ?? null : null
-    );
+    const selectedBlockDef = computed(() => {
+      refreshTrigger.value;
+      return selectedBlock.value ? entryDefinitionService.blockDefinitions[selectedBlock.value] ?? null : null;
+    });
     const inputParams = computed(() => selectedBlockDef.value?.parameters?.input ?? []);
     const outputParams = computed(() => selectedBlockDef.value?.parameters?.output ?? []);
 
@@ -168,16 +178,19 @@ export default {
 
     function onMoveUp(blockName) {
       entryDefinitionService.moveBlockUp(blockName);
+      bumpRefresh();
       persist();
     }
 
     function onMoveDown(blockName) {
       entryDefinitionService.moveBlockDown(blockName);
+      bumpRefresh();
       persist();
     }
 
     function onDelete(blockName) {
       entryDefinitionService.removeBlock(blockName);
+      bumpRefresh();
       selectedBlock.value = null;
       persist();
     }
@@ -185,6 +198,7 @@ export default {
     function onAddBlock() {
       const newName = entryDefinitionService.addBlock(activeCategory.value);
       if (newName) {
+        bumpRefresh();
         selectedBlock.value = newName;
         persist();
       }
