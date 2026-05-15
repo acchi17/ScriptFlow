@@ -1,7 +1,6 @@
 <template>
   <div
     class="recipe-item"
-    @click="clearState"
   >
     <div class="recipe-content">
       <div class="recipe-header">
@@ -36,7 +35,6 @@
 <script>
 import { ref } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
-import { useSystemState } from '../composables/useSystemState'
 import { useEntryRect } from '../composables/useEntryRect'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import ConnectionView from './ConnectionView.vue'
@@ -51,7 +49,6 @@ export default {
 
   setup() {
     const { addContainer, clearContainer } = useEntryOperation()
-    const { clearState } = useSystemState()
     const { executeEntry } = useEntryExecution()
 
     const mainContainer = addContainer(null, 'root-container', 0)
@@ -69,7 +66,6 @@ export default {
 
     return {
       mainContainer,
-      clearState,
       executeRecipe,
       clearRecipe,
       entryPanelRef,

@@ -19,6 +19,7 @@
 
 <script>
 import { onMounted, onBeforeUnmount, inject, ref } from 'vue'
+import { useSystemState } from './composables/useSystemState'
 import MenuArea from './components/MenuArea.vue'
 import MainArea from './components/MainArea.vue'
 import SideArea from './components/SideArea.vue'
@@ -33,11 +34,10 @@ export default {
     BlockSettingView,
   },
   setup() {
-    // Get injected service instance
     const entryExecutionService = inject('entryExecutionService')
     const showBlockSetting = ref(false)
+    const { resetState } = useSystemState()
 
-    // Define event handler function
     function handleBeforeUnload() {
       console.log('Application unloading, performing cleanup...')
       if (entryExecutionService) {
@@ -45,16 +45,14 @@ export default {
       }
     }
 
-    // Add event listener when component is mounted
     onMounted(() => {
       window.addEventListener('beforeunload', handleBeforeUnload)
-      console.log('Registered beforeunload event handler')
+      document.addEventListener('click', resetState)
     })
 
-    // Remove event listener and cleanup when component is unmounted
     onBeforeUnmount(() => {
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      console.log('Removed beforeunload handler and performed cleanup...')
+      document.removeEventListener('click', resetState)
       if (entryExecutionService) {
         entryExecutionService.terminate()
       }

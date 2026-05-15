@@ -19,7 +19,7 @@ export function useSystemState() {
   const entryParamManager = inject('entryParamManager')
 
   // --- drag & drop ---
-  const activateDragging = () => { isDragging.value = true }
+  const activateDragging = () => { cancelConnection(); isDragging.value = true }
   const deactivateDragging = () => { draggedItemIds.value.clear(); isDragging.value = false }
   const setDraggedIds = (ids) => { draggedItemIds.value = new Set(ids) }
   const hasDraggedIds = (id) => draggedItemIds.value.has(id)
@@ -89,9 +89,9 @@ export function useSystemState() {
   }
 
   // --- combined ---
-  const clearState = () => {
-    if (isConnecting.value) cancelConnection()
-    else clearSelection()
+  const resetState = () => {
+    cancelConnection()
+    clearSelection()
   }
 
   return {
@@ -118,7 +118,7 @@ export function useSystemState() {
     startConnection,
     cancelConnection,
     endConnection,
-    // combined
-    clearState,
+    // others
+    resetState,
   }
 }

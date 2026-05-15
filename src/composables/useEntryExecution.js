@@ -16,7 +16,7 @@ export function useEntryExecution() {
    */
   const executeEntry = async (entry) => {
     if (!entry) return;
-    clearSelection();
+    //clearSelection();
     cancelConnection();
     
     setExecuting(true);

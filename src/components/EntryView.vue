@@ -1,5 +1,5 @@
 <template>
-  <div class="entry-view">
+  <div class="entry-view" @click.stop>
     <div v-if="selectedEntry">
       <div class="entry-header">{{ selectedEntry?.name }}</div>
       <div class="section-divider" />

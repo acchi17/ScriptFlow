@@ -1,5 +1,5 @@
 <template>
-  <div class="block-list-view" @click="clearState">
+  <div class="block-list-view">
     <div class="block-list-header">
       <!-- <span class="block-list-title">Block List</span> -->
       <button class="setting-icon" @click.stop="$emit('open-setting')"></button>
@@ -18,7 +18,6 @@
 <script>
 import { inject, ref, onMounted } from 'vue';
 import { useDraggable } from '../composables/useDraggable';
-import { useSystemState } from '../composables/useSystemState';
 
 export default {
   name: 'BlockListView',
@@ -38,8 +37,6 @@ export default {
       setOnDragStartCallBack: setBlockDragStartCallback
     } = useDraggable();
 
-    const { clearState } = useSystemState();
-
     // Set custom callbacks for drag start events
     setBlockDragStartCallback((event) => {
       event.dataTransfer.setData('entryType', 'block');
@@ -58,8 +55,7 @@ export default {
     return {
       blockNames,
       onDragStartBlock,
-      onDragEndBlock,
-      clearState
+      onDragEndBlock
     };
   }
 }
