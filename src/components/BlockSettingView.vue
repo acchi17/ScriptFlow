@@ -11,6 +11,10 @@
         :active-block-list="activeBlockList"
         :selected-block="selectedBlock"
         @category-selected="onCategorySelected"
+        @category-move-up="onCategoryMoveUp"
+        @category-move-down="onCategoryMoveDown"
+        @category-add="onAddCategory"
+        @category-delete="onDeleteCategory"
         @update:selected-block="selectedBlock = $event"
         @move-up="onMoveUp"
         @move-down="onMoveDown"
@@ -46,7 +50,7 @@ export default {
 
     const categories = computed(() => {
       refreshTrigger.value;
-      return entryDefinitionService.blockCategories;
+      return [...entryDefinitionService.blockCategories];
     });
     const activeCategory = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
@@ -102,10 +106,37 @@ export default {
       persist();
     }
 
-    function onAddBlock() {
-      const insertIndex = selectedBlock.value !== null
-        ? activeBlockList.value.indexOf(selectedBlock.value) + 1
-        : null;
+    function onCategoryMoveUp() {
+      entryDefinitionService.moveCategoryUp(activeCategory.value);
+      bumpRefresh();
+      persist();
+    }
+
+    function onCategoryMoveDown() {
+      entryDefinitionService.moveCategoryDown(activeCategory.value);
+      bumpRefresh();
+      persist();
+    }
+
+    function onDeleteCategory() {
+      entryDefinitionService.removeCategory(activeCategory.value);
+      bumpRefresh();
+      activeCategory.value = entryDefinitionService.blockCategories[0]?.name ?? '';
+      selectedBlock.value = null;
+      persist();
+    }
+
+    function onAddCategory(insertIndex) {
+      const newName = entryDefinitionService.addCategory(null, insertIndex);
+      if (newName) {
+        bumpRefresh();
+        activeCategory.value = newName;
+        selectedBlock.value = null;
+        persist();
+      }
+    }
+
+    function onAddBlock(insertIndex) {
       const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
       if (newName) {
         bumpRefresh();
@@ -122,6 +153,10 @@ export default {
       inputParams,
       outputParams,
       onCategorySelected,
+      onCategoryMoveUp,
+      onCategoryMoveDown,
+      onDeleteCategory,
+      onAddCategory,
       onMoveUp,
       onMoveDown,
       onDelete,

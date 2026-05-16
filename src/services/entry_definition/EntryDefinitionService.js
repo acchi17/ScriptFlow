@@ -164,6 +164,47 @@ export default class EntryDefinitionService {
     return name;
   }
 
+  addCategory(name, insertIndex = null) {
+    const base = name ?? 'NewCategory';
+    let candidate = base;
+    let i = 1;
+    while (this.blockCategories.some(c => c.name === candidate)) {
+      candidate = `${base}${i++}`;
+    }
+    const entry = { name: candidate, blocks: [] };
+    if (insertIndex !== null) {
+      this.blockCategories.splice(insertIndex, 0, entry);
+    } else {
+      this.blockCategories.push(entry);
+    }
+    return candidate;
+  }
+
+  removeCategory(name) {
+    const idx = this.blockCategories.findIndex(c => c.name === name);
+    if (idx < 0) return false;
+    const cat = this.blockCategories[idx];
+    cat.blocks.forEach(blockName => { delete this.blockDefinitions[blockName]; });
+    this.blockCategories.splice(idx, 1);
+    return true;
+  }
+
+  moveCategoryUp(name) {
+    const idx = this.blockCategories.findIndex(c => c.name === name);
+    if (idx <= 0) return false;
+    [this.blockCategories[idx - 1], this.blockCategories[idx]] =
+      [this.blockCategories[idx], this.blockCategories[idx - 1]];
+    return true;
+  }
+
+  moveCategoryDown(name) {
+    const idx = this.blockCategories.findIndex(c => c.name === name);
+    if (idx < 0 || idx >= this.blockCategories.length - 1) return false;
+    [this.blockCategories[idx], this.blockCategories[idx + 1]] =
+      [this.blockCategories[idx + 1], this.blockCategories[idx]];
+    return true;
+  }
+
   async saveBlockDefinitions() {
     const raw = {
       categories: this.blockCategories.map(cat => ({
