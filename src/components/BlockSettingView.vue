@@ -11,22 +11,22 @@
           :items="categoryNames"
           :selected-item="activeCategory"
           @update:selected-item="onCategorySelected"
-          @move-up="onCategoryMoveUp"
-          @move-down="onCategoryMoveDown"
+          @move-up="onMoveUpCategory"
+          @move-down="onMoveDownCategory"
           @add="onAddCategory"
-          @delete="onDeleteCategory"
           @rename="onRenameCategory"
+          @delete="onDeleteCategory"
         />
         <SettingListItem
           :title="`BLOCK — ${activeCategory}`"
           :items="activeBlockList"
           :selected-item="selectedBlock"
           @update:selected-item="selectedBlock = $event"
-          @move-up="onMoveUp"
-          @move-down="onMoveDown"
+          @move-up="onMoveUpBlock"
+          @move-down="onMoveDownBlock"
           @add="onAddBlock"
-          @delete="onDelete"
           @rename="onRenameBlock"
+          @delete="onDeleteBlock"
         />
       </div>
       <BlockSettingBlockParams
@@ -100,42 +100,15 @@ export default {
       selectedBlock.value = activeBlockList.value[0] ?? null;
     }
 
-    function onMoveUp(blockName) {
-      entryDefinitionService.moveBlockUp(blockName);
-      bumpRefresh();
-      persist();
-    }
-
-    function onMoveDown(blockName) {
-      entryDefinitionService.moveBlockDown(blockName);
-      bumpRefresh();
-      persist();
-    }
-
-    function onDelete(blockName) {
-      entryDefinitionService.removeBlock(blockName);
-      bumpRefresh();
-      selectedBlock.value = null;
-      persist();
-    }
-
-    function onCategoryMoveUp() {
+    function onMoveUpCategory() {
       entryDefinitionService.moveCategoryUp(activeCategory.value);
       bumpRefresh();
       persist();
     }
 
-    function onCategoryMoveDown() {
+    function onMoveDownCategory() {
       entryDefinitionService.moveCategoryDown(activeCategory.value);
       bumpRefresh();
-      persist();
-    }
-
-    function onDeleteCategory() {
-      entryDefinitionService.removeCategory(activeCategory.value);
-      bumpRefresh();
-      activeCategory.value = entryDefinitionService.blockCategories[0]?.name ?? '';
-      selectedBlock.value = null;
       persist();
     }
 
@@ -149,6 +122,34 @@ export default {
       }
     }
 
+    function onRenameCategory(oldName, newName) {
+      if (entryDefinitionService.renameCategory(oldName, newName)) {
+        bumpRefresh();
+        activeCategory.value = newName.trim();
+        persist();
+      }
+    }
+
+    function onDeleteCategory() {
+      entryDefinitionService.removeCategory(activeCategory.value);
+      bumpRefresh();
+      activeCategory.value = entryDefinitionService.blockCategories[0]?.name ?? '';
+      selectedBlock.value = null;
+      persist();
+    }
+
+    function onMoveUpBlock(blockName) {
+      entryDefinitionService.moveBlockUp(blockName);
+      bumpRefresh();
+      persist();
+    }
+
+    function onMoveDownBlock(blockName) {
+      entryDefinitionService.moveBlockDown(blockName);
+      bumpRefresh();
+      persist();
+    }
+
     function onAddBlock(insertIndex) {
       console.log('Adding block at index', insertIndex, 'in category', activeCategory.value);
       const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
@@ -158,21 +159,20 @@ export default {
         persist();
       }
     }
-
-    function onRenameCategory(oldName, newName) {
-      if (entryDefinitionService.renameCategory(oldName, newName)) {
-        bumpRefresh();
-        activeCategory.value = newName.trim();
-        persist();
-      }
-    }
-
+    
     function onRenameBlock(oldName, newName) {
       if (entryDefinitionService.renameBlock(oldName, newName)) {
         bumpRefresh();
         selectedBlock.value = newName.trim();
         persist();
       }
+    }
+
+    function onDeleteBlock(blockName) {
+      entryDefinitionService.removeBlock(blockName);
+      bumpRefresh();
+      selectedBlock.value = null;
+      persist();
     }
 
     return {
@@ -184,14 +184,14 @@ export default {
       inputParams,
       outputParams,
       onCategorySelected,
-      onCategoryMoveUp,
-      onCategoryMoveDown,
+      onMoveUpCategory,
+      onMoveDownCategory,
       onDeleteCategory,
       onAddCategory,
-      onMoveUp,
-      onMoveDown,
-      onDelete,
+      onMoveUpBlock,
+      onMoveDownBlock,
       onAddBlock,
+      onDeleteBlock,
       onRenameCategory,
       onRenameBlock,
     };

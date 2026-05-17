@@ -52,7 +52,7 @@
 </template>
 
 <script>
-import { ref } from 'vue';
+import { ref, nextTick } from 'vue';
 
 export default {
   name: 'SettingListItem',
@@ -79,6 +79,7 @@ export default {
       if (!props.selectedItem) return;
       editingItem.value = props.selectedItem;
       editingValue.value = props.selectedItem;
+      nextTick(() => document.querySelector('.rename-input')?.focus());
     }
     function commitEdit() {
       if (!editingItem.value) return;
