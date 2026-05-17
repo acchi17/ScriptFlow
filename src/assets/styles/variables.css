@@ -4,13 +4,19 @@
 
   /* Icon images */
   --play-icon-image: url('@/assets/images/play-icon-gray-256.png');
+  --plus-icon-image: url('@/assets/images/plus-icon-gray-256.png');
+  --plus-top-icon-image: url('@/assets/images/plus-top-icon-gray-256.png');
+  --plus-bottom-icon-image: url('@/assets/images/plus-bottom-icon-gray-256.png');
   --trash-icon-image: url('@/assets/images/trash-icon-gray-256.png');
   --linked-icon-image: url('@/assets/images/linked-icon-gray-256.png');
   --unlink-icon-image: url('@/assets/images/unlink-icon-gray-256.png');
-  --left-2-arrow-icon-image: url('@/assets/images/left-2-arrow-gray-96.png');
-  --right-2-arrow-icon-image: url('@/assets/images/right-2-arrow-gray-96.png');
+  --top-arrow-icon-image: url('@/assets/images/top-arrow-icon-gray-256.png');
+  --bottom-arrow-icon-image: url('@/assets/images/bottom-arrow-icon-gray-256.png');
+  --left-2arrow-icon-image: url('@/assets/images/left-2arrow-icon-gray-256.png');
+  --right-2arrow-icon-image: url('@/assets/images/right-2arrow-icon-gray-256.png');
   --close-icon-image: url('@/assets/images/close-icon-gray-96.png');
   --setting-icon-image: url('@/assets/images/setting-icon-gray-256.png');
+  --edit-icon-image: url('@/assets/images/pensil-icon-gray-256.png');
 
   /* Base-layout styles */
   --menu-bar-height: 48px;

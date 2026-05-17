@@ -98,18 +98,18 @@ export default {
 .item-prefix {
   width: 20px;
   height: 20px;
-  background-size: contain;
+  background-size: 60%;
   background-repeat: no-repeat;
   background-position: center;
   flex-shrink: 0;
 }
 
 .item-prefix.dir-output {
-  background-image: var(--right-2-arrow-icon-image);
+  background-image: var(--right-2arrow-icon-image);
 }
 
 .item-prefix.dir-input {
-  background-image: var(--left-2-arrow-icon-image);
+  background-image: var(--left-2arrow-icon-image);
 }
 
 .item-param-name {

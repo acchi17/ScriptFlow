@@ -5,22 +5,34 @@
       <button class="close-btn" @click="$emit('close')"></button>
     </div>
     <div class="body">
-      <BlockSettingBlockList
-        :categories="categories"
-        :active-category="activeCategory"
-        :active-block-list="activeBlockList"
-        :selected-block="selectedBlock"
-        @category-selected="onCategorySelected"
-        @update:selected-block="selectedBlock = $event"
-        @move-up="onMoveUp"
-        @move-down="onMoveDown"
-        @delete="onDelete"
-        @add="onAddBlock"
-      />
+      <div class="two-panel">
+        <SettingListItem
+          title="CATEGORY"
+          :items="categoryNames"
+          :selected-item="activeCategory"
+          @update:selected-item="onCategorySelected"
+          @move-up="onMoveUpCategory"
+          @move-down="onMoveDownCategory"
+          @add="onAddCategory"
+          @rename="onRenameCategory"
+          @delete="onDeleteCategory"
+        />
+        <SettingListItem
+          :title="`BLOCK — ${activeCategory}`"
+          :items="activeBlockList"
+          :selected-item="selectedBlock"
+          @update:selected-item="selectedBlock = $event"
+          @move-up="onMoveUpBlock"
+          @move-down="onMoveDownBlock"
+          @add="onAddBlock"
+          @rename="onRenameBlock"
+          @delete="onDeleteBlock"
+        />
+      </div>
       <BlockSettingBlockParams
         v-if="selectedBlock"
-        :input-params="inputParams"
-        :output-params="outputParams"
+        :block-name="selectedBlock"
+        @change="onParamsChange"
       />
     </div>
   </div>
@@ -28,12 +40,12 @@
 
 <script>
 import { inject, ref, computed } from 'vue';
-import BlockSettingBlockList from './BlockSettingBlockList.vue';
+import SettingListItem from './SettingListItem.vue';
 import BlockSettingBlockParams from './BlockSettingBlockParams.vue';
 
 export default {
   name: 'BlockSettingView',
-  components: { BlockSettingBlockList, BlockSettingBlockParams },
+  components: { SettingListItem, BlockSettingBlockParams },
   emits: ['close'],
 
   setup() {
@@ -46,7 +58,7 @@ export default {
 
     const categories = computed(() => {
       refreshTrigger.value;
-      return entryDefinitionService.blockCategories;
+      return [...entryDefinitionService.blockCategories];
     });
     const activeCategory = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
@@ -54,6 +66,11 @@ export default {
     const selectedBlock = ref(
       entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
     );
+
+    const categoryNames = computed(() => {
+      refreshTrigger.value;
+      return categories.value.map(c => c.name);
+    });
 
     const activeBlockList = computed(() => {
       refreshTrigger.value;
@@ -63,12 +80,6 @@ export default {
       return cat ? [...cat.blocks] : [];
     });
 
-    const selectedBlockDef = computed(() => {
-      refreshTrigger.value;
-      return selectedBlock.value ? entryDefinitionService.blockDefinitions[selectedBlock.value] ?? null : null;
-    });
-    const inputParams = computed(() => selectedBlockDef.value?.parameters?.input ?? []);
-    const outputParams = computed(() => selectedBlockDef.value?.parameters?.output ?? []);
 
     async function persist() {
       try {
@@ -83,29 +94,58 @@ export default {
       selectedBlock.value = activeBlockList.value[0] ?? null;
     }
 
-    function onMoveUp(blockName) {
+    function onMoveUpCategory() {
+      entryDefinitionService.moveCategoryUp(activeCategory.value);
+      bumpRefresh();
+      persist();
+    }
+
+    function onMoveDownCategory() {
+      entryDefinitionService.moveCategoryDown(activeCategory.value);
+      bumpRefresh();
+      persist();
+    }
+
+    function onAddCategory(insertIndex) {
+      const newName = entryDefinitionService.addCategory(null, insertIndex);
+      if (newName) {
+        bumpRefresh();
+        activeCategory.value = newName;
+        selectedBlock.value = null;
+        persist();
+      }
+    }
+
+    function onRenameCategory(oldName, newName) {
+      if (entryDefinitionService.renameCategory(oldName, newName)) {
+        bumpRefresh();
+        activeCategory.value = newName.trim();
+        persist();
+      }
+    }
+
+    function onDeleteCategory() {
+      entryDefinitionService.removeCategory(activeCategory.value);
+      bumpRefresh();
+      activeCategory.value = entryDefinitionService.blockCategories[0]?.name ?? '';
+      selectedBlock.value = null;
+      persist();
+    }
+
+    function onMoveUpBlock(blockName) {
       entryDefinitionService.moveBlockUp(blockName);
       bumpRefresh();
       persist();
     }
 
-    function onMoveDown(blockName) {
+    function onMoveDownBlock(blockName) {
       entryDefinitionService.moveBlockDown(blockName);
       bumpRefresh();
       persist();
     }
 
-    function onDelete(blockName) {
-      entryDefinitionService.removeBlock(blockName);
-      bumpRefresh();
-      selectedBlock.value = null;
-      persist();
-    }
-
-    function onAddBlock() {
-      const insertIndex = selectedBlock.value !== null
-        ? activeBlockList.value.indexOf(selectedBlock.value) + 1
-        : null;
+    function onAddBlock(insertIndex) {
+      console.log('Adding block at index', insertIndex, 'in category', activeCategory.value);
       const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
       if (newName) {
         bumpRefresh();
@@ -113,19 +153,45 @@ export default {
         persist();
       }
     }
+    
+    function onRenameBlock(oldName, newName) {
+      if (entryDefinitionService.renameBlock(oldName, newName)) {
+        bumpRefresh();
+        selectedBlock.value = newName.trim();
+        persist();
+      }
+    }
+
+    function onDeleteBlock(blockName) {
+      entryDefinitionService.removeBlock(blockName);
+      bumpRefresh();
+      selectedBlock.value = null;
+      persist();
+    }
+
+    function onParamsChange() {
+      bumpRefresh();
+      persist();
+    }
 
     return {
       categories,
+      categoryNames,
       activeCategory,
       activeBlockList,
       selectedBlock,
-      inputParams,
-      outputParams,
       onCategorySelected,
-      onMoveUp,
-      onMoveDown,
-      onDelete,
+      onMoveUpCategory,
+      onMoveDownCategory,
+      onDeleteCategory,
+      onAddCategory,
+      onMoveUpBlock,
+      onMoveDownBlock,
       onAddBlock,
+      onDeleteBlock,
+      onRenameCategory,
+      onRenameBlock,
+      onParamsChange,
     };
   }
 }
@@ -170,5 +236,11 @@ export default {
 .body {
   flex: 1;
   overflow-y: auto;
+}
+
+.two-panel {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
 }
 </style>
