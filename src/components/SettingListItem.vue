@@ -8,7 +8,18 @@
         class="panel-row"
         :class="{ selected: selectedItem === item }"
         @click.stop="$emit('update:selected-item', item)"
-      >{{ item }}</div>
+      >
+        <input
+          v-if="editingItem === item"
+          class="rename-input"
+          v-model="editingValue"
+          @keydown.enter.stop="commitEdit"
+          @keydown.escape.stop="cancelEdit"
+          @blur="commitEdit"
+          @click.stop
+        />
+        <template v-else>{{ item }}</template>
+      </div>
     </div>
     <div class="toolbar">
       <div class="toolbar-left">
@@ -22,9 +33,14 @@
           :class="{ disabled: !selectedItem || isLast(selectedItem) }"
           @click.stop="$emit('move-down', selectedItem)"
         ></button>
-        <button class="tool-btn add-btn" @click.stop="$emit('add', addMiddleIndex)"></button>
+        <button class="tool-btn add-btn" @click.stop="$emit('add', addMiddleIndex())"></button>
         <button class="tool-btn add-top-btn" @click.stop="$emit('add', 0)"></button>
         <button class="tool-btn add-bottom-btn" @click.stop="$emit('add', items.length)"></button>
+        <button
+          class="tool-btn rename-btn"
+          :class="{ disabled: !selectedItem }"
+          @click.stop="startEditing"
+        ></button>
       </div>
       <button
         class="tool-btn delete-btn"
@@ -36,6 +52,8 @@
 </template>
 
 <script>
+import { ref } from 'vue';
+
 export default {
   name: 'SettingListItem',
   props: {
@@ -43,8 +61,8 @@ export default {
     items: { type: Array, required: true },
     selectedItem: { type: String, default: null },
   },
-  emits: ['update:selected-item', 'move-up', 'move-down', 'add', 'delete'],
-  setup(props) {
+  emits: ['update:selected-item', 'move-up', 'move-down', 'add', 'delete', 'rename'],
+  setup(props, { emit }) {
     function isFirst(item) {
       return props.items[0] === item;
     }
@@ -53,7 +71,25 @@ export default {
     }
     const addMiddleIndex = () =>
       props.selectedItem ? props.items.indexOf(props.selectedItem) + 1 : props.items.length;
-    return { isFirst, isLast, addMiddleIndex };
+
+    const editingItem = ref(null);
+    const editingValue = ref('');
+
+    function startEditing() {
+      if (!props.selectedItem) return;
+      editingItem.value = props.selectedItem;
+      editingValue.value = props.selectedItem;
+    }
+    function commitEdit() {
+      if (!editingItem.value) return;
+      emit('rename', editingItem.value, editingValue.value);
+      editingItem.value = null;
+    }
+    function cancelEdit() {
+      editingItem.value = null;
+    }
+
+    return { isFirst, isLast, addMiddleIndex, editingItem, editingValue, startEditing, commitEdit, cancelEdit };
   }
 }
 </script>
@@ -163,5 +199,19 @@ export default {
 
 .delete-btn {
   background-image: var(--trash-icon-image);
+}
+
+.rename-btn {
+  background-image: var(--edit-icon-image);
+}
+
+.rename-input {
+  width: 100%;
+  font-size: 12px;
+  padding: 0 2px;
+  border: 1px solid #aaa;
+  border-radius: 2px;
+  outline: none;
+  box-sizing: border-box;
 }
 </style>

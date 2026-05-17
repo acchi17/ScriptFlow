@@ -132,6 +132,19 @@ export default class EntryDefinitionService {
     delete this.blockDefinitions[blockName];
   }
 
+  renameBlock(oldName, newName) {
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === oldName || this.blockDefinitions[trimmed]) return false;
+    const cat = this.blockCategories.find(c => c.blocks.includes(oldName));
+    if (!cat) return false;
+    cat.blocks[cat.blocks.indexOf(oldName)] = trimmed;
+    const def = this.blockDefinitions[oldName];
+    def.name = trimmed;
+    this.blockDefinitions[trimmed] = def;
+    delete this.blockDefinitions[oldName];
+    return true;
+  }
+
   /**
    * Add a new block to the specified category.
    * The block's name defaults to 'NewBlock'; if a block with that name
@@ -186,6 +199,16 @@ export default class EntryDefinitionService {
     const cat = this.blockCategories[idx];
     cat.blocks.forEach(blockName => { delete this.blockDefinitions[blockName]; });
     this.blockCategories.splice(idx, 1);
+    return true;
+  }
+
+  renameCategory(oldName, newName) {
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === oldName || this.blockCategories.some(c => c.name === trimmed)) return false;
+    const cat = this.blockCategories.find(c => c.name === oldName);
+    if (!cat) return false;
+    cat.name = trimmed;
+    cat.blocks.forEach(b => { if (this.blockDefinitions[b]) this.blockDefinitions[b].category = trimmed; });
     return true;
   }
 

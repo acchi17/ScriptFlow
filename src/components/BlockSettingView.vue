@@ -5,22 +5,30 @@
       <button class="close-btn" @click="$emit('close')"></button>
     </div>
     <div class="body">
-      <BlockSettingBlockList
-        :categories="categories"
-        :active-category="activeCategory"
-        :active-block-list="activeBlockList"
-        :selected-block="selectedBlock"
-        @category-selected="onCategorySelected"
-        @category-move-up="onCategoryMoveUp"
-        @category-move-down="onCategoryMoveDown"
-        @category-add="onAddCategory"
-        @category-delete="onDeleteCategory"
-        @update:selected-block="selectedBlock = $event"
-        @move-up="onMoveUp"
-        @move-down="onMoveDown"
-        @delete="onDelete"
-        @add="onAddBlock"
-      />
+      <div class="two-panel">
+        <SettingListItem
+          title="CATEGORY"
+          :items="categoryNames"
+          :selected-item="activeCategory"
+          @update:selected-item="onCategorySelected"
+          @move-up="onCategoryMoveUp"
+          @move-down="onCategoryMoveDown"
+          @add="onAddCategory"
+          @delete="onDeleteCategory"
+          @rename="onRenameCategory"
+        />
+        <SettingListItem
+          :title="`BLOCK — ${activeCategory}`"
+          :items="activeBlockList"
+          :selected-item="selectedBlock"
+          @update:selected-item="selectedBlock = $event"
+          @move-up="onMoveUp"
+          @move-down="onMoveDown"
+          @add="onAddBlock"
+          @delete="onDelete"
+          @rename="onRenameBlock"
+        />
+      </div>
       <BlockSettingBlockParams
         v-if="selectedBlock"
         :input-params="inputParams"
@@ -32,12 +40,12 @@
 
 <script>
 import { inject, ref, computed } from 'vue';
-import BlockSettingBlockList from './BlockSettingBlockList.vue';
+import SettingListItem from './SettingListItem.vue';
 import BlockSettingBlockParams from './BlockSettingBlockParams.vue';
 
 export default {
   name: 'BlockSettingView',
-  components: { BlockSettingBlockList, BlockSettingBlockParams },
+  components: { SettingListItem, BlockSettingBlockParams },
   emits: ['close'],
 
   setup() {
@@ -58,6 +66,11 @@ export default {
     const selectedBlock = ref(
       entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
     );
+
+    const categoryNames = computed(() => {
+      refreshTrigger.value;
+      return categories.value.map(c => c.name);
+    });
 
     const activeBlockList = computed(() => {
       refreshTrigger.value;
@@ -137,6 +150,7 @@ export default {
     }
 
     function onAddBlock(insertIndex) {
+      console.log('Adding block at index', insertIndex, 'in category', activeCategory.value);
       const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
       if (newName) {
         bumpRefresh();
@@ -145,8 +159,25 @@ export default {
       }
     }
 
+    function onRenameCategory(oldName, newName) {
+      if (entryDefinitionService.renameCategory(oldName, newName)) {
+        bumpRefresh();
+        activeCategory.value = newName.trim();
+        persist();
+      }
+    }
+
+    function onRenameBlock(oldName, newName) {
+      if (entryDefinitionService.renameBlock(oldName, newName)) {
+        bumpRefresh();
+        selectedBlock.value = newName.trim();
+        persist();
+      }
+    }
+
     return {
       categories,
+      categoryNames,
       activeCategory,
       activeBlockList,
       selectedBlock,
@@ -161,6 +192,8 @@ export default {
       onMoveDown,
       onDelete,
       onAddBlock,
+      onRenameCategory,
+      onRenameBlock,
     };
   }
 }
@@ -205,5 +238,11 @@ export default {
 .body {
   flex: 1;
   overflow-y: auto;
+}
+
+.two-panel {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
 }
 </style>
