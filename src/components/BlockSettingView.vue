@@ -31,8 +31,8 @@
       </div>
       <BlockSettingBlockParams
         v-if="selectedBlock"
-        :input-params="inputParams"
-        :output-params="outputParams"
+        :block-name="selectedBlock"
+        @change="onParamsChange"
       />
     </div>
   </div>
@@ -80,12 +80,6 @@ export default {
       return cat ? [...cat.blocks] : [];
     });
 
-    const selectedBlockDef = computed(() => {
-      refreshTrigger.value;
-      return selectedBlock.value ? entryDefinitionService.blockDefinitions[selectedBlock.value] ?? null : null;
-    });
-    const inputParams = computed(() => selectedBlockDef.value?.parameters?.input ?? []);
-    const outputParams = computed(() => selectedBlockDef.value?.parameters?.output ?? []);
 
     async function persist() {
       try {
@@ -175,14 +169,17 @@ export default {
       persist();
     }
 
+    function onParamsChange() {
+      bumpRefresh();
+      persist();
+    }
+
     return {
       categories,
       categoryNames,
       activeCategory,
       activeBlockList,
       selectedBlock,
-      inputParams,
-      outputParams,
       onCategorySelected,
       onMoveUpCategory,
       onMoveDownCategory,
@@ -194,6 +191,7 @@ export default {
       onDeleteBlock,
       onRenameCategory,
       onRenameBlock,
+      onParamsChange,
     };
   }
 }

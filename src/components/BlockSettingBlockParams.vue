@@ -1,132 +1,194 @@
 <template>
-  <div class="param-section">
-    <div class="param-section-header">Input</div>
-    <table class="param-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Data type</th>
-          <th>UI type</th>
-          <th>Initial value</th>
-          <th>Step</th>
-          <th>Min</th>
-          <th>Max</th>
-          <th>Comment</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="param in inputParams" :key="param.name">
-          <td>{{ param.name }}</td>
-          <td>{{ formatDataType(param.dataType) }}</td>
-          <td>{{ formatCtrlType(param.ctrlType) }}</td>
-          <td>{{ param.default ?? '' }}</td>
-          <td>{{ param.step ?? '' }}</td>
-          <td>{{ param.min ?? '' }}</td>
-          <td>{{ param.max ?? '' }}</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="add-row" @click.stop><span>+</span></div>
-  </div>
+  <div class="param-setting">
+    <div class="param-setting-header">Parameter Setting</div>
+    <div class="param-setting-body">
 
-  <div class="param-section">
-    <div class="param-section-header">Output</div>
-    <table class="param-table">
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Data type</th>
-          <th>Comment</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="param in outputParams" :key="param.name">
-          <td>{{ param.name }}</td>
-          <td>{{ formatDataType(param.dataType) }}</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-    <div class="add-row" @click.stop><span>+</span></div>
+      <div class="param-lists">
+        <SettingListItem
+          title="Input"
+          :items="inputParamNames"
+          :selected-item="selectedInputParam"
+          @update:selected-item="onSelectInput"
+          @move-up="onMoveUp('input', $event)"
+          @move-down="onMoveDown('input', $event)"
+          @add="onAdd('input', $event)"
+          @rename="(old, nw) => onRename('input', old, nw)"
+          @delete="onDelete('input', $event)"
+        />
+        <SettingListItem
+          title="Output"
+          :items="outputParamNames"
+          :selected-item="selectedOutputParam"
+          @update:selected-item="onSelectOutput"
+          @move-up="onMoveUp('output', $event)"
+          @move-down="onMoveDown('output', $event)"
+          @add="onAdd('output', $event)"
+          @rename="(old, nw) => onRename('output', old, nw)"
+          @delete="onDelete('output', $event)"
+        />
+      </div>
+
+      <SettingParamItem
+        v-if="selectedParam"
+        :param="selectedParam"
+        @update="onUpdateParam"
+      />
+
+    </div>
   </div>
 </template>
 
 <script>
+import { ref, computed, inject } from 'vue';
+import SettingListItem from './SettingListItem.vue';
+import SettingParamItem from './SettingParamItem.vue';
+
 export default {
   name: 'BlockSettingBlockParams',
+  components: { SettingListItem, SettingParamItem },
   props: {
-    inputParams: { type: Array, required: true },
-    outputParams: { type: Array, required: true },
+    blockName: { type: String, required: true },
   },
-  setup() {
-    function formatDataType(dt) {
-      return dt ? dt.charAt(0).toUpperCase() + dt.slice(1) : '';
+  emits: ['change'],
+  setup(props, { emit }) {
+    const entryDefinitionService = inject('entryDefinitionService');
+
+    const refreshTrigger = ref(0);
+    const bumpRefresh = () => { refreshTrigger.value++; };
+
+    const inputParams = computed(() => {
+      refreshTrigger.value;
+      return [...(entryDefinitionService.blockDefinitions[props.blockName]?.parameters?.input ?? [])];
+    });
+    const outputParams = computed(() => {
+      refreshTrigger.value;
+      return [...(entryDefinitionService.blockDefinitions[props.blockName]?.parameters?.output ?? [])];
+    });
+
+    const inputParamNames = computed(() => inputParams.value.map(p => p.name));
+    const outputParamNames = computed(() => outputParams.value.map(p => p.name));
+
+    const selectedPrmType = ref(null);
+    const selectedParamName = ref(null);
+
+    const selectedInputParam = computed(() =>
+      selectedPrmType.value === 'input' ? selectedParamName.value : null
+    );
+    const selectedOutputParam = computed(() =>
+      selectedPrmType.value === 'output' ? selectedParamName.value : null
+    );
+
+    const selectedParam = computed(() => {
+      if (!selectedPrmType.value || !selectedParamName.value) return null;
+      const list = selectedPrmType.value === 'input' ? inputParams.value : outputParams.value;
+      return list.find(p => p.name === selectedParamName.value) ?? null;
+    });
+
+    function onSelectInput(name) {
+      selectedPrmType.value = 'input';
+      selectedParamName.value = name;
+    }
+    function onSelectOutput(name) {
+      selectedPrmType.value = 'output';
+      selectedParamName.value = name;
     }
 
-    function formatCtrlType(ct) {
-      const map = {
-        'integer_spinner': 'Spin',
-        'real_spinner': 'Spin',
-        'check_box': 'Check',
-        'combo_box': 'Combo',
-        'text_box': 'Text',
-      };
-      return map[ct] ?? (ct || '');
+    function mutate(fn) {
+      fn();
+      bumpRefresh();
+      emit('change');
     }
 
-    return { formatDataType, formatCtrlType };
+    function onAdd(prmType, insertIndex) {
+      mutate(() => {
+        const name = entryDefinitionService.addParam(props.blockName, prmType, insertIndex);
+        if (name) {
+          selectedPrmType.value = prmType;
+          selectedParamName.value = name;
+        }
+      });
+    }
+
+    function onDelete(prmType, paramName) {
+      mutate(() => {
+        entryDefinitionService.removeParam(props.blockName, prmType, paramName);
+        if (selectedPrmType.value === prmType && selectedParamName.value === paramName) {
+          selectedPrmType.value = null;
+          selectedParamName.value = null;
+        }
+      });
+    }
+
+    function onMoveUp(prmType, paramName) {
+      mutate(() => entryDefinitionService.moveParamUp(props.blockName, prmType, paramName));
+    }
+
+    function onMoveDown(prmType, paramName) {
+      mutate(() => entryDefinitionService.moveParamDown(props.blockName, prmType, paramName));
+    }
+
+    function onRename(prmType, oldName, newName) {
+      mutate(() => {
+        if (entryDefinitionService.renameParam(props.blockName, prmType, oldName, newName)) {
+          if (selectedPrmType.value === prmType && selectedParamName.value === oldName) {
+            selectedParamName.value = newName.trim();
+          }
+        }
+      });
+    }
+
+    function onUpdateParam(field, value) {
+      mutate(() => entryDefinitionService.updateParam(
+        props.blockName, selectedPrmType.value, selectedParamName.value, { [field]: value }
+      ));
+    }
+
+    return {
+      inputParamNames,
+      outputParamNames,
+      selectedInputParam,
+      selectedOutputParam,
+      selectedParam,
+      onSelectInput,
+      onSelectOutput,
+      onAdd,
+      onDelete,
+      onMoveUp,
+      onMoveDown,
+      onRename,
+      onUpdateParam,
+    };
   }
 }
 </script>
 
 <style scoped>
-.param-section {
+.param-setting {
   border-top: var(--base-outline-border, 1px solid #ccc);
-  padding: 8px 0;
+  padding: 8px;
 }
 
-.param-section-header {
-  padding: 4px 12px 6px;
+.param-setting-header {
+  padding: 4px 4px 6px;
   font-size: 13px;
   font-weight: 600;
   color: #333;
 }
 
-.param-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
+.param-setting-body {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  align-items: flex-start;
 }
 
-.param-table th,
-.param-table td {
-  padding: 4px 8px;
-  border: var(--base-outline-border, 1px solid #ccc);
-  color: #333;
-  white-space: nowrap;
+.param-lists {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
 }
 
-.param-table th {
-  background-color: rgba(0, 0, 0, 0.04);
-  font-weight: 600;
-  text-align: left;
-}
 
-.param-table td {
-  background-color: #fff;
-}
-
-.add-row {
-  padding: 6px 12px;
-  font-size: 18px;
-  color: #888;
-  cursor: pointer;
-  user-select: none;
-}
-
-.add-row:hover {
-  color: #333;
-  background-color: rgba(0, 0, 0, 0.04);
-}
 </style>

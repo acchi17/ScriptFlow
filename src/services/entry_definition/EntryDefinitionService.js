@@ -80,7 +80,8 @@ export default class EntryDefinitionService {
                     min: param.min,
                     max: param.max,
                     step: param.step,
-                    items: param.items || []
+                    items: param.items || [],
+                    comment: param.comment || ''
                   };
                   if (param.prmType === 'input') {
                     blockDef.parameters.input.push(paramDef);
@@ -225,6 +226,76 @@ export default class EntryDefinitionService {
     if (idx < 0 || idx >= this.blockCategories.length - 1) return false;
     [this.blockCategories[idx], this.blockCategories[idx + 1]] =
       [this.blockCategories[idx + 1], this.blockCategories[idx]];
+    return true;
+  }
+
+  addParam(blockName, prmType, insertIndex = null) {
+    const def = this.blockDefinitions[blockName];
+    if (!def) return null;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    const base = 'NewParam';
+    let name = base;
+    let i = 1;
+    while (params.some(p => p.name === name)) { name = `${base}${i++}`; }
+    const newParam = { name, dataType: 'integer', ctrlType: 'integer_spinner', default: 0, min: -999, max: 999, step: 1, items: [], comment: '' };
+    if (insertIndex !== null) {
+      params.splice(insertIndex, 0, newParam);
+    } else {
+      params.push(newParam);
+    }
+    return name;
+  }
+
+  removeParam(blockName, prmType, paramName) {
+    const def = this.blockDefinitions[blockName];
+    if (!def) return false;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    const i = params.findIndex(p => p.name === paramName);
+    if (i < 0) return false;
+    params.splice(i, 1);
+    return true;
+  }
+
+  moveParamUp(blockName, prmType, paramName) {
+    const def = this.blockDefinitions[blockName];
+    if (!def) return false;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    const idx = params.findIndex(p => p.name === paramName);
+    if (idx <= 0) return false;
+    [params[idx - 1], params[idx]] = [params[idx], params[idx - 1]];
+    return true;
+  }
+
+  moveParamDown(blockName, prmType, paramName) {
+    const def = this.blockDefinitions[blockName];
+    if (!def) return false;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    const idx = params.findIndex(p => p.name === paramName);
+    if (idx < 0 || idx >= params.length - 1) return false;
+    [params[idx], params[idx + 1]] = [params[idx + 1], params[idx]];
+    return true;
+  }
+
+  renameParam(blockName, prmType, oldName, newName) {
+    const trimmed = newName?.trim();
+    if (!trimmed || trimmed === oldName) return false;
+    const def = this.blockDefinitions[blockName];
+    if (!def) return false;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    if (params.some(p => p.name === trimmed)) return false;
+    const param = params.find(p => p.name === oldName);
+    if (!param) return false;
+    param.name = trimmed;
+    return true;
+  }
+
+  updateParam(blockName, prmType, paramName, updates) {
+    const def = this.blockDefinitions[blockName];
+    if (!def) return false;
+    const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
+    const param = params.find(p => p.name === paramName);
+    if (!param) return false;
+    Object.assign(param, updates);
     return true;
   }
 
