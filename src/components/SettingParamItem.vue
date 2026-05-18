@@ -59,11 +59,10 @@ const dataTypeOptions = [
 ];
 
 const ctrlTypeOptions = [
-  { value: 'integer_spinner', label: 'Spin (Int)' },
-  { value: 'real_spinner',    label: 'Spin (Real)' },
-  { value: 'check_box',       label: 'Check' },
-  { value: 'combo_box',       label: 'Combo' },
-  { value: 'text_box',        label: 'Text' },
+  { value: 'spinner',   label: 'Spin' },
+  { value: 'check_box', label: 'Check' },
+  { value: 'combo_box', label: 'Combo' },
+  { value: 'text_box',  label: 'Text' },
 ];
 
 const numericFields = new Set(['default', 'step', 'min', 'max']);
@@ -75,10 +74,7 @@ export default {
   },
   emits: ['update'],
   setup(props, { emit }) {
-    const isSpinner = computed(() =>
-      props.param.ctrlType === 'integer_spinner' ||
-      props.param.ctrlType === 'real_spinner'
-    );
+    const isSpinner = computed(() => props.param.ctrlType === 'spinner');
 
     function onFieldChange(field, rawValue) {
       const value = numericFields.has(field) ? Number(rawValue) : rawValue;
