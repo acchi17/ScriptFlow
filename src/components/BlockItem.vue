@@ -57,7 +57,7 @@ export default {
       isDragging,
       onDragStart,
       onDragEnd,
-      setOnDragStartCallBack
+      setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
     const { getParentId } = useEntryOperation()
@@ -91,7 +91,7 @@ export default {
     }
     
     // Set callback for drag start
-    setOnDragStartCallBack((event) => {
+    setOnDragStartCallback((event) => {
       // Get parent ID
       const parentId = getParentId(props.entry.id)
 

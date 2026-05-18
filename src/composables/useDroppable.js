@@ -14,7 +14,7 @@ export function useDroppable() {
   const dragEnterCount = ref(0)
   
   // Callback function to execute on drop
-  let OnDropCallBack = null
+  let onDropCallback = null
 
   /**
    * Computed property that determines if the entry can accept drops
@@ -39,8 +39,8 @@ export function useDroppable() {
    * Set the callback for drop event
    * @param {Function} callback - Callback function
    */
-  const setOnDropCallBack = (callback) => {
-    OnDropCallBack = callback
+  const setOnDropCallback = (callback) => {
+    onDropCallback = callback
   }
 
   /**
@@ -84,15 +84,15 @@ export function useDroppable() {
     event.preventDefault()
     isDragEntering.value = false
     dragEnterCount.value = 0
-    if (OnDropCallBack) {
-      OnDropCallBack(event, index)
+    if (onDropCallback) {
+      onDropCallback(event, index)
     }
   }
 
   // Return public state and methods
   return {
     isDroppable,
-    setOnDropCallBack,
+    setOnDropCallback,
     onDragEnter,
     onDragLeave,
     onDragOver,

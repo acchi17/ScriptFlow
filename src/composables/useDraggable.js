@@ -11,14 +11,14 @@ export function useDraggable() {
   const isDragging = ref(false)
   
   // Custom callback for drag start event
-  let OnDragStartCallBack = null
+  let onDragStartCallback = null
   
   /**
    * Set the callback for drag start event
    * @param {Function} callback - Callback function to execute on drag start
    */
-  const setOnDragStartCallBack = (callback) => {
-    OnDragStartCallBack = callback
+  const setOnDragStartCallback = (callback) => {
+    onDragStartCallback = callback
   }
   
   /**
@@ -32,8 +32,8 @@ export function useDraggable() {
     }
     isDragging.value = true
     dragDropState.activateDragging()
-    if (OnDragStartCallBack) {
-      OnDragStartCallBack(event, dragDropState)
+    if (onDragStartCallback) {
+      onDragStartCallback(event, dragDropState)
     }
   }
   
@@ -48,7 +48,7 @@ export function useDraggable() {
   // Return public state and methods
   return {
     isDragging,
-    setOnDragStartCallBack,
+    setOnDragStartCallback,
     onDragStart,
     onDragEnd
   }

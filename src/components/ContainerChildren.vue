@@ -44,7 +44,7 @@ export default {
       isDroppable,
       onDrop,
       onDragOver,
-      setOnDropCallBack
+      setOnDropCallback
     } = useDroppable()
     const {
       addBlock,
@@ -57,7 +57,7 @@ export default {
     const children = computed(() => props.entry.children)
     const dropAllowed = isDroppable(props.entry.id)
 
-    setOnDropCallBack((event, index) => {
+    setOnDropCallback((event, index) => {
       const entryType = event.dataTransfer.getData('entryType')
       const entryName = event.dataTransfer.getData('entryName')
       const entryId   = event.dataTransfer.getData('entryId')

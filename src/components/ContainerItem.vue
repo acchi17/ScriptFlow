@@ -58,7 +58,7 @@ export default {
       isDragging,
       onDragStart,
       onDragEnd,
-      setOnDragStartCallBack
+      setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
 
@@ -96,7 +96,7 @@ export default {
     }
     
     // Set callback for drag start
-    setOnDragStartCallBack((event, dragDropState) => {
+    setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
       const allIds = getAllDescendantIds(props.entry.id)
       dragDropState.setDraggedIds(allIds)
