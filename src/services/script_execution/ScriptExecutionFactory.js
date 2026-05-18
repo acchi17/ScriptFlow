@@ -23,8 +23,8 @@ export default class ScriptExecutionFactory {
       case 'javascript':
         return new JavaScriptExecutionEngine(scriptsDir).initialize();
       
-        // case "python":
-        //   return new PythonExecutionEngine(scriptsDir).initialize();
+      // case 'python':
+      //   return new PythonExecutionEngine(scriptsDir).initialize();
       
       default:
         throw new Error(`Unsupported script engine name: ${engineName}`);

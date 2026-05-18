@@ -10,7 +10,7 @@
             {
               "name": "NumberA",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -21,7 +21,7 @@
             {
               "name": "NumberB",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -32,7 +32,7 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "items": [],
               "prmType": "output"
             }
@@ -45,7 +45,7 @@
             {
               "name": "NumberA",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -56,7 +56,7 @@
             {
               "name": "NumberB",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 1,
               "min": -999,
               "max": 999,
@@ -67,14 +67,14 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "items": [],
               "prmType": "output"
             },
             {
               "name": "Mod",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "items": [],
               "prmType": "output"
             }
@@ -87,7 +87,7 @@
             {
               "name": "NumberA",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -98,7 +98,7 @@
             {
               "name": "NumberB",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -109,7 +109,7 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "items": [],
               "prmType": "output"
             }
@@ -122,7 +122,7 @@
             {
               "name": "NumberA",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -133,7 +133,7 @@
             {
               "name": "NumberB",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "default": 0,
               "min": -999,
               "max": 999,
@@ -144,7 +144,7 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "integer_spinner",
+              "ctrlType": "spinner",
               "items": [],
               "prmType": "output"
             }
