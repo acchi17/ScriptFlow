@@ -142,7 +142,7 @@ export default class EntryParamManager {
    */
   setInputParam(entryId, paramName, value) {
     if (!entryId || !paramName) return;
-    if (!this._inputParamsMap.has(entryId)) return; 
+    if (!this._inputParamsMap.has(entryId)) return;
 
     const params = this._inputParamsMap.get(entryId);
     const type = params[paramName]?.type;
@@ -152,7 +152,7 @@ export default class EntryParamManager {
     }
     if (params[paramName]) {
       params[paramName].value = value;
-    } 
+    }
   }
 
   /**

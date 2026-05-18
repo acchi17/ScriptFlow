@@ -1,6 +1,6 @@
 import { inject } from 'vue'
-import Block from '../classes/Block'
-import Container from '../classes/Container'
+import Block from '../models/Block'
+import Container from '../models/Container'
 import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
