@@ -53,159 +53,90 @@
   </div>
 </template>
 
-<script setup>
+<script>
 import { computed } from 'vue';
 import { useEntryExecution } from '../composables/useEntryExecution';
 
-// Get functions from the composables
-const { getLogs, clearLogs } = useEntryExecution();
+export default {
+  name: 'ExecutionLogView',
+  setup() {
+    const { getLogs, clearLogs } = useEntryExecution();
+    const logs = getLogs();
 
-/**
- * Get CSS classes for entry row based on entry type
- * Handles null/undefined result safely through optional chaining
- * @param {Object} entry The entry to get classes for
- * @returns {Object} Object with CSS class names as keys
- */
-const entryRowClass = (entry) => {
-  return {
-    'entry-row': true,
-    'block-row': entry?.entryType === 'block',
-    'container-row': entry?.entryType === 'container'
-  };
-};
-
-// Get logs from the service
-const logs = getLogs();
-
-/**
- * Format timestamp to YYYY/MM/DD hh:mm:ss.fff format
- * @param {Date} timestamp The timestamp to format
- * @returns {string} Formatted timestamp string
- */
-function formatTimestamp(timestamp) {
-  if (!timestamp) return '';
-  const date = new Date(timestamp);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
-}
-
-/**
- * Format execution time to display with 3 decimal places
- * @param {number} time The execution time in milliseconds
- * @returns {string} Formatted time string with 3 decimal places (without 'ms' unit)
- */
-function formatExecutionTime(time) {
-  if (time === undefined || time === null) return '';
-  return time.toFixed(3);
-}
-
-/**
- * Format input parameters for display
- * @param {Object} inputParams Input parameters object
- * @returns {string} Formatted input parameters as key-value pairs
- */
-function formatInputParams(inputParams) {
-  if (!inputParams || Object.keys(inputParams).length === 0) return '';
-  return Object.entries(inputParams).map(([key, value]) => `${key}: ${value}`).join(', ');
-}
-
-/**
- * Format result into output parameters for display
- * Displays properties other than success, errorMessage
- * @param {Object} result Execution result object
- * @returns {string} Formatted output parameters as key-value pairs
- */
-function formatOutputParams(result) {
-  if (!result) return '';
-  
-  const excludedKeys = ['success', 'errorMessage'];
-  const entries = Object.entries(result).filter(([key]) => !excludedKeys.includes(key));
-  // When entries is empty, join() returns an empty string
-  return entries.map(([key, value]) => `${key}: ${value}`).join(', ');
-}
-
-/**
- * Recursively add child executions to the result array
- * Helper function to handle nested container executions
- * @param {string} parentId The parent execution ID
- * @param {Object} executionsTree The execution tree structure
- * @param {Array} result the array to add child executions to
- */
-function addChildExecutions(parentId, executionsTree, result) {
-  const children = executionsTree.executionsByParent[parentId] || [];
-  
-  children.forEach(childExecution => {
-    // Add the child execution entry
-    result.push({
-      type: 'entry',
-      key: `entry_${childExecution.executionId}`,
-      data: childExecution
+    const entryRowClass = (entry) => ({
+      'entry-row': true,
+      'block-row': entry?.entryType === 'block',
+      'container-row': entry?.entryType === 'container'
     });
-    
-    // If the child execution is a container, add its children recursively
-    if (childExecution.entryType === 'container') {
-      // Recursive call to handle nested containers
-      addChildExecutions(childExecution.executionId, executionsTree, result);
-      
-      // Container end marker
-      result.push({
-        type: 'container-end',
-        key: `end_${childExecution.executionId}`,
-        containerName: childExecution.entryName
+
+    function formatTimestamp(timestamp) {
+      if (!timestamp) return '';
+      const date = new Date(timestamp);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      const seconds = String(date.getSeconds()).padStart(2, '0');
+      const milliseconds = String(date.getMilliseconds()).padStart(3, '0');
+      return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+    }
+
+    function formatExecutionTime(time) {
+      if (time === undefined || time === null) return '';
+      return time.toFixed(3);
+    }
+
+    function formatInputParams(inputParams) {
+      if (!inputParams || Object.keys(inputParams).length === 0) return '';
+      return Object.entries(inputParams).map(([key, value]) => `${key}: ${value}`).join(', ');
+    }
+
+    function formatOutputParams(result) {
+      if (!result) return '';
+      const excludedKeys = ['success', 'errorMessage'];
+      const entries = Object.entries(result).filter(([key]) => !excludedKeys.includes(key));
+      return entries.map(([key, value]) => `${key}: ${value}`).join(', ');
+    }
+
+    function addChildExecutions(parentId, executionsTree, result) {
+      const children = executionsTree.executionsByParent[parentId] || [];
+      children.forEach(childExecution => {
+        result.push({ type: 'entry', key: `entry_${childExecution.executionId}`, data: childExecution });
+        if (childExecution.entryType === 'container') {
+          addChildExecutions(childExecution.executionId, executionsTree, result);
+          result.push({ type: 'container-end', key: `end_${childExecution.executionId}`, containerName: childExecution.entryName });
+        }
       });
     }
-  });
-}
 
-/**
- * Transform hierarchical execution tree into a flat array with special
- * marker entries to indicate container relationships (sandwich-style display)
- * @returns {Array} Flat array of entries with container grouping markers
- */
-const transformedLogs = computed(() => {
-  const result = [];
-  try {
-    const executionsTree = logs.value;
-    
-    // Process root executions in reverse order (newest first)
-    for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
-      const execution = executionsTree.rootExecutions[i];
-      const isRootContainer = execution.entryName === 'root-container';
-
-      if (!isRootContainer) {
-        result.push({
-          type: 'entry',
-          key: `entry_${execution.executionId}`,
-          data: execution
-        });
-      }
-
-      // If the execution is a container, add container grouping markers
-      if (execution.entryType === 'container') {
-        // Recursively add child executions
-        addChildExecutions(execution.executionId, executionsTree, result);
-
-        if (!isRootContainer) {
-          // Container end marker
-          result.push({
-            type: 'container-end',
-            key: `end_${execution.executionId}`,
-            containerName: execution.entryName
-          });
+    // Transforms the hierarchical execution tree into a flat sandwich-style array for table rendering
+    const transformedLogs = computed(() => {
+      const result = [];
+      try {
+        const executionsTree = logs.value;
+        for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
+          const execution = executionsTree.rootExecutions[i];
+          const isRootContainer = execution.entryName === 'root-container';
+          if (!isRootContainer) {
+            result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
+          }
+          if (execution.entryType === 'container') {
+            addChildExecutions(execution.executionId, executionsTree, result);
+            if (!isRootContainer) {
+              result.push({ type: 'container-end', key: `end_${execution.executionId}`, containerName: execution.entryName });
+            }
+          }
         }
+      } catch (error) {
+        console.error(`transformedLogs() failed: ${error.message}`);
       }
-    }
-  } catch (error) {
-    console.error(`transformedLogs() failed: ${error.message}`);
+      return result;
+    });
+
+    return { clearLogs, entryRowClass, formatTimestamp, formatExecutionTime, formatInputParams, formatOutputParams, transformedLogs };
   }
-  return result;
-});
+};
 </script>
 
 <style scoped>

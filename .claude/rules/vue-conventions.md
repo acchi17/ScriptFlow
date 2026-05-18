@@ -23,8 +23,6 @@ export default {
 }
 ```
 
-> `ExecutionLogView.vue` is a legacy exception that uses `<script setup>`. Migrate it to Options API when refactoring.
-
 ## Props
 
 Always use the verbose object syntax. Specify `type`, `required`, and `default` explicitly.
