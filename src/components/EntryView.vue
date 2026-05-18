@@ -14,7 +14,7 @@
               :param-type="paramDef.dataType"
             />
             <component
-              :is="paramComponents[paramDef.ctrlType]"
+              :is="resolveParamComponent(paramDef)"
               :min="paramDef.min"
               :max="paramDef.max"
               :step="paramDef.step"
@@ -33,7 +33,7 @@
               :param-type="paramDef.dataType"
             />
             <component
-              :is="paramComponents[paramDef.ctrlType]"
+              :is="resolveParamComponent(paramDef)"
               :min="paramDef.min"
               :max="paramDef.max"
               :step="paramDef.step"
@@ -62,9 +62,13 @@ export default {
   setup() {
     const { getSelectedEntryId } = useSystemState()
     const paramComponents = {
-      integer_spinner: IntSpinEdit,
-      real_spinner:    RealSpinEdit,
-      checkbox:        CheckEdit,
+      checkbox: CheckEdit,
+    }
+    const resolveParamComponent = (paramDef) => {
+      if (paramDef.ctrlType === 'spinner') {
+        return paramDef.dataType === 'real' ? RealSpinEdit : IntSpinEdit
+      }
+      return paramComponents[paramDef.ctrlType]
     }
     const entryManager = inject('entryManager')
     const entryParamManager = inject('entryParamManager')
@@ -120,7 +124,7 @@ export default {
       localInputParams,
       localOutputParams,
       onParamChange,
-      paramComponents,
+      resolveParamComponent,
     }
   }
 }
