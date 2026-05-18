@@ -33,6 +33,5 @@ pnpm-debug.log*
 !README.md
 !CLAUDE.md
 
-# Agents
-.claude
+# Git worktrees
 .worktrees/
