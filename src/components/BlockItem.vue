@@ -12,7 +12,7 @@
         <div class="entry-spacer"/>
         <div class="entry-text">{{ entry.name }}</div>
         <div class="entry-button entry-button-play"
-            :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
+             :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="block-header-tail">
           <div
