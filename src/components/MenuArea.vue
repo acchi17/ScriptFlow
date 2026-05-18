@@ -17,8 +17,8 @@ import { useDraggable } from '../composables/useDraggable'
 export default {
   name: 'MenuArea',
   setup() {
-    const { onDragStart: onDragStartContainer, onDragEnd: onDragEndContainer, setOnDragStartCallBack } = useDraggable()
-    setOnDragStartCallBack((event) => {
+    const { onDragStart: onDragStartContainer, onDragEnd: onDragEndContainer, setOnDragStartCallback } = useDraggable()
+    setOnDragStartCallback((event) => {
       event.dataTransfer.setData('entryType', 'container')
       event.dataTransfer.setData('entryName', 'Container')
       event.dataTransfer.setData('sourceId', undefined)

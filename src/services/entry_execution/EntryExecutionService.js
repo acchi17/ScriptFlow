@@ -105,8 +105,8 @@ export default class EntryExecutionService {
     try {
       // Execute child entries sequentially
       for (const childEntry of container.children) {
-          const childResult = await this.executeEntry(childEntry, traceId);
-          childResults.push(childResult);
+        const childResult = await this.executeEntry(childEntry, traceId);
+        childResults.push(childResult);
       }
       result.success = childResults.every(childResult => childResult.success === true);
     } catch (error) {

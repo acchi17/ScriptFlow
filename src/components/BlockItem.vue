@@ -12,7 +12,7 @@
         <div class="entry-spacer"/>
         <div class="entry-text">{{ entry.name }}</div>
         <div class="entry-button entry-button-play"
-            :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
+             :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="block-header-tail">
           <div
@@ -57,7 +57,7 @@ export default {
       isDragging,
       onDragStart,
       onDragEnd,
-      setOnDragStartCallBack
+      setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
     const { getParentId } = useEntryOperation()
@@ -91,7 +91,7 @@ export default {
     }
     
     // Set callback for drag start
-    setOnDragStartCallBack((event) => {
+    setOnDragStartCallback((event) => {
       // Get parent ID
       const parentId = getParentId(props.entry.id)
 

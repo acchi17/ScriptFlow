@@ -14,5 +14,11 @@ module.exports = {
     ecmaVersion: 'latest',
     sourceType: 'module'
   },
-  rules: {}
+  rules: {
+    'indent': ['error', 2, { SwitchCase: 1 }],
+    'quotes': ['error', 'single', { avoidEscape: true }],
+    'new-cap': ['error', { newIsCap: true, capIsNew: true }],
+    'vue/html-indent': ['error', 2],
+    'vue/html-quotes': ['error', 'double']
+  }
 }

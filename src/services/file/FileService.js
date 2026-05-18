@@ -16,17 +16,17 @@ export default class FileService {
    */
   async readXmlFile(filePath) {
     if (!filePath) {
-      throw new Error("File path must be specified");
+      throw new Error('File path must be specified');
     }
     
     try {
       const content = await this._readFile(filePath);
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(content, "text/xml");
+      const xmlDoc = parser.parseFromString(content, 'text/xml');
       
       // Check for XML parse error
-      if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
-        throw new Error("XML parse error: " + xmlDoc.body.textContent);
+      if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+        throw new Error('XML parse error: ' + xmlDoc.body.textContent);
       }
       
       return xmlDoc;
@@ -44,7 +44,7 @@ export default class FileService {
    */
   async readJsonFile(filePath) {
     if (!filePath) {
-      throw new Error("File path must be specified");
+      throw new Error('File path must be specified');
     }
     
     try {

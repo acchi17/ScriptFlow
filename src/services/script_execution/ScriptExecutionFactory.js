@@ -20,11 +20,11 @@ export default class ScriptExecutionFactory {
    */
   static createEngine(engineName = 'javascript', scriptsDir = '') {
     switch (engineName.toLowerCase()) {
-      case "javascript":
+      case 'javascript':
         return new JavaScriptExecutionEngine(scriptsDir).initialize();
       
-      // case "python":
-      //   return new PythonExecutionEngine(scriptsDir).initialize();
+        // case "python":
+        //   return new PythonExecutionEngine(scriptsDir).initialize();
       
       default:
         throw new Error(`Unsupported script engine name: ${engineName}`);

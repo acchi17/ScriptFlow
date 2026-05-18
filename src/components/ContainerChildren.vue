@@ -1,9 +1,9 @@
 <template>
   <div class="container-children">
     <div class="drop-area"
-        :class="{'is-active': dropAllowed}"
-        @drop="(event) => onDrop(event, 0)"
-        @dragover="onDragOver"
+         :class="{'is-active': dropAllowed}"
+         @drop="(event) => onDrop(event, 0)"
+         @dragover="onDragOver"
     />
     <template v-for="(child, index) in children" :key="child.id">
       <component
@@ -12,9 +12,9 @@
         @remove="removeChild"
       />
       <div class="drop-area"
-          :class="{'is-active': dropAllowed}"
-          @drop="(event) => onDrop(event, index + 1)"
-          @dragover="onDragOver"
+           :class="{'is-active': dropAllowed}"
+           @drop="(event) => onDrop(event, index + 1)"
+           @dragover="onDragOver"
       />
     </template>
   </div>
@@ -44,7 +44,7 @@ export default {
       isDroppable,
       onDrop,
       onDragOver,
-      setOnDropCallBack
+      setOnDropCallback
     } = useDroppable()
     const {
       addBlock,
@@ -57,7 +57,7 @@ export default {
     const children = computed(() => props.entry.children)
     const dropAllowed = isDroppable(props.entry.id)
 
-    setOnDropCallBack((event, index) => {
+    setOnDropCallback((event, index) => {
       const entryType = event.dataTransfer.getData('entryType')
       const entryName = event.dataTransfer.getData('entryName')
       const entryId   = event.dataTransfer.getData('entryId')

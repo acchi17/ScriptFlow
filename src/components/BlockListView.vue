@@ -34,7 +34,7 @@ export default {
     const {
       onDragStart: onDragStartBlock,
       onDragEnd: onDragEndBlock,
-      setOnDragStartCallBack: setBlockDragStartCallback
+      setOnDragStartCallback: setBlockDragStartCallback
     } = useDraggable();
 
     // Set custom callbacks for drag start events
