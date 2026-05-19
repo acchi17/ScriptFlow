@@ -2,7 +2,7 @@
   <div class="block-params-setting">
     <div class="param-names">
       <SettingListItem
-        :title="`Input — ${blockName}`"
+        :title="`Input Parameters — ${blockName}`"
         :items="inputParamNames"
         :selected-item="selectedInputParam"
         @update:selected-item="onSelectInput"
@@ -13,7 +13,7 @@
         @delete="onDelete('input', $event)"
       />
       <SettingListItem
-        :title="`Output — ${blockName}`"
+        :title="`Output Parameters — ${blockName}`"
         :items="outputParamNames"
         :selected-item="selectedOutputParam"
         @update:selected-item="onSelectOutput"
