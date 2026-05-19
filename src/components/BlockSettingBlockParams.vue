@@ -186,7 +186,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
+  flex: 0 0 50%;
   min-width: 0;
 }
 
