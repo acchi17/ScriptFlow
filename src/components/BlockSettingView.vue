@@ -62,10 +62,10 @@ export default {
 
 <style scoped>
 .block-setting-view {
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--left-side-bg-color, #fff);
-  height: 100%;
   overflow: hidden;
 }
 
@@ -73,11 +73,11 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: 4px 12px;
 }
 
 .title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: #333;
 }

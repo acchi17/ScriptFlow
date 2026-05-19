@@ -1,29 +1,27 @@
 <template>
   <div class="block-name-setting">
-    <div class="two-panel">
-      <SettingListItem
-        title="CATEGORY"
-        :items="categoryNames"
-        :selected-item="activeCategory"
-        @update:selected-item="onCategorySelected"
-        @move-up="onMoveUpCategory"
-        @move-down="onMoveDownCategory"
-        @add="onAddCategory"
-        @rename="onRenameCategory"
-        @delete="onDeleteCategory"
-      />
-      <SettingListItem
-        :title="`BLOCK — ${activeCategory}`"
-        :items="activeBlockList"
-        :selected-item="selectedBlock"
-        @update:selected-item="onBlockSelected"
-        @move-up="onMoveUpBlock"
-        @move-down="onMoveDownBlock"
-        @add="onAddBlock"
-        @rename="onRenameBlock"
-        @delete="onDeleteBlock"
-      />
-    </div>
+    <SettingListItem
+      title="Category"
+      :items="categoryNames"
+      :selected-item="activeCategory"
+      @update:selected-item="onCategorySelected"
+      @move-up="onMoveUpCategory"
+      @move-down="onMoveDownCategory"
+      @add="onAddCategory"
+      @rename="onRenameCategory"
+      @delete="onDeleteCategory"
+    />
+    <SettingListItem
+      :title="`Block — ${activeCategory}`"
+      :items="activeBlockList"
+      :selected-item="selectedBlock"
+      @update:selected-item="onBlockSelected"
+      @move-up="onMoveUpBlock"
+      @move-down="onMoveDownBlock"
+      @add="onAddBlock"
+      @rename="onRenameBlock"
+      @delete="onDeleteBlock"
+    />
   </div>
 </template>
 
@@ -181,7 +179,7 @@ export default {
 </script>
 
 <style scoped>
-.two-panel {
+.block-name-setting {
   display: flex;
   gap: 8px;
   padding: 8px;
