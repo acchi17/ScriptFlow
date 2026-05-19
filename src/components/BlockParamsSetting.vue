@@ -1,39 +1,35 @@
 <template>
-  <div class="param-setting">
-    <div class="param-setting-header">Parameter Setting</div>
-    <div class="param-setting-body">
-
-      <div class="param-lists">
-        <SettingListItem
-          title="Input"
-          :items="inputParamNames"
-          :selected-item="selectedInputParam"
-          @update:selected-item="onSelectInput"
-          @move-up="onMoveUp('input', $event)"
-          @move-down="onMoveDown('input', $event)"
-          @add="onAdd('input', $event)"
-          @rename="(old, nw) => onRename('input', old, nw)"
-          @delete="onDelete('input', $event)"
-        />
-        <SettingListItem
-          title="Output"
-          :items="outputParamNames"
-          :selected-item="selectedOutputParam"
-          @update:selected-item="onSelectOutput"
-          @move-up="onMoveUp('output', $event)"
-          @move-down="onMoveDown('output', $event)"
-          @add="onAdd('output', $event)"
-          @rename="(old, nw) => onRename('output', old, nw)"
-          @delete="onDelete('output', $event)"
-        />
-      </div>
-
+  <div class="block-params-setting">
+    <div class="param-names">
+      <SettingListItem
+        :title="`Input Parameters — ${blockName}`"
+        :items="inputParamNames"
+        :selected-item="selectedInputParam"
+        @update:selected-item="onSelectInput"
+        @move-up="onMoveUp('input', $event)"
+        @move-down="onMoveDown('input', $event)"
+        @add="onAdd('input', $event)"
+        @rename="(old, nw) => onRename('input', old, nw)"
+        @delete="onDelete('input', $event)"
+      />
+      <SettingListItem
+        :title="`Output Parameters — ${blockName}`"
+        :items="outputParamNames"
+        :selected-item="selectedOutputParam"
+        @update:selected-item="onSelectOutput"
+        @move-up="onMoveUp('output', $event)"
+        @move-down="onMoveDown('output', $event)"
+        @add="onAdd('output', $event)"
+        @rename="(old, nw) => onRename('output', old, nw)"
+        @delete="onDelete('output', $event)"
+      />
+    </div>
+    <div class="param-editor">
       <SettingParamItem
         v-if="selectedParam"
         :param="selectedParam"
         @update="onUpdateParam"
       />
-
     </div>
   </div>
 </template>
@@ -44,7 +40,7 @@ import SettingListItem from './SettingListItem.vue';
 import SettingParamItem from './SettingParamItem.vue';
 
 export default {
-  name: 'BlockSettingBlockParams',
+  name: 'BlockParamsSetting',
   components: { SettingListItem, SettingParamItem },
   props: {
     blockName: { type: String, required: true },
@@ -163,32 +159,23 @@ export default {
 </script>
 
 <style scoped>
-.param-setting {
-  border-top: var(--base-outline-border, 1px solid #ccc);
-  padding: 8px;
-}
-
-.param-setting-header {
-  padding: 4px 4px 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
-}
-
-.param-setting-body {
+.block-params-setting {
   display: flex;
-  flex-direction: row;
   gap: 8px;
-  align-items: flex-start;
+  padding: 8px;
+  border-top: var(--base-outline-border, 1px solid #ccc);
 }
 
-.param-lists {
+.param-names {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 0 0 50%;
+  flex: 1;
   min-width: 0;
 }
 
-
+.param-editor {
+  flex: 1;
+  min-width: 0;
+}
 </style>
