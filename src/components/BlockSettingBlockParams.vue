@@ -1,11 +1,10 @@
 <template>
   <div class="param-setting">
-    <div class="param-setting-header">Parameter Setting</div>
     <div class="param-setting-body">
 
       <div class="param-lists">
         <SettingListItem
-          title="Input"
+          :title="`Input — ${blockName}`"
           :items="inputParamNames"
           :selected-item="selectedInputParam"
           @update:selected-item="onSelectInput"
@@ -16,7 +15,7 @@
           @delete="onDelete('input', $event)"
         />
         <SettingListItem
-          title="Output"
+          :title="`Output — ${blockName}`"
           :items="outputParamNames"
           :selected-item="selectedOutputParam"
           @update:selected-item="onSelectOutput"
@@ -166,13 +165,6 @@ export default {
 .param-setting {
   border-top: var(--base-outline-border, 1px solid #ccc);
   padding: 8px;
-}
-
-.param-setting-header {
-  padding: 4px 4px 6px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #333;
 }
 
 .param-setting-body {
