@@ -43,7 +43,7 @@ import SettingListItem from './SettingListItem.vue';
 import SettingParamItem from './SettingParamItem.vue';
 
 export default {
-  name: 'BlockSettingBlockParams',
+  name: 'BlockParamsSetting',
   components: { SettingListItem, SettingParamItem },
   props: {
     blockName: { type: String, required: true },

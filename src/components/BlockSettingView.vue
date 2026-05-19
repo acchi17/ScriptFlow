@@ -29,7 +29,7 @@
           @delete="onDeleteBlock"
         />
       </div>
-      <BlockSettingBlockParams
+      <BlockParamsSetting
         v-if="selectedBlock"
         :block-name="selectedBlock"
         @change="onParamsChange"
@@ -41,11 +41,11 @@
 <script>
 import { inject, ref, computed } from 'vue';
 import SettingListItem from './SettingListItem.vue';
-import BlockSettingBlockParams from './BlockSettingBlockParams.vue';
+import BlockParamsSetting from './BlockParamsSetting.vue';
 
 export default {
   name: 'BlockSettingView',
-  components: { SettingListItem, BlockSettingBlockParams },
+  components: { SettingListItem, BlockParamsSetting },
   emits: ['close'],
 
   setup() {
