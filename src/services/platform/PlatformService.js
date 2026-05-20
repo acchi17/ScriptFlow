@@ -41,4 +41,11 @@ export default class PlatformService {
     }
     return []
   }
+
+  async saveScript(name, content) {
+    if (this.isElectron) {
+      return window.electronAPI.saveScript(name, content)
+    }
+    throw new Error('saveScript is not supported in the browser build')
+  }
 }

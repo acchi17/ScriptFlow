@@ -165,6 +165,12 @@ function registerIpcHandlers() {
     return fs.readFileSync(filePath, 'utf8')
   })
 
+  ipcMain.handle('scripts:save', async (_evt, scriptName, content) => {
+    const filePath = resolveScriptPath(scriptName)
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    fs.writeFileSync(filePath, content, 'utf8')
+  })
+
   ipcMain.handle('defs:read', async () => {
     const filePath = path.join(getUserSettingsDir(), DEFS_FILENAME)
     if (!fs.existsSync(filePath)) {

@@ -22,16 +22,18 @@
       @rename="onRenameBlock"
       @delete="onDeleteBlock"
     />
+    <BlockScriptSetting :block-name="selectedBlock" />
   </div>
 </template>
 
 <script>
 import { inject, ref, computed } from 'vue';
 import SettingListItem from './SettingListItem.vue';
+import BlockScriptSetting from './BlockScriptSetting.vue';
 
 export default {
   name: 'BlockNameSetting',
-  components: { SettingListItem },
+  components: { SettingListItem, BlockScriptSetting },
   emits: ['update:selected-block', 'change'],
 
   setup(props, { emit }) {
