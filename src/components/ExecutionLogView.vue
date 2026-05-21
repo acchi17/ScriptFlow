@@ -2,7 +2,7 @@
   <div class="execution-log-view">
     <!-- Header section with title and clear button -->
     <div class="log-header">
-      <h4>Execution Log</h4>
+      <h5>Execution Log</h5>
       <button @click="clearLogs" class="clear-button">Clear</button>
     </div>
     <!-- Empty state message -->

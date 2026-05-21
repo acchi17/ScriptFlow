@@ -8,11 +8,17 @@
         @dragend="onDragEndContainer"
       ></div>
     </div>
+    <button class="log-toggle-btn"
+            :title="showLog ? 'Hide Log' : 'Show Log'"
+            @click="toggleLog">
+      {{ showLog ? '»' : '«' }}
+    </button>
   </div>
 </template>
 
 <script>
 import { useDraggable } from '../composables/useDraggable'
+import { useSystemState } from '../composables/useSystemState'
 
 export default {
   name: 'MenuArea',
@@ -23,7 +29,8 @@ export default {
       event.dataTransfer.setData('entryName', 'Container')
       event.dataTransfer.setData('sourceId', undefined)
     })
-    return { onDragStartContainer, onDragEndContainer }
+    const { showLog, toggleLog } = useSystemState()
+    return { onDragStartContainer, onDragEndContainer, showLog, toggleLog }
   }
 }
 </script>
@@ -34,7 +41,8 @@ export default {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 12px;
+  padding: 0 4px;
+  gap: 8px;
   border-top: var(--base-outline-border);
   border-bottom: var(--base-outline-border);
   background-color: var(--main-bg-color);
@@ -53,5 +61,17 @@ export default {
 .rect-icon.lime {
   background-color: #8eec9a;
   border: 1px solid #7bc97b;
+}
+.log-toggle-btn {
+  width: 20px;
+  height: 20px;
+  font-size: 14px;
+  color: #555;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.log-toggle-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
 }
 </style>

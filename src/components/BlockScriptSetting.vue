@@ -1,6 +1,6 @@
 <template>
   <div class="panel">
-    <div class="panel-header">Block Script</div>
+    <div class="panel-header">Block Script file</div>
     <div class="panel-body">
       <div v-if="status === 'found'" class="status-found">
         <span class="status-icon">✓</span>
@@ -92,6 +92,7 @@ export default {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #777;
+  text-align: center;
   border-bottom: var(--base-outline-border, 1px solid #ccc);
   user-select: none;
 }

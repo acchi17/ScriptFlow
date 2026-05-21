@@ -1,12 +1,5 @@
 <template>
   <div class="main-area">
-    <div class="top-spacer">
-      <button class="log-toggle-btn"
-              :title="showLog ? 'Hide Log' : 'Show Log'"
-              @click="showLog = !showLog">
-        {{ showLog ? '»' : '«' }}
-      </button>
-    </div>
     <div class="main-content" :class="{ 'executing': isExecuting }">
       <div class="tab-bar">
         <div class="tab active">
@@ -33,13 +26,8 @@ export default {
     ExecutionLogView
   },
   setup() {
-    const { isExecuting } = useSystemState()
-    return { isExecuting }
-  },
-  data() {
-    return {
-      showLog: false
-    }
+    const { isExecuting, showLog } = useSystemState()
+    return { isExecuting, showLog }
   }
 }
 </script>
@@ -52,16 +40,9 @@ export default {
   background-color: var(--main-bg-color);
 }
 
-.top-spacer {
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
 .main-content {
   position: relative;
-  height: calc(100% - 24px);
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
@@ -109,20 +90,6 @@ export default {
 
 .tab-content {
   height: calc(100% - var(--main-tab-bar-height));
-}
-
-.log-toggle-btn {
-  width: 20px;
-  height: 20px;
-  font-size: 14px;
-  color: #555;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.log-toggle-btn:hover {
-  background-color: rgba(0, 0, 0, 0.1);
 }
 
 .log-popup {
