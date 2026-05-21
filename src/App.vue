@@ -8,12 +8,12 @@
       <div class="center">
         <MainArea />
       </div>
-      <BlockSettingView
-        v-if="showBlockSetting"
-        class="block-setting-overlay"
-        @close="showBlockSetting = false"
-      />
     </div>
+    <BlockSettingView
+      v-if="showBlockSetting"
+      class="block-setting-overlay"
+      @close="showBlockSetting = false"
+    />
   </div>
 </template>
 
@@ -82,6 +82,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
 }
 
 /* Row below the menu bar */
