@@ -42,10 +42,6 @@ export default {
     const refreshTrigger = ref(0);
     const bumpRefresh = () => { refreshTrigger.value++; };
 
-    const categories = computed(() => {
-      refreshTrigger.value;
-      return [...entryDefinitionService.blockCategories];
-    });
     const activeCategory = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
     );
@@ -55,7 +51,7 @@ export default {
 
     const categoryNames = computed(() => {
       refreshTrigger.value;
-      return categories.value.map(c => c.name);
+      return entryDefinitionService.blockCategories.map(c => c.name);
     });
 
     const activeBlockList = computed(() => {
