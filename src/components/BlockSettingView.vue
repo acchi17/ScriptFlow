@@ -5,11 +5,11 @@
       <button class="close-btn" @click="$emit('close')"></button>
     </div>
     <div class="body">
-      <BlockNameSetting
+      <BlockNameSetting :style="{ flex: '0 0 30%' }"
         @update:selected-block="selectedBlock = $event"
         @change="onNamesChange"
       />
-      <BlockParamsSetting
+      <BlockParamsSetting :style="{ flex: '0 0 70%' }"
         v-if="selectedBlock"
         :block-name="selectedBlock"
         @change="onParamsChange"
@@ -98,6 +98,7 @@ export default {
 
 .body {
   flex: 1;
+  display: flex;
   overflow-y: auto;
 }
 </style>

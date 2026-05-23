@@ -1,6 +1,6 @@
 <template>
   <div class="block-name-setting">
-    <SettingListItem
+    <SettingListItem :style="{ flex: 2.5 }"
       title="Category"
       :items="categoryNames"
       :selected-item="activeCategory"
@@ -11,7 +11,7 @@
       @rename="onRenameCategory"
       @delete="onDeleteCategory"
     />
-    <SettingListItem
+    <SettingListItem :style="{ flex: 5.5 }"
       :title="`Block — ${activeCategory}`"
       :items="activeBlockList"
       :selected-item="selectedBlock"
@@ -22,7 +22,7 @@
       @rename="onRenameBlock"
       @delete="onDeleteBlock"
     />
-    <BlockScriptSetting :block-name="selectedBlock" />
+    <BlockScriptSetting :style="{ flex: 2 }" :block-name="selectedBlock" />
   </div>
 </template>
 
@@ -183,6 +183,7 @@ export default {
 <style scoped>
 .block-name-setting {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   padding: 8px;
 }

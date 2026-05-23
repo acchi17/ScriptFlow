@@ -1,7 +1,7 @@
 <template>
   <div class="block-params-setting">
-    <div class="param-names">
-      <SettingListItem
+    <div class="param-names" :style="{ flex: '0 0 40%' }">
+      <SettingListItem :style="{ flex: 5 }"
         :title="`Input Parameters — ${blockName}`"
         :items="inputParamNames"
         :selected-item="selectedInputParam"
@@ -12,7 +12,7 @@
         @rename="(old, nw) => onRename('input', old, nw)"
         @delete="onDelete('input', $event)"
       />
-      <SettingListItem
+      <SettingListItem :style="{ flex: 5 }"
         :title="`Output Parameters — ${blockName}`"
         :items="outputParamNames"
         :selected-item="selectedOutputParam"
@@ -24,7 +24,7 @@
         @delete="onDelete('output', $event)"
       />
     </div>
-    <div class="param-editor">
+    <div class="param-editor" :style="{ flex: '0 0 60%' }">
       <SettingParamItem
         v-if="selectedParam"
         :param="selectedParam"
@@ -163,19 +163,11 @@ export default {
   display: flex;
   gap: 8px;
   padding: 8px;
-  border-top: var(--base-outline-border, 1px solid #ccc);
 }
 
 .param-names {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.param-editor {
-  flex: 1;
-  min-width: 0;
 }
 </style>

@@ -88,14 +88,12 @@ export default {
 
 <style scoped>
 .param-detail {
-  flex: 1;
-  min-width: 0;
-  border: var(--base-outline-border, 1px solid #ccc);
-  border-radius: 4px;
-  padding: 8px 12px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  border: var(--base-outline-border);
 }
 
 .detail-row {
