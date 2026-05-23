@@ -3,7 +3,7 @@
     <SettingListItem :style="{ flex: 2.5 }"
       title="Category"
       :items="categoryNames"
-      :selected-item="activeCategory"
+      :selected-item="selectedCategoryName"
       @update:selected-item="onCategorySelected"
       @move-up="onMoveUpCategory"
       @move-down="onMoveDownCategory"
@@ -12,9 +12,9 @@
       @delete="onDeleteCategory"
     />
     <SettingListItem :style="{ flex: 5.5 }"
-      :title="`Block — ${activeCategory}`"
-      :items="activeBlockList"
-      :selected-item="selectedBlock"
+      :title="`Block — ${selectedCategoryName}`"
+      :items="activeBlockNames"
+      :selected-item="selectedBlockName"
       @update:selected-item="onBlockSelected"
       @move-up="onMoveUpBlock"
       @move-down="onMoveDownBlock"
@@ -22,7 +22,7 @@
       @rename="onRenameBlock"
       @delete="onDeleteBlock"
     />
-    <BlockScriptSetting :style="{ flex: 2 }" :block-name="selectedBlock" />
+    <BlockScriptSetting :style="{ flex: 2 }" :block-name="selectedBlockName" />
   </div>
 </template>
 
@@ -42,10 +42,10 @@ export default {
     const refreshTrigger = ref(0);
     const bumpRefresh = () => { refreshTrigger.value++; };
 
-    const activeCategory = ref(
+    const selectedCategoryName = ref(
       entryDefinitionService.blockCategories[0]?.name ?? ''
     );
-    const selectedBlock = ref(
+    const selectedBlockName = ref(
       entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
     );
 
@@ -54,16 +54,16 @@ export default {
       return entryDefinitionService.blockCategories.map(c => c.name);
     });
 
-    const activeBlockList = computed(() => {
+    const activeBlockNames = computed(() => {
       refreshTrigger.value;
       const cat = entryDefinitionService.blockCategories.find(
-        c => c.name === activeCategory.value
+        c => c.name === selectedCategoryName.value
       );
       return cat ? [...cat.blocks] : [];
     });
 
     function emitSelection() {
-      emit('update:selected-block', selectedBlock.value);
+      emit('update:selected-block', selectedBlockName.value);
     }
 
     function mutate(fn) {
@@ -73,30 +73,30 @@ export default {
     }
 
     function onCategorySelected(catName) {
-      activeCategory.value = catName;
-      selectedBlock.value = activeBlockList.value[0] ?? null;
+      selectedCategoryName.value = catName;
+      selectedBlockName.value = activeBlockNames.value[0] ?? null;
       emitSelection();
     }
 
     function onBlockSelected(blockName) {
-      selectedBlock.value = blockName;
+      selectedBlockName.value = blockName;
       emitSelection();
     }
 
-    function onMoveUpCategory() {
-      mutate(() => entryDefinitionService.moveCategoryUp(activeCategory.value));
+    function onMoveUpCategory(catName) {
+      mutate(() => entryDefinitionService.moveCategoryUp(catName));
     }
 
-    function onMoveDownCategory() {
-      mutate(() => entryDefinitionService.moveCategoryDown(activeCategory.value));
+    function onMoveDownCategory(catName) {
+      mutate(() => entryDefinitionService.moveCategoryDown(catName));
     }
 
     function onAddCategory(insertIndex) {
       mutate(() => {
         const newName = entryDefinitionService.addCategory(null, insertIndex);
         if (newName) {
-          activeCategory.value = newName;
-          selectedBlock.value = null;
+          selectedCategoryName.value = newName;
+          selectedBlockName.value = null;
           emitSelection();
         }
       });
@@ -105,19 +105,19 @@ export default {
     function onRenameCategory(oldName, newName) {
       mutate(() => {
         if (entryDefinitionService.renameCategory(oldName, newName)) {
-          activeCategory.value = newName.trim();
+          selectedCategoryName.value = newName.trim();
         }
       });
     }
 
-    function onDeleteCategory() {
-      const idx = categoryNames.value.indexOf(activeCategory.value);
-      mutate(() => entryDefinitionService.removeCategory(activeCategory.value));
+    function onDeleteCategory(catName) {
+      const idx = categoryNames.value.indexOf(catName);
+      mutate(() => entryDefinitionService.removeCategory(catName));
       const newList = categoryNames.value;
-      activeCategory.value = newList.length === 0 ? ''
+      selectedCategoryName.value = newList.length === 0 ? ''
         : idx > 0 ? newList[idx - 1]
         : newList[0];
-      selectedBlock.value = null;
+      selectedBlockName.value = null;
       emitSelection();
     }
 
@@ -131,9 +131,9 @@ export default {
 
     function onAddBlock(insertIndex) {
       mutate(() => {
-        const newName = entryDefinitionService.addBlock(activeCategory.value, null, insertIndex);
+        const newName = entryDefinitionService.addBlock(selectedCategoryName.value, null, insertIndex);
         if (newName) {
-          selectedBlock.value = newName;
+          selectedBlockName.value = newName;
           emitSelection();
         }
       });
@@ -142,17 +142,17 @@ export default {
     function onRenameBlock(oldName, newName) {
       mutate(() => {
         if (entryDefinitionService.renameBlock(oldName, newName)) {
-          selectedBlock.value = newName.trim();
+          selectedBlockName.value = newName.trim();
           emitSelection();
         }
       });
     }
 
     function onDeleteBlock(blockName) {
-      const idx = activeBlockList.value.indexOf(blockName);
+      const idx = activeBlockNames.value.indexOf(blockName);
       mutate(() => entryDefinitionService.removeBlock(blockName));
-      const newList = activeBlockList.value;
-      selectedBlock.value = newList.length === 0 ? null
+      const newList = activeBlockNames.value;
+      selectedBlockName.value = newList.length === 0 ? null
         : idx > 0 ? newList[idx - 1]
         : newList[0];
       emitSelection();
@@ -160,9 +160,9 @@ export default {
 
     return {
       categoryNames,
-      activeCategory,
-      activeBlockList,
-      selectedBlock,
+      selectedCategoryName,
+      activeBlockNames,
+      selectedBlockName,
       onCategorySelected,
       onBlockSelected,
       onMoveUpCategory,
