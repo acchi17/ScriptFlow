@@ -162,17 +162,8 @@
               "prmType": "output"
             }
           ]
-        },
-        {
-          "name": "NewBlock",
-          "command": "NewBlock",
-          "parameters": []
         }
       ]
-    },
-    {
-      "name": "NewCategory",
-      "blocks": []
     }
   ]
 }

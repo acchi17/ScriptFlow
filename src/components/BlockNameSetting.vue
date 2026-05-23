@@ -115,12 +115,14 @@ export default {
     }
 
     function onDeleteCategory() {
-      mutate(() => {
-        entryDefinitionService.removeCategory(activeCategory.value);
-        activeCategory.value = entryDefinitionService.blockCategories[0]?.name ?? '';
-        selectedBlock.value = null;
-        emitSelection();
-      });
+      const idx = categoryNames.value.indexOf(activeCategory.value);
+      mutate(() => entryDefinitionService.removeCategory(activeCategory.value));
+      const newList = categoryNames.value;
+      activeCategory.value = newList.length === 0 ? ''
+        : idx > 0 ? newList[idx - 1]
+        : newList[0];
+      selectedBlock.value = null;
+      emitSelection();
     }
 
     function onMoveUpBlock(blockName) {
@@ -151,11 +153,13 @@ export default {
     }
 
     function onDeleteBlock(blockName) {
-      mutate(() => {
-        entryDefinitionService.removeBlock(blockName);
-        selectedBlock.value = null;
-        emitSelection();
-      });
+      const idx = activeBlockList.value.indexOf(blockName);
+      mutate(() => entryDefinitionService.removeBlock(blockName));
+      const newList = activeBlockList.value;
+      selectedBlock.value = newList.length === 0 ? null
+        : idx > 0 ? newList[idx - 1]
+        : newList[0];
+      emitSelection();
     }
 
     return {
