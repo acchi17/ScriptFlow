@@ -5,11 +5,11 @@
       <button class="close-btn" @click="$emit('close')"></button>
     </div>
     <div class="body">
-      <BlockNameSetting
+      <BlockNameSetting :style="{ flex: '0 0 30%' }"
         @update:selected-block="selectedBlock = $event"
         @change="onNamesChange"
       />
-      <BlockParamsSetting
+      <BlockParamsSetting :style="{ flex: 1 }"
         v-if="selectedBlock"
         :block-name="selectedBlock"
         @change="onParamsChange"
@@ -66,7 +66,6 @@ export default {
   display: flex;
   flex-direction: column;
   background-color: var(--left-side-bg-color, #fff);
-  overflow: hidden;
 }
 
 .header {
@@ -98,6 +97,9 @@ export default {
 
 .body {
   flex: 1;
-  overflow-y: auto;
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
 }
 </style>

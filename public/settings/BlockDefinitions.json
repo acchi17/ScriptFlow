@@ -42,11 +42,6 @@
           ]
         },
         {
-          "name": "NewBlock",
-          "command": "NewBlock",
-          "parameters": []
-        },
-        {
           "name": "DivMod",
           "command": "DivMod",
           "parameters": [

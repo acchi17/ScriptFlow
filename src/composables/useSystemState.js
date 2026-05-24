@@ -7,6 +7,9 @@ const isDragging = ref(false)
 // execution lock
 const isExecuting = ref(false)
 
+// log visibility
+const showLog = ref(false)
+
 // entry selection
 const selectedEntryId = ref(null)
 
@@ -26,6 +29,9 @@ export function useSystemState() {
 
   // --- execution lock ---
   const setExecuting = (value) => { isExecuting.value = value }
+
+  // --- log visibility ---
+  const toggleLog = () => { showLog.value = !showLog.value }
 
   // --- selection ---
   const isSelected = (entryId) => computed(() => selectedEntryId.value === entryId)
@@ -104,6 +110,9 @@ export function useSystemState() {
     // execution
     isExecuting: readonly(isExecuting),
     setExecuting,
+    // log
+    showLog: readonly(showLog),
+    toggleLog,
     // selection
     isSelected,
     getSelectedEntryId,

@@ -1,6 +1,6 @@
 <template>
   <div class="panel">
-    <div class="panel-header">Block Script</div>
+    <div class="panel-header">Block Script file</div>
     <div class="panel-body">
       <div v-if="status === 'found'" class="status-found">
         <span class="status-icon">✓</span>
@@ -78,10 +78,10 @@ export default {
 
 <style scoped>
 .panel {
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  /* flex-shrink: 0; */
   border: var(--base-outline-border);
   border-radius: 4px;
 }
@@ -92,8 +92,9 @@ export default {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #777;
-  border-bottom: var(--base-outline-border, 1px solid #ccc);
+  border-bottom: var(--base-outline-border);
   user-select: none;
+  white-space: nowrap;
 }
 
 .panel-body {

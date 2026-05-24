@@ -99,10 +99,9 @@ export default {
 .panel {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-width: 0;
   border: var(--base-outline-border);
   border-radius: 4px;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -111,15 +110,15 @@ export default {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #777;
-  /* background-color: var(--left-side-bg-color, #f5f5f5); */
-  border-bottom: var(--base-outline-border, 1px solid #ccc);
+  border-bottom: var(--base-outline-border);
   user-select: none;
+  white-space: nowrap;
 }
 
 .panel-body {
-  height: 160px;
-  overflow-y: auto;
+  flex-grow: 1;
   padding-bottom: 4px;
+  overflow-y: auto;
 }
 
 .panel-row {

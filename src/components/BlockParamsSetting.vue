@@ -1,47 +1,36 @@
 <template>
   <div class="block-params-setting">
-    <div class="param-names">
-      <SettingListItem
-        :title="`Input Parameters — ${blockName}`"
-        :items="inputParamNames"
-        :selected-item="selectedInputParam"
-        @update:selected-item="onSelectInput"
-        @move-up="onMoveUp('input', $event)"
-        @move-down="onMoveDown('input', $event)"
-        @add="onAdd('input', $event)"
-        @rename="(old, nw) => onRename('input', old, nw)"
-        @delete="onDelete('input', $event)"
-      />
-      <SettingListItem
-        :title="`Output Parameters — ${blockName}`"
-        :items="outputParamNames"
-        :selected-item="selectedOutputParam"
-        @update:selected-item="onSelectOutput"
-        @move-up="onMoveUp('output', $event)"
-        @move-down="onMoveDown('output', $event)"
-        @add="onAdd('output', $event)"
-        @rename="(old, nw) => onRename('output', old, nw)"
-        @delete="onDelete('output', $event)"
-      />
-    </div>
-    <div class="param-editor">
-      <SettingParamItem
-        v-if="selectedParam"
-        :param="selectedParam"
-        @update="onUpdateParam"
-      />
-    </div>
+    <BlockParamNameSetting :style="{ flex: 1 }"
+      :block-name="blockName"
+      :input-param-names="inputParamNames"
+      :output-param-names="outputParamNames"
+      :selected-input-name="selectedInputName"
+      :selected-output-name="selectedOutputName"
+      @update:selectedInputName="onSelectInput"
+      @update:selectedOutputName="onSelectOutput"
+      @move-up="onMoveUp"
+      @move-down="onMoveDown"
+      @add="onAdd"
+      @rename="onRename"
+      @delete="onDelete"
+    />
+    <BlockParamDetailSetting :style="{ flex: 1 }"
+      :selected-input-param-def="selectedInputParamDef"
+      :selected-output-param-def="selectedOutputParamDef"
+      @update-input="onUpdateInputParam"
+      @update-output="onUpdateOutputParam"
+    />
   </div>
 </template>
 
 <script>
 import { ref, computed, inject } from 'vue';
-import SettingListItem from './SettingListItem.vue';
-import SettingParamItem from './SettingParamItem.vue';
+import BlockParamNameSetting from './BlockParamNameSetting.vue';
+import BlockParamDetailSetting from './BlockParamDetailSetting.vue';
 
 export default {
   name: 'BlockParamsSetting',
-  components: { SettingListItem, SettingParamItem },
+  components: { BlockParamNameSetting, BlockParamDetailSetting },
   props: {
     blockName: { type: String, required: true },
   },
@@ -64,30 +53,22 @@ export default {
     const inputParamNames = computed(() => inputParams.value.map(p => p.name));
     const outputParamNames = computed(() => outputParams.value.map(p => p.name));
 
-    const selectedPrmType = ref(null);
-    const selectedParamName = ref(null);
+    const selectedInputName = ref(null);
+    const selectedOutputName = ref(null);
 
-    const selectedInputParam = computed(() =>
-      selectedPrmType.value === 'input' ? selectedParamName.value : null
+    const selectedInputParamDef = computed(() =>
+      selectedInputName.value
+        ? inputParams.value.find(p => p.name === selectedInputName.value) ?? null
+        : null
     );
-    const selectedOutputParam = computed(() =>
-      selectedPrmType.value === 'output' ? selectedParamName.value : null
+    const selectedOutputParamDef = computed(() =>
+      selectedOutputName.value
+        ? outputParams.value.find(p => p.name === selectedOutputName.value) ?? null
+        : null
     );
 
-    const selectedParam = computed(() => {
-      if (!selectedPrmType.value || !selectedParamName.value) return null;
-      const list = selectedPrmType.value === 'input' ? inputParams.value : outputParams.value;
-      return list.find(p => p.name === selectedParamName.value) ?? null;
-    });
-
-    function onSelectInput(name) {
-      selectedPrmType.value = 'input';
-      selectedParamName.value = name;
-    }
-    function onSelectOutput(name) {
-      selectedPrmType.value = 'output';
-      selectedParamName.value = name;
-    }
+    function onSelectInput(name) { selectedInputName.value = name; }
+    function onSelectOutput(name) { selectedOutputName.value = name; }
 
     function mutate(fn) {
       fn();
@@ -99,8 +80,8 @@ export default {
       mutate(() => {
         const name = entryDefinitionService.addParam(props.blockName, prmType, insertIndex);
         if (name) {
-          selectedPrmType.value = prmType;
-          selectedParamName.value = name;
+          if (prmType === 'input') selectedInputName.value = name;
+          else selectedOutputName.value = name;
         }
       });
     }
@@ -108,10 +89,8 @@ export default {
     function onDelete(prmType, paramName) {
       mutate(() => {
         entryDefinitionService.removeParam(props.blockName, prmType, paramName);
-        if (selectedPrmType.value === prmType && selectedParamName.value === paramName) {
-          selectedPrmType.value = null;
-          selectedParamName.value = null;
-        }
+        if (prmType === 'input' && selectedInputName.value === paramName) selectedInputName.value = null;
+        if (prmType === 'output' && selectedOutputName.value === paramName) selectedOutputName.value = null;
       });
     }
 
@@ -126,25 +105,31 @@ export default {
     function onRename(prmType, oldName, newName) {
       mutate(() => {
         if (entryDefinitionService.renameParam(props.blockName, prmType, oldName, newName)) {
-          if (selectedPrmType.value === prmType && selectedParamName.value === oldName) {
-            selectedParamName.value = newName.trim();
-          }
+          if (prmType === 'input' && selectedInputName.value === oldName) selectedInputName.value = newName.trim();
+          if (prmType === 'output' && selectedOutputName.value === oldName) selectedOutputName.value = newName.trim();
         }
       });
     }
 
-    function onUpdateParam(field, value) {
+    function onUpdateInputParam(field, value) {
       mutate(() => entryDefinitionService.updateParam(
-        props.blockName, selectedPrmType.value, selectedParamName.value, { [field]: value }
+        props.blockName, 'input', selectedInputName.value, { [field]: value }
+      ));
+    }
+
+    function onUpdateOutputParam(field, value) {
+      mutate(() => entryDefinitionService.updateParam(
+        props.blockName, 'output', selectedOutputName.value, { [field]: value }
       ));
     }
 
     return {
       inputParamNames,
       outputParamNames,
-      selectedInputParam,
-      selectedOutputParam,
-      selectedParam,
+      selectedInputName,
+      selectedOutputName,
+      selectedInputParamDef,
+      selectedOutputParamDef,
       onSelectInput,
       onSelectOutput,
       onAdd,
@@ -152,7 +137,8 @@ export default {
       onMoveUp,
       onMoveDown,
       onRename,
-      onUpdateParam,
+      onUpdateInputParam,
+      onUpdateOutputParam,
     };
   }
 }
@@ -160,22 +146,8 @@ export default {
 
 <style scoped>
 .block-params-setting {
+  min-height: 0;
   display: flex;
   gap: 8px;
-  padding: 8px;
-  border-top: var(--base-outline-border, 1px solid #ccc);
-}
-
-.param-names {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex: 1;
-  min-width: 0;
-}
-
-.param-editor {
-  flex: 1;
-  min-width: 0;
 }
 </style>
