@@ -9,7 +9,7 @@
         @update:selected-block="selectedBlock = $event"
         @change="onNamesChange"
       />
-      <BlockParamsSetting :style="{ flex: 1 }"
+      <BlockParamSetting :style="{ flex: 1 }"
         v-if="selectedBlock"
         :block-name="selectedBlock"
         @change="onParamsChange"
@@ -21,11 +21,11 @@
 <script>
 import { inject, ref } from 'vue';
 import BlockNameSetting from './BlockNameSetting.vue';
-import BlockParamsSetting from './BlockParamsSetting.vue';
+import BlockParamSetting from './BlockParamSetting.vue';
 
 export default {
   name: 'BlockSettingView',
-  components: { BlockNameSetting, BlockParamsSetting },
+  components: { BlockNameSetting, BlockParamSetting },
   emits: ['close'],
 
   setup() {

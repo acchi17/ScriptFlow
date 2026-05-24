@@ -29,7 +29,7 @@ import BlockParamNameSetting from './BlockParamNameSetting.vue';
 import BlockParamDetailSetting from './BlockParamDetailSetting.vue';
 
 export default {
-  name: 'BlockParamsSetting',
+  name: 'BlockParamSetting',
   components: { BlockParamNameSetting, BlockParamDetailSetting },
   props: {
     blockName: { type: String, required: true },
