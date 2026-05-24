@@ -1,7 +1,7 @@
 <template>
   <div class="block-name-setting">
     <SettingListItem :style="{ flex: 2.5 }"
-      title="Category"
+      title="Categories"
       :items="categoryNames"
       :selected-item="selectedCategoryName"
       @update:selected-item="onCategorySelected"
@@ -12,7 +12,7 @@
       @delete="onDeleteCategory"
     />
     <SettingListItem :style="{ flex: 5.5 }"
-      :title="`Block — ${selectedCategoryName}`"
+      :title="`Blocks — ${selectedCategoryName}`"
       :items="activeBlockNames"
       :selected-item="selectedBlockName"
       @update:selected-item="onBlockSelected"

@@ -92,9 +92,9 @@ export default {
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #777;
-  text-align: center;
-  border-bottom: var(--base-outline-border, 1px solid #ccc);
+  border-bottom: var(--base-outline-border);
   user-select: none;
+  white-space: nowrap;
 }
 
 .panel-body {

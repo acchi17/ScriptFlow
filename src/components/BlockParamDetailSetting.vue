@@ -3,6 +3,7 @@
     <div class="detail-item">
       <SettingParamItem :style="{ flex: 1 }"
         v-if="selectedInputParamDef"
+        :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
         :param="selectedInputParamDef"
         @update="(field, value) => $emit('update-input', field, value)"
       />
@@ -10,6 +11,7 @@
     <div class="detail-item">
       <SettingParamItem :style="{ flex: 1 }"
         v-if="selectedOutputParamDef"
+        :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
         :param="selectedOutputParamDef"
         @update="(field, value) => $emit('update-output', field, value)"
       />

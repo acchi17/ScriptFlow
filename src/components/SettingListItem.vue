@@ -97,7 +97,6 @@ export default {
 
 <style scoped>
 .panel {
-  /* min-height: 0; */
   display: flex;
   flex-direction: column;
   border: var(--base-outline-border);
