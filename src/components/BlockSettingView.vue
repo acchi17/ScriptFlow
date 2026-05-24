@@ -5,7 +5,7 @@
       <button class="close-btn" @click="$emit('close')"></button>
     </div>
     <div class="body">
-      <BlockNameSetting :style="{ flex: '0 0 30%' }"
+      <BlockNameSetting :style="{ flex: '0 0 25%' }"
         @update:selected-block="selectedBlock = $event"
         @change="onNamesChange"
       />
@@ -100,6 +100,7 @@ export default {
   display: flex;
   gap: 8px;
   padding: 8px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 </style>

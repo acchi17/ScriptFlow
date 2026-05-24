@@ -1,6 +1,6 @@
 <template>
   <div class="block-params-setting">
-    <BlockParamNameSetting :style="{ flex: 1 }"
+    <BlockParamNameSetting :style="{ flex: 2 }"
       :block-name="blockName"
       :input-param-names="inputParamNames"
       :output-param-names="outputParamNames"
@@ -14,7 +14,7 @@
       @rename="onRename"
       @delete="onDelete"
     />
-    <BlockParamDetailSetting :style="{ flex: 1 }"
+    <BlockParamDetailSetting :style="{ flex: 3 }"
       :selected-input-param-def="selectedInputParamDef"
       :selected-output-param-def="selectedOutputParamDef"
       @update-input="onUpdateInputParam"
