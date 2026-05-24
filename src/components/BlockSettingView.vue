@@ -9,7 +9,7 @@
         @update:selected-block="selectedBlock = $event"
         @change="onNamesChange"
       />
-      <BlockParamsSetting :style="{ flex: '0 0 70%' }"
+      <BlockParamsSetting :style="{ flex: 1 }"
         v-if="selectedBlock"
         :block-name="selectedBlock"
         @change="onParamsChange"
@@ -66,7 +66,6 @@ export default {
   display: flex;
   flex-direction: column;
   background-color: var(--left-side-bg-color, #fff);
-  overflow: hidden;
 }
 
 .header {
@@ -99,6 +98,8 @@ export default {
 .body {
   flex: 1;
   display: flex;
-  overflow-y: auto;
+  gap: 8px;
+  padding: 8px;
+  overflow: hidden;
 }
 </style>

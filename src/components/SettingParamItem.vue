@@ -94,9 +94,11 @@ export default {
   padding: 8px 12px;
   border-radius: 4px;
   border: var(--base-outline-border);
+  overflow-y: auto;
 }
 
 .detail-row {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;

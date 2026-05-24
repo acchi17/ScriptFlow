@@ -97,12 +97,12 @@ export default {
 
 <style scoped>
 .panel {
-  min-height: 0;
-  min-width: 0;
+  /* min-height: 0; */
   display: flex;
   flex-direction: column;
   border: var(--base-outline-border);
   border-radius: 4px;
+  overflow: hidden;
 }
 
 .panel-header {
@@ -113,11 +113,10 @@ export default {
   color: #777;
   border-bottom: var(--base-outline-border);
   user-select: none;
+  white-space: nowrap;
 }
 
 .panel-body {
-  min-height: 0;
-  min-width: 0;
   flex-grow: 1;
   padding-bottom: 4px;
   overflow-y: auto;
