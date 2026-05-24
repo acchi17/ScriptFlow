@@ -78,10 +78,10 @@ export default {
 
 <style scoped>
 .panel {
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-  /* flex-shrink: 0; */
   border: var(--base-outline-border);
   border-radius: 4px;
 }

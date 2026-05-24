@@ -128,7 +128,6 @@ export default {
   border-radius: 3px;
   background-color: #fff;
   outline: none;
-  box-sizing: border-box;
 }
 
 .detail-input-num {
