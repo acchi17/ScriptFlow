@@ -6,6 +6,7 @@ const isDragging = ref(false)
 
 // execution lock
 const isExecuting = ref(false)
+const executingRootEntryId = ref(null)
 
 // log visibility
 const showLog = ref(false)
@@ -28,7 +29,10 @@ export function useSystemState() {
   const hasDraggedIds = (id) => draggedItemIds.value.has(id)
 
   // --- execution lock ---
-  const setExecuting = (value) => { isExecuting.value = value }
+  const setExecuting = (value, entryId = null) => {
+    isExecuting.value = value
+    executingRootEntryId.value = value ? entryId : null
+  }
 
   // --- log visibility ---
   const toggleLog = () => { showLog.value = !showLog.value }
@@ -109,6 +113,7 @@ export function useSystemState() {
     hasDraggedIds,
     // execution
     isExecuting: readonly(isExecuting),
+    executingRootEntryId: readonly(executingRootEntryId),
     setExecuting,
     // log
     showLog: readonly(showLog),

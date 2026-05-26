@@ -19,7 +19,7 @@ export function useEntryExecution() {
     //clearSelection();
     cancelConnection();
     
-    setExecuting(true);
+    setExecuting(true, entry.id);
     try {
       await entryExecutionService.executeEntry(entry);
     } finally {
