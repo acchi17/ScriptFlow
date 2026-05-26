@@ -2,8 +2,6 @@
   <input
     type="number"
     class="spin-edit-input"
-    :min="min"
-    :max="max"
     :step="effectiveStep"
     :value="value"
     :disabled="disabled"
