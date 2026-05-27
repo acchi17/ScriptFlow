@@ -30,6 +30,7 @@
         </div>
       </div>
     </div>
+    <CommSettingView v-if="showCommSetting" @close="showCommSetting = false" />
   </div>
 </template>
 
@@ -40,12 +41,14 @@ import { useEntryRect } from '../composables/useEntryRect'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
+import CommSettingView from './CommSettingView.vue'
 
 export default {
   name: 'RecipeItem',
   components: {
     ConnectionView,
-    ContainerChildren
+    ContainerChildren,
+    CommSettingView,
   },
 
   setup() {
@@ -62,8 +65,10 @@ export default {
       clearContainer(mainContainer.id)
     }
 
+    const showCommSetting = ref(false)
+
     const openComSetting = () => {
-      // TODO: open communication setting
+      showCommSetting.value = true
     }
 
     const entryPanelRef = ref(null)
@@ -74,6 +79,7 @@ export default {
       executeRecipe,
       clearRecipe,
       openComSetting,
+      showCommSetting,
       entryPanelRef,
       entryLayoutMap
     }
@@ -174,7 +180,7 @@ export default {
 }
 
 .recipe-com-btn {
-  background-image: var(--com-icon-image);
+  background-image: var(--comm-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

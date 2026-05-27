@@ -17,7 +17,7 @@
   --close-icon-image: url('@/assets/images/close-icon-gray-96.png');
   --setting-icon-image: url('@/assets/images/setting-icon-gray-256.png');
   --edit-icon-image: url('@/assets/images/pensil-icon-gray-256.png');
-  --com-icon-image: url('@/assets/images/com-icon-gray-256.png');
+  --comm-icon-image: url('@/assets/images/comm-icon-gray-256.png');
 
   /* Base-layout styles */
   --menu-bar-height: 48px;
