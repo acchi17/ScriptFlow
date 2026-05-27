@@ -5,6 +5,7 @@
     <div class="recipe-content">
       <div class="recipe-header">
         <button class="recipe-btn recipe-run-btn" title="Run" @click.stop="executeRecipe"></button>
+        <button class="recipe-btn recipe-com-btn" title="Communication Setting" @click.stop="openComSetting"></button>
         <button class="recipe-btn recipe-clear-btn" title="Clear" @click.stop="clearRecipe"></button>
       </div>
       <div class="recipe-panel">
@@ -61,6 +62,10 @@ export default {
       clearContainer(mainContainer.id)
     }
 
+    const openComSetting = () => {
+      // TODO: open communication setting
+    }
+
     const entryPanelRef = ref(null)
     const entryLayoutMap = useEntryRect(entryPanelRef)
 
@@ -68,6 +73,7 @@ export default {
       mainContainer,
       executeRecipe,
       clearRecipe,
+      openComSetting,
       entryPanelRef,
       entryLayoutMap
     }
@@ -162,6 +168,13 @@ export default {
 
 .recipe-run-btn {
   background-image: var(--play-icon-image);
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.recipe-com-btn {
+  background-image: var(--com-icon-image);
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
