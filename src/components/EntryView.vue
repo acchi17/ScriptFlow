@@ -135,7 +135,7 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: 12px;
 }
 
 .entry-header {

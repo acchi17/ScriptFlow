@@ -43,11 +43,12 @@ export default {
 
 <style scoped>
 .spin-edit-input {
-  width: 90px;
-  padding: 4px 4px;
+  width: 100%;
+  padding: 4px 8px;
   font-size: 16px;
   color: #555;
   border: 1px solid #bbb;
   border-radius: 3px;
+  text-align: left;
 }
 </style>

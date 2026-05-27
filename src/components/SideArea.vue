@@ -44,13 +44,13 @@ export default {
 }
 
 .top-item {
-  flex: 6;
+  flex: 5;
   display: flex;
   overflow-y: auto;
 }
 
 .bottom-item {
-  flex: 4;
+  flex: 5;
   display: flex;
   overflow-y: auto;
 }
