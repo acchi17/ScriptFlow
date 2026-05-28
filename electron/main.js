@@ -150,6 +150,23 @@ function executeScriptInRunner(scriptName, inputParams) {
   })
 }
 
+function createSocketInRunner(host, port) {
+  const runner = ensureScriptRunner()
+  const id = ++executionCounter
+  return new Promise((resolve, reject) => {
+    pendingExecutions.set(id, { resolve, reject })
+    runner.postMessage({ type: 'createSocket', id, host, port })
+    // A timed-out connect is reported as a failure (empty string) so the
+    // renderer-side contract — "empty string means create failed" — holds.
+    setTimeout(() => {
+      if (pendingExecutions.has(id)) {
+        pendingExecutions.get(id).resolve('')
+        pendingExecutions.delete(id)
+      }
+    }, 10000)
+  })
+}
+
 function registerIpcHandlers() {
   ipcMain.handle('scripts:list', async () => {
     const dir = getUserScriptsDir()
@@ -190,6 +207,10 @@ function registerIpcHandlers() {
 
   ipcMain.handle('script:execute', async (_evt, scriptName, inputParams) => {
     return executeScriptInRunner(scriptName, inputParams)
+  })
+
+  ipcMain.handle('socket:create', async (_evt, host, port) => {
+    return createSocketInRunner(host, port)
   })
 }
 
