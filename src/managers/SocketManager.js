@@ -26,14 +26,12 @@ export default class SocketManager {
    * Returns false if no socket exists for the entry or the connection fails.
    *
    * @param {string} entryId
-   * @param {string} host
-   * @param {number} port
    * @returns {Promise<boolean>}
    */
-  async connect(entryId, host, port) {
+  async connect(entryId) {
     const record = this._entrySocketMap.get(entryId)
     if (!record) return false
-    const connected = await window.electronAPI.connectSocket(record.socketId, host, port)
+    const connected = await window.electronAPI.connectSocket(record.socketId, record.host, record.port)
     return !!connected
   }
 
@@ -59,5 +57,17 @@ export default class SocketManager {
    */
   getSocketIdByEntry(entryId) {
     return this._entrySocketMap.get(entryId)?.socketId ?? null
+  }
+
+  /**
+   * Return the stored host and port for an entry, or null if none.
+   *
+   * @param {string} entryId
+   * @returns {{ host: string, port: number }|null}
+   */
+  getCommSettingByEntry(entryId) {
+    const record = this._entrySocketMap.get(entryId)
+    if (!record) return null
+    return { host: record.host, port: record.port }
   }
 }

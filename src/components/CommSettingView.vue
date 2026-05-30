@@ -63,20 +63,28 @@ export default {
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
 
+    const existing = socketManager.getCommSettingByEntry(props.entryId)
+    if (existing) {
+      useTcpIp.value = true
+      ipParts.value = existing.host.split('.')
+      port.value = String(existing.port)
+    }
+
     const checkConnection = () => {
       // TODO: implement connection check
     }
 
     const onClose = async () => {
+      let connected = null
       if (useTcpIp.value) {
         const host = ipParts.value.join('.')
         const portNum = Number(port.value)
         await socketManager.create(props.entryId, host, portNum)
-        await socketManager.connect(props.entryId, host, portNum)
+        connected = await socketManager.connect(props.entryId)
       } else {
         await socketManager.release(props.entryId)
       }
-      emit('close')
+      emit('close', connected)
     }
 
     const onKeydown = (e) => {
