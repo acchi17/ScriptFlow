@@ -1,9 +1,9 @@
 <template>
-  <div class="comm-setting-backdrop" @click.self="$emit('close')">
+  <div class="comm-setting-backdrop" @click.self="onClose">
     <div class="comm-setting-dialog">
       <div class="dialog-header">
         <span class="dialog-title">Communication Setting</span>
-        <button class="close-btn" @click="$emit('close')"></button>
+        <button class="close-btn" @click="onClose"></button>
       </div>
       <div class="dialog-body">
         <label class="row checkbox-row">
@@ -48,13 +48,17 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, inject, onMounted, onBeforeUnmount } from 'vue'
 
 export default {
   name: 'CommSettingView',
+  props: {
+    entryId: { type: String, required: true }
+  },
   emits: ['close'],
 
-  setup(_, { emit }) {
+  setup(props, { emit }) {
+    const socketManager = inject('socketManager')
     const useTcpIp = ref(false)
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
@@ -63,13 +67,25 @@ export default {
       // TODO: implement connection check
     }
 
+    const onClose = async () => {
+      if (useTcpIp.value) {
+        const host = ipParts.value.join('.')
+        const portNum = Number(port.value)
+        await socketManager.create(props.entryId, host, portNum)
+        await socketManager.connect(props.entryId, host, portNum)
+      } else {
+        await socketManager.release(props.entryId)
+      }
+      emit('close')
+    }
+
     const onKeydown = (e) => {
-      if (e.key === 'Escape') emit('close')
+      if (e.key === 'Escape') onClose()
     }
     onMounted(()       => document.addEventListener('keydown', onKeydown))
     onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
-    return { useTcpIp, ipParts, port, checkConnection }
+    return { useTcpIp, ipParts, port, checkConnection, onClose }
   }
 }
 </script>

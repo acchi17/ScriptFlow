@@ -39,46 +39,65 @@ async function handleExecute({ id, scriptName, inputParams }) {
   }
 }
 
-function handleCreateSocket({ id, host, port }) {
+function handleNewSocket({ id }) {
+  const socket = new net.Socket()
+  const socketId = randomUUID()
+  sockets.set(socketId, socket)
+  socket.once('close', () => { sockets.delete(socketId) })
+  send({ type: 'result', id, result: socketId })
+}
+
+function handleConnectSocket({ id, socketId, host, port }) {
   let settled = false
-  const finish = (socketId) => {
+  const finish = (ok) => {
     if (settled) return
     settled = true
-    send({ type: 'result', id, result: socketId })
+    send({ type: 'result', id, result: ok })
   }
 
-  try {
-    const socket = new net.Socket()
+  const socket = sockets.get(socketId)
+  if (!socket) { finish(false); return }
 
+  try {
     const onConnect = () => {
       socket.removeListener('error', onError)
-      const socketId = randomUUID()
-      sockets.set(socketId, socket)
-      // Drop the entry once the connection is gone so the map cannot leak.
-      socket.once('close', () => { sockets.delete(socketId) })
-      finish(socketId)
+      finish(true)
     }
-
     const onError = () => {
       socket.removeListener('connect', onConnect)
+      sockets.delete(socketId)
       try { socket.destroy() } catch { /* noop */ }
-      finish('')
+      finish(false)
     }
-
     socket.once('connect', onConnect)
     socket.once('error', onError)
     socket.connect(port, host)
   } catch {
-    finish('')
+    sockets.delete(socketId)
+    try { socket.destroy() } catch { /* noop */ }
+    finish(false)
   }
+}
+
+function handleDestroySocket({ id, socketId }) {
+  const socket = sockets.get(socketId)
+  if (socket) {
+    sockets.delete(socketId)
+    try { socket.destroy() } catch { /* noop */ }
+  }
+  send({ type: 'result', id, result: true })
 }
 
 function onMessage(msg) {
   if (!msg || typeof msg !== 'object') return
   if (msg.type === 'execute') {
     handleExecute(msg)
-  } else if (msg.type === 'createSocket') {
-    handleCreateSocket(msg)
+  } else if (msg.type === 'newSocket') {
+    handleNewSocket(msg)
+  } else if (msg.type === 'connectSocket') {
+    handleConnectSocket(msg)
+  } else if (msg.type === 'destroySocket') {
+    handleDestroySocket(msg)
   }
 }
 

@@ -30,7 +30,7 @@
         </div>
       </div>
     </div>
-    <CommSettingView v-if="showCommSetting" @close="showCommSetting = false" />
+    <CommSettingView v-if="showCommSetting" :entryId="mainContainer.id" @close="showCommSetting = false" />
   </div>
 </template>
 

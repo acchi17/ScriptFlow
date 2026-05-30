@@ -150,20 +150,48 @@ function executeScriptInRunner(scriptName, inputParams) {
   })
 }
 
-function createSocketInRunner(host, port) {
+function newSocketInRunner() {
   const runner = ensureScriptRunner()
   const id = ++executionCounter
-  return new Promise((resolve, reject) => {
-    pendingExecutions.set(id, { resolve, reject })
-    runner.postMessage({ type: 'createSocket', id, host, port })
-    // A timed-out connect is reported as a failure (empty string) so the
-    // renderer-side contract — "empty string means create failed" — holds.
+  return new Promise((resolve) => {
+    pendingExecutions.set(id, { resolve, reject: resolve })
+    runner.postMessage({ type: 'newSocket', id })
     setTimeout(() => {
       if (pendingExecutions.has(id)) {
         pendingExecutions.get(id).resolve('')
         pendingExecutions.delete(id)
       }
     }, 10000)
+  })
+}
+
+function connectSocketInRunner(socketId, host, port) {
+  const runner = ensureScriptRunner()
+  const id = ++executionCounter
+  return new Promise((resolve) => {
+    pendingExecutions.set(id, { resolve, reject: resolve })
+    runner.postMessage({ type: 'connectSocket', id, socketId, host, port })
+    setTimeout(() => {
+      if (pendingExecutions.has(id)) {
+        pendingExecutions.get(id).resolve(false)
+        pendingExecutions.delete(id)
+      }
+    }, 10000)
+  })
+}
+
+function destroySocketInRunner(socketId) {
+  const runner = ensureScriptRunner()
+  const id = ++executionCounter
+  return new Promise((resolve) => {
+    pendingExecutions.set(id, { resolve, reject: resolve })
+    runner.postMessage({ type: 'destroySocket', id, socketId })
+    setTimeout(() => {
+      if (pendingExecutions.has(id)) {
+        pendingExecutions.delete(id)
+        resolve(false)
+      }
+    }, 5000)
   })
 }
 
@@ -209,8 +237,16 @@ function registerIpcHandlers() {
     return executeScriptInRunner(scriptName, inputParams)
   })
 
-  ipcMain.handle('socket:create', async (_evt, host, port) => {
-    return createSocketInRunner(host, port)
+  ipcMain.handle('socket:create', async () => {
+    return newSocketInRunner()
+  })
+
+  ipcMain.handle('socket:connect', async (_evt, socketId, host, port) => {
+    return connectSocketInRunner(socketId, host, port)
+  })
+
+  ipcMain.handle('socket:destroy', async (_evt, socketId) => {
+    return destroySocketInRunner(socketId)
   })
 }
 
