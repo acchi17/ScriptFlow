@@ -150,30 +150,15 @@ function executeScriptInRunner(scriptName, inputParams) {
   })
 }
 
-function newSocketInRunner() {
+function createSocketInRunner(host, port) {
   const runner = ensureScriptRunner()
   const id = ++executionCounter
   return new Promise((resolve) => {
     pendingExecutions.set(id, { resolve, reject: resolve })
-    runner.postMessage({ type: 'newSocket', id })
+    runner.postMessage({ type: 'createSocket', id, host, port })
     setTimeout(() => {
       if (pendingExecutions.has(id)) {
-        pendingExecutions.get(id).resolve('')
-        pendingExecutions.delete(id)
-      }
-    }, 10000)
-  })
-}
-
-function connectSocketInRunner(socketId, host, port) {
-  const runner = ensureScriptRunner()
-  const id = ++executionCounter
-  return new Promise((resolve) => {
-    pendingExecutions.set(id, { resolve, reject: resolve })
-    runner.postMessage({ type: 'connectSocket', id, socketId, host, port })
-    setTimeout(() => {
-      if (pendingExecutions.has(id)) {
-        pendingExecutions.get(id).resolve(false)
+        pendingExecutions.get(id).resolve(null)
         pendingExecutions.delete(id)
       }
     }, 10000)
@@ -237,12 +222,8 @@ function registerIpcHandlers() {
     return executeScriptInRunner(scriptName, inputParams)
   })
 
-  ipcMain.handle('socket:create', async () => {
-    return newSocketInRunner()
-  })
-
-  ipcMain.handle('socket:connect', async (_evt, socketId, host, port) => {
-    return connectSocketInRunner(socketId, host, port)
+  ipcMain.handle('socket:create', async (_evt, host, port) => {
+    return createSocketInRunner(host, port)
   })
 
   ipcMain.handle('socket:destroy', async (_evt, socketId) => {
@@ -291,9 +272,12 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => {
-  if (scriptRunner) {
-    try { scriptRunner.kill() } catch { /* noop */ }
-    scriptRunner = null
-  }
+app.on('before-quit', (event) => {
+  if (!scriptRunner) return
+  event.preventDefault()
+  const runner = scriptRunner
+  scriptRunner = null
+  const forceKill = setTimeout(() => { try { runner.kill() } catch { /* noop */ } }, 2000)
+  runner.once('exit', () => { clearTimeout(forceKill); app.quit() })
+  runner.postMessage({ type: 'shutdown' })
 })

@@ -39,35 +39,29 @@ async function handleExecute({ id, scriptName, inputParams }) {
   }
 }
 
-function handleNewSocket({ id }) {
-  const socket = new net.Socket()
+function handleCreateSocket({ id, host, port }) {
+  let settled = false
   const socketId = randomUUID()
+  const socket = new net.Socket()
   sockets.set(socketId, socket)
   socket.once('close', () => { sockets.delete(socketId) })
-  send({ type: 'result', id, result: socketId })
-}
 
-function handleConnectSocket({ id, socketId, host, port }) {
-  let settled = false
-  const finish = (ok) => {
+  const finish = (result) => {
     if (settled) return
     settled = true
-    send({ type: 'result', id, result: ok })
+    send({ type: 'result', id, result })
   }
-
-  const socket = sockets.get(socketId)
-  if (!socket) { finish(false); return }
 
   try {
     const onConnect = () => {
       socket.removeListener('error', onError)
-      finish(true)
+      finish(socketId)
     }
     const onError = () => {
       socket.removeListener('connect', onConnect)
       sockets.delete(socketId)
       try { socket.destroy() } catch { /* noop */ }
-      finish(false)
+      finish(null)
     }
     socket.once('connect', onConnect)
     socket.once('error', onError)
@@ -75,7 +69,7 @@ function handleConnectSocket({ id, socketId, host, port }) {
   } catch {
     sockets.delete(socketId)
     try { socket.destroy() } catch { /* noop */ }
-    finish(false)
+    finish(null)
   }
 }
 
@@ -92,12 +86,15 @@ function onMessage(msg) {
   if (!msg || typeof msg !== 'object') return
   if (msg.type === 'execute') {
     handleExecute(msg)
-  } else if (msg.type === 'newSocket') {
-    handleNewSocket(msg)
-  } else if (msg.type === 'connectSocket') {
-    handleConnectSocket(msg)
+  } else if (msg.type === 'createSocket') {
+    handleCreateSocket(msg)
   } else if (msg.type === 'destroySocket') {
     handleDestroySocket(msg)
+  } else if (msg.type === 'shutdown') {
+    for (const socket of sockets.values()) {
+      try { socket.destroy() } catch { /* noop */ }
+    }
+    process.exit(0)
   }
 }
 

@@ -7,7 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readBlockDefinitions: () => ipcRenderer.invoke('defs:read'),
   writeBlockDefinitions: (data) => ipcRenderer.invoke('defs:write', data),
   executeScript: (name, inputParams) => ipcRenderer.invoke('script:execute', name, inputParams),
-  createSocket: () => ipcRenderer.invoke('socket:create'),
-  connectSocket: (socketId, host, port) => ipcRenderer.invoke('socket:connect', socketId, host, port),
+  createSocket: (host, port) => ipcRenderer.invoke('socket:create', host, port),
   destroySocket: (socketId) => ipcRenderer.invoke('socket:destroy', socketId)
 })

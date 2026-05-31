@@ -37,11 +37,6 @@
             @input="port = $event.target.value"
           />
         </div>
-        <div class="row check-row">
-          <button class="check-btn" :disabled="!useTcpIp" @click="checkConnection">
-            Check connection
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -63,24 +58,21 @@ export default {
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
 
-    const existing = socketManager.getCommSettingByEntry(props.entryId)
+    const existing = socketManager.getCommSetting(props.entryId)
     if (existing) {
-      useTcpIp.value = true
+      useTcpIp.value = existing.useTcpIp
       ipParts.value = existing.host.split('.')
       port.value = String(existing.port)
     }
 
-    const checkConnection = () => {
-      // TODO: implement connection check
-    }
-
     const onClose = async () => {
+      const host = ipParts.value.join('.')
+      const portNum = Number(port.value)
+      socketManager.saveSetting(props.entryId, useTcpIp.value, host, portNum)
+
       let connected = null
       if (useTcpIp.value) {
-        const host = ipParts.value.join('.')
-        const portNum = Number(port.value)
-        await socketManager.create(props.entryId, host, portNum)
-        connected = await socketManager.connect(props.entryId)
+        connected = await socketManager.create(props.entryId, host, portNum)
       } else {
         await socketManager.release(props.entryId)
       }
@@ -93,7 +85,7 @@ export default {
     onMounted(()       => document.addEventListener('keydown', onKeydown))
     onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
-    return { useTcpIp, ipParts, port, checkConnection, onClose }
+    return { useTcpIp, ipParts, port, onClose }
   }
 }
 </script>

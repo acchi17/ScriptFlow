@@ -1,12 +1,15 @@
 export default class SocketManager {
   constructor() {
-    // entryId -> { socketId, host, port }
+    // entryId -> { socketId }
     this._entrySocketMap = new Map()
+    // entryId -> { useTcpIp, host, port }
+    this._entrySettingMap = new Map()
   }
 
   /**
-   * Ask script-runner to create a socket for an entry and store host/port.
-   * Does NOT connect. Returns false if the entry already has a socket or creation fails.
+   * Ask script-runner to create and connect a socket for an entry.
+   * Destroys any existing socket for the entry before creating a new one.
+   * Returns false if the connection fails.
    *
    * @param {string} entryId
    * @param {string} host
@@ -14,25 +17,11 @@ export default class SocketManager {
    * @returns {Promise<boolean>}
    */
   async create(entryId, host, port) {
-    if (this._entrySocketMap.has(entryId)) return false
-    const socketId = await window.electronAPI.createSocket()
+    await this.release(entryId)
+    const socketId = await window.electronAPI.createSocket(host, port)
     if (!socketId) return false
-    this._entrySocketMap.set(entryId, { socketId, host, port })
+    this._entrySocketMap.set(entryId, { socketId })
     return true
-  }
-
-  /**
-   * Connect the socket held by an entry.
-   * Returns false if no socket exists for the entry or the connection fails.
-   *
-   * @param {string} entryId
-   * @returns {Promise<boolean>}
-   */
-  async connect(entryId) {
-    const record = this._entrySocketMap.get(entryId)
-    if (!record) return false
-    const connected = await window.electronAPI.connectSocket(record.socketId, record.host, record.port)
-    return !!connected
   }
 
   /**
@@ -50,24 +39,27 @@ export default class SocketManager {
   }
 
   /**
-   * Return the socket ID for an entry, or null if none.
+   * Persist the user's intended communication settings for an entry.
+   * Called before any connection attempt so settings survive failure.
    *
-   * @param {string} entryId
-   * @returns {string|null}
+   * @param {string}  entryId
+   * @param {boolean} useTcpIp
+   * @param {string}  host
+   * @param {number}  port
    */
-  getSocketIdByEntry(entryId) {
-    return this._entrySocketMap.get(entryId)?.socketId ?? null
+  saveSetting(entryId, useTcpIp, host, port) {
+    this._entrySettingMap.set(entryId, { useTcpIp, host, port })
   }
 
   /**
-   * Return the stored host and port for an entry, or null if none.
+   * Return the stored communication settings for an entry, or null if none.
    *
    * @param {string} entryId
-   * @returns {{ host: string, port: number }|null}
+   * @returns {{ useTcpIp: boolean, host: string, port: number }|null}
    */
-  getCommSettingByEntry(entryId) {
-    const record = this._entrySocketMap.get(entryId)
+  getCommSetting(entryId) {
+    const record = this._entrySettingMap.get(entryId)
     if (!record) return null
-    return { host: record.host, port: record.port }
+    return { useTcpIp: record.useTcpIp, host: record.host, port: record.port }
   }
 }
