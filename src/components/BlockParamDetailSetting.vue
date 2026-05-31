@@ -13,6 +13,7 @@
         v-if="selectedOutputParamDef"
         :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
         :param="selectedOutputParamDef"
+        :outputMode="true"
         @update="(field, value) => $emit('update-output', field, value)"
       />
     </div>

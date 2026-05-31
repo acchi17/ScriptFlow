@@ -8,33 +8,33 @@
           <option v-for="dt in dataTypeOptions" :key="dt.value" :value="dt.value">{{ dt.label }}</option>
         </select>
       </div>
-      <div class="detail-row">
+      <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">UI Type</span>
         <select class="detail-select" :value="param.ctrlType" @change="onFieldChange('ctrlType', $event.target.value)">
           <option v-for="ct in ctrlTypeOptions" :key="ct.value" :value="ct.value">{{ ct.label }}</option>
         </select>
       </div>
-      <div class="detail-row">
+      <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">Initial Value</span>
         <input class="detail-input detail-input-num" type="number"
           :value="param.default"
           @change="onFieldChange('default', $event.target.value)" />
       </div>
-      <div class="detail-row">
+      <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">Step Value</span>
         <input class="detail-input detail-input-num" type="number"
           :value="param.step"
           :disabled="!isSpinner"
           @change="onFieldChange('step', $event.target.value)" />
       </div>
-      <div class="detail-row">
+      <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">Min value</span>
         <input class="detail-input detail-input-num" type="number"
           :value="param.min"
           :disabled="!isSpinner"
           @change="onFieldChange('min', $event.target.value)" />
       </div>
-      <div class="detail-row">
+      <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">Max value</span>
         <input class="detail-input detail-input-num" type="number"
           :value="param.max"
@@ -73,8 +73,9 @@ const numericFields = new Set(['default', 'step', 'min', 'max']);
 export default {
   name: 'SettingParamItem',
   props: {
-    title: { type: String, required: true },
-    param: { type: Object, required: true },
+    title:      { type: String,  required: true },
+    param:      { type: Object,  required: true },
+    outputMode: { type: Boolean, default: false },
   },
   emits: ['update'],
   setup(props, { emit }) {
