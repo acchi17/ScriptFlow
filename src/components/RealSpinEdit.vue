@@ -30,6 +30,10 @@ export default {
   methods: {
     onChange(target) {
       let val = parseFloat(target.value);
+      if (isNaN(val)) {
+        target.value = this.value;
+        return;
+      }
       if (this.min !== null) val = Math.max(Number(this.min), val);
       if (this.max !== null) val = Math.min(Number(this.max), val);
       target.value = val;
