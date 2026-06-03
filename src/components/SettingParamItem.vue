@@ -11,7 +11,7 @@
       <div v-if="!outputMode" class="detail-row">
         <span class="detail-label">UI Type</span>
         <select class="detail-select" :value="param.ctrlType" @change="onFieldChange('ctrlType', $event.target.value)">
-          <option v-for="ct in ctrlTypeOptions" :key="ct.value" :value="ct.value">{{ ct.label }}</option>
+          <option v-for="ct in availableCtrlTypes" :key="ct.value" :value="ct.value">{{ ct.label }}</option>
         </select>
       </div>
       <div v-if="!outputMode" class="detail-row">
@@ -68,6 +68,13 @@ const ctrlTypeOptions = [
   { value: 'text_box',  label: 'Text' },
 ];
 
+const ctrlTypeMap = {
+  integer: ['spinner', 'combo_box'],
+  real:    ['spinner', 'combo_box'],
+  boolean: ['check_box'],
+  string:  ['text_box', 'combo_box'],
+};
+
 const numericFields = new Set(['default', 'step', 'min', 'max']);
 
 export default {
@@ -80,13 +87,23 @@ export default {
   emits: ['update'],
   setup(props, { emit }) {
     const isSpinner = computed(() => props.param.ctrlType === 'spinner');
+    const availableCtrlTypes = computed(() =>
+      ctrlTypeOptions.filter(o => ctrlTypeMap[props.param.dataType]?.includes(o.value))
+    );
 
     function onFieldChange(field, rawValue) {
       const value = numericFields.has(field) ? Number(rawValue) : rawValue;
       emit('update', field, value);
+
+      if (field === 'dataType') {
+        const allowed = ctrlTypeMap[value] ?? [];
+        if (!allowed.includes(props.param.ctrlType)) {
+          emit('update', 'ctrlType', allowed[0]);
+        }
+      }
     }
 
-    return { dataTypeOptions, ctrlTypeOptions, isSpinner, onFieldChange };
+    return { dataTypeOptions, availableCtrlTypes, isSpinner, onFieldChange };
   }
 }
 </script>
