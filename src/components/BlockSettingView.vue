@@ -2,7 +2,7 @@
   <div class="block-setting-view">
     <div class="header">
       <span class="title">Block Setting</span>
-      <button class="close-btn" @click="$emit('close')"></button>
+      <button class="close-btn" @click="handleClose"></button>
     </div>
     <div class="body">
       <BlockNameSetting :style="{ flex: '0 0 25%' }"
@@ -28,12 +28,13 @@ export default {
   components: { BlockNameSetting, BlockParamSetting },
   emits: ['close'],
 
-  setup() {
+  setup(_, { emit }) {
     const entryDefinitionService = inject('entryDefinitionService');
 
     const selectedBlock = ref(
       entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
     );
+    const isDirty = ref(false);
 
     async function persist() {
       try {
@@ -44,17 +45,23 @@ export default {
     }
 
     function onNamesChange() {
-      persist();
+      isDirty.value = true;
     }
 
     function onParamsChange() {
-      persist();
+      isDirty.value = true;
+    }
+
+    async function handleClose() {
+      if (isDirty.value) await persist();
+      emit('close');
     }
 
     return {
       selectedBlock,
       onNamesChange,
       onParamsChange,
+      handleClose,
     };
   }
 }
