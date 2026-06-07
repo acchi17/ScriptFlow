@@ -19,7 +19,8 @@
 </template>
 
 <script>
-import { inject, ref } from 'vue';
+import { provide, ref } from 'vue';
+import { useEntryDefinition } from '../composables/useEntryDefinition.js';
 import BlockNameSetting from './BlockNameSetting.vue';
 import BlockParamSetting from './BlockParamSetting.vue';
 
@@ -29,16 +30,20 @@ export default {
   emits: ['close'],
 
   setup(_, { emit }) {
-    const entryDefinitionService = inject('entryDefinitionService');
+    const { localDefs, saveBlockDefinitions } = useEntryDefinition();
+
+    // Shadow the global entryDefinitionService for all descendants so they
+    // call BlockDefinitionStore methods on the local clone.
+    provide('entryDefinitionService', localDefs);
 
     const selectedBlock = ref(
-      entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
+      localDefs.blockCategories[0]?.blocks[0] ?? null
     );
     const isDirty = ref(false);
 
     async function persist() {
       try {
-        await entryDefinitionService.saveBlockDefinitions();
+        await saveBlockDefinitions();
       } catch (e) {
         console.warn('[BlockSettingView] saveBlockDefinitions skipped:', e.message);
       }
