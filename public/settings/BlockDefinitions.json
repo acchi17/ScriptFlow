@@ -182,7 +182,7 @@
             {
               "name": "Result",
               "dataType": "real",
-              "ctrlType": "spinner",              
+              "ctrlType": "spinner",
               "items": [],
               "comment": "",
               "prmType": "output"
