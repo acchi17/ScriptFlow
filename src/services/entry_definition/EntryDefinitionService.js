@@ -1,38 +1,45 @@
-import BlockDefinitionStore from './BlockDefinitionStore.js';
+import BlockDefinition from './BlockDefinition.js';
 
 /**
  * EntryDefinitionService
- * Composes a BlockDefinitionStore for data and mutation. This service is
- * responsible only for I/O (load/save via PlatformService) and query helpers.
+ * Owns the authoritative blockCategories and blockDefinitions.
+ * I/O is delegated to PlatformService.
+ * Use getBlockDefinition() to get an isolated BlockDefinition for editing.
  */
 export default class EntryDefinitionService {
   constructor(config, platformService) {
     this.config = config;
     this.platformService = platformService;
-    this._store = new BlockDefinitionStore();
+    this.blockCategories = [];
+    this.blockDefinitions = {};
   }
 
-  get blockCategories() { return this._store.blockCategories; }
-  get blockDefinitions() { return this._store.blockDefinitions; }
+  /**
+   * Returns a new BlockDefinition pre-populated with deep clones of the
+   * current blockCategories and blockDefinitions.
+   */
+  getBlockDefinition() {
+    return new BlockDefinition(
+      JSON.parse(JSON.stringify(this.blockCategories)),
+      JSON.parse(JSON.stringify(this.blockDefinitions))
+    );
+  }
 
   _castParamValue(value, dataType) {
     if (value === null || value === undefined) return value;
     switch (dataType) {
-      case 'integer':
-        return parseInt(value, 10);
-      case 'real':
-        return parseFloat(value);
+      case 'integer': return parseInt(value, 10);
+      case 'real':    return parseFloat(value);
       case 'boolean':
         if (typeof value === 'boolean') return value;
         return value === 'true' || value === true;
-      default:
-        return value;
+      default:        return value;
     }
   }
 
   async loadBlockDefinitions() {
-    this._store.blockCategories = [];
-    this._store.blockDefinitions = {};
+    this.blockCategories = [];
+    this.blockDefinitions = {};
     try {
       const data = await this.platformService.readBlockDefinitions();
       if (Array.isArray(data && data.categories)) {
@@ -74,27 +81,32 @@ export default class EntryDefinitionService {
                   }
                 });
               }
-              this._store.blockDefinitions[blockName] = blockDef;
+              this.blockDefinitions[blockName] = blockDef;
             });
           }
-          this._store.blockCategories.push(categoryInfo);
+          this.blockCategories.push(categoryInfo);
         });
       }
       return {
-        blockDefinitions: this._store.blockDefinitions,
-        blockCategories: this._store.blockCategories
+        blockDefinitions: this.blockDefinitions,
+        blockCategories: this.blockCategories
       };
     } catch (error) {
       console.error(`[${this.constructor.name}] loadBlockDefinitions() failed: ${error.message}`);
     }
   }
 
+  updateBlockDefinition(blockCategories, blockDefinitions) {
+    this.blockCategories = JSON.parse(JSON.stringify(blockCategories));
+    this.blockDefinitions = JSON.parse(JSON.stringify(blockDefinitions));
+  }
+
   async saveBlockDefinitions() {
     const raw = {
-      categories: this._store.blockCategories.map(cat => ({
+      categories: this.blockCategories.map(cat => ({
         name: cat.name,
         blocks: cat.blocks.map(name => {
-          const def = this._store.blockDefinitions[name];
+          const def = this.blockDefinitions[name];
           return {
             name: def.name,
             command: def.command,
@@ -110,26 +122,22 @@ export default class EntryDefinitionService {
   }
 
   getBlockParamDef(blockName) {
-    const blockDef = this._store.blockDefinitions[blockName];
+    const blockDef = this.blockDefinitions[blockName];
     if (!blockDef) return { input: {}, output: {} };
-
     const input = {};
     const output = {};
-
     blockDef.parameters.input.forEach(param => {
       input[param.name] = {
         value: param.default !== undefined ? this._castParamValue(param.default, param.dataType) : null,
         type: param.dataType
       };
     });
-
     blockDef.parameters.output.forEach(param => {
       output[param.name] = {
         value: param.default !== undefined ? this._castParamValue(param.default, param.dataType) : null,
         type: param.dataType
       };
     });
-
     return { input, output };
   }
 }

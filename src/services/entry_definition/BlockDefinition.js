@@ -1,8 +1,11 @@
-export default class BlockDefinitionStore {
-  constructor() {
-    this.blockCategories = [];
-    this.blockDefinitions = {};
+export default class BlockDefinition {
+  constructor(blockCategories, blockDefinitions) {
+    this._blockCategories = blockCategories;
+    this._blockDefinitions = blockDefinitions;
   }
+
+  get blockCategories() { return this._blockCategories; }
+  get blockDefinitions() { return this._blockDefinitions; }
 
   moveBlockUp(blockName) {
     const cat = this.blockCategories.find(c => c.blocks.includes(blockName));

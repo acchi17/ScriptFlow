@@ -33,7 +33,7 @@ export default {
     const { localDefs, saveBlockDefinitions } = useEntryDefinition();
 
     // Shadow the global entryDefinitionService for all descendants so they
-    // call BlockDefinitionStore methods on the local clone.
+    // call BlockDefinition methods on the local clone.
     provide('entryDefinitionService', localDefs);
 
     const selectedBlock = ref(
