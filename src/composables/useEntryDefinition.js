@@ -6,7 +6,7 @@ export function useEntryDefinition() {
   const localDefs = reactive(service.getBlockDefinition());
 
   function saveBlockDefinitions() {
-    service.updateBlockDefinition(localDefs.blockCategories, localDefs.blockDefinitions);
+    service.updateBlockDefinition(localDefs.blockDefinitions);
   }
 
   return { localDefs, saveBlockDefinitions };

@@ -1,63 +1,58 @@
 export default class BlockDefinition {
-  constructor(blockCategories, blockDefinitions) {
-    this._blockCategories = blockCategories;
+  constructor(blockDefinitions) {
     this._blockDefinitions = blockDefinitions;
   }
 
-  get blockCategories() { return this._blockCategories; }
   get blockDefinitions() { return this._blockDefinitions; }
 
+  _findBlock(blockName) {
+    return this.blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
+  }
+
   moveBlockUp(blockName) {
-    const cat = this.blockCategories.find(c => c.blocks.includes(blockName));
+    const cat = this.blockDefinitions.find(c => c.blocks.some(b => b.name === blockName));
     if (!cat) return false;
-    const idx = cat.blocks.indexOf(blockName);
+    const idx = cat.blocks.findIndex(b => b.name === blockName);
     if (idx <= 0) return false;
     [cat.blocks[idx - 1], cat.blocks[idx]] = [cat.blocks[idx], cat.blocks[idx - 1]];
     return true;
   }
 
   moveBlockDown(blockName) {
-    const cat = this.blockCategories.find(c => c.blocks.includes(blockName));
+    const cat = this.blockDefinitions.find(c => c.blocks.some(b => b.name === blockName));
     if (!cat) return false;
-    const idx = cat.blocks.indexOf(blockName);
+    const idx = cat.blocks.findIndex(b => b.name === blockName);
     if (idx < 0 || idx >= cat.blocks.length - 1) return false;
     [cat.blocks[idx], cat.blocks[idx + 1]] = [cat.blocks[idx + 1], cat.blocks[idx]];
     return true;
   }
 
   removeBlock(blockName) {
-    for (const cat of this.blockCategories) {
-      const i = cat.blocks.indexOf(blockName);
+    for (const cat of this.blockDefinitions) {
+      const i = cat.blocks.findIndex(b => b.name === blockName);
       if (i >= 0) { cat.blocks.splice(i, 1); break; }
     }
-    delete this.blockDefinitions[blockName];
   }
 
   renameBlock(oldName, newName) {
     const trimmed = newName?.trim();
-    if (!trimmed || trimmed === oldName || this.blockDefinitions[trimmed]) return false;
-    const cat = this.blockCategories.find(c => c.blocks.includes(oldName));
+    if (!trimmed || trimmed === oldName || this._findBlock(trimmed)) return false;
+    const cat = this.blockDefinitions.find(c => c.blocks.some(b => b.name === oldName));
     if (!cat) return false;
-    cat.blocks[cat.blocks.indexOf(oldName)] = trimmed;
-    const def = this.blockDefinitions[oldName];
-    def.name = trimmed;
-    this.blockDefinitions[trimmed] = def;
-    delete this.blockDefinitions[oldName];
+    cat.blocks.find(b => b.name === oldName).name = trimmed;
     return true;
   }
 
   addBlock(categoryName, blockName = null, insertIndex = null) {
-    const cat = this.blockCategories.find(c => c.name === categoryName);
+    const cat = this.blockDefinitions.find(c => c.name === categoryName);
     if (!cat) return null;
     const base = blockName ?? 'NewBlock';
     let name = base;
     let i = 1;
-    while (this.blockDefinitions[name]) { name = `${base}${i++}`; }
-    if (insertIndex !== null) cat.blocks.splice(insertIndex, 0, name);
-    else cat.blocks.push(name);
-    this.blockDefinitions[name] = {
-      name, category: categoryName, command: name, parameters: { input: [], output: [] }
-    };
+    while (this._findBlock(name)) { name = `${base}${i++}`; }
+    const newBlock = { name, command: name, parameters: { input: [], output: [] } };
+    if (insertIndex !== null) cat.blocks.splice(insertIndex, 0, newBlock);
+    else cat.blocks.push(newBlock);
     return name;
   }
 
@@ -65,49 +60,47 @@ export default class BlockDefinition {
     const base = name ?? 'NewCategory';
     let candidate = base;
     let i = 1;
-    while (this.blockCategories.some(c => c.name === candidate)) { candidate = `${base}${i++}`; }
+    while (this.blockDefinitions.some(c => c.name === candidate)) { candidate = `${base}${i++}`; }
     const entry = { name: candidate, blocks: [] };
-    if (insertIndex !== null) this.blockCategories.splice(insertIndex, 0, entry);
-    else this.blockCategories.push(entry);
+    if (insertIndex !== null) this.blockDefinitions.splice(insertIndex, 0, entry);
+    else this.blockDefinitions.push(entry);
     return candidate;
   }
 
   removeCategory(name) {
-    const idx = this.blockCategories.findIndex(c => c.name === name);
+    const idx = this.blockDefinitions.findIndex(c => c.name === name);
     if (idx < 0) return false;
-    this.blockCategories[idx].blocks.forEach(b => { delete this.blockDefinitions[b]; });
-    this.blockCategories.splice(idx, 1);
+    this.blockDefinitions.splice(idx, 1);
     return true;
   }
 
   renameCategory(oldName, newName) {
     const trimmed = newName?.trim();
-    if (!trimmed || trimmed === oldName || this.blockCategories.some(c => c.name === trimmed)) return false;
-    const cat = this.blockCategories.find(c => c.name === oldName);
+    if (!trimmed || trimmed === oldName || this.blockDefinitions.some(c => c.name === trimmed)) return false;
+    const cat = this.blockDefinitions.find(c => c.name === oldName);
     if (!cat) return false;
     cat.name = trimmed;
-    cat.blocks.forEach(b => { if (this.blockDefinitions[b]) this.blockDefinitions[b].category = trimmed; });
     return true;
   }
 
   moveCategoryUp(name) {
-    const idx = this.blockCategories.findIndex(c => c.name === name);
+    const idx = this.blockDefinitions.findIndex(c => c.name === name);
     if (idx <= 0) return false;
-    [this.blockCategories[idx - 1], this.blockCategories[idx]] =
-      [this.blockCategories[idx], this.blockCategories[idx - 1]];
+    [this.blockDefinitions[idx - 1], this.blockDefinitions[idx]] =
+      [this.blockDefinitions[idx], this.blockDefinitions[idx - 1]];
     return true;
   }
 
   moveCategoryDown(name) {
-    const idx = this.blockCategories.findIndex(c => c.name === name);
-    if (idx < 0 || idx >= this.blockCategories.length - 1) return false;
-    [this.blockCategories[idx], this.blockCategories[idx + 1]] =
-      [this.blockCategories[idx + 1], this.blockCategories[idx]];
+    const idx = this.blockDefinitions.findIndex(c => c.name === name);
+    if (idx < 0 || idx >= this.blockDefinitions.length - 1) return false;
+    [this.blockDefinitions[idx], this.blockDefinitions[idx + 1]] =
+      [this.blockDefinitions[idx + 1], this.blockDefinitions[idx]];
     return true;
   }
 
   addParam(blockName, prmType, insertIndex = null) {
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return null;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const base = 'NewParam';
@@ -121,7 +114,7 @@ export default class BlockDefinition {
   }
 
   removeParam(blockName, prmType, paramName) {
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return false;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const i = params.findIndex(p => p.name === paramName);
@@ -131,7 +124,7 @@ export default class BlockDefinition {
   }
 
   moveParamUp(blockName, prmType, paramName) {
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return false;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const idx = params.findIndex(p => p.name === paramName);
@@ -141,7 +134,7 @@ export default class BlockDefinition {
   }
 
   moveParamDown(blockName, prmType, paramName) {
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return false;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const idx = params.findIndex(p => p.name === paramName);
@@ -153,7 +146,7 @@ export default class BlockDefinition {
   renameParam(blockName, prmType, oldName, newName) {
     const trimmed = newName?.trim();
     if (!trimmed || trimmed === oldName) return false;
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return false;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     if (params.some(p => p.name === trimmed)) return false;
@@ -164,7 +157,7 @@ export default class BlockDefinition {
   }
 
   updateParam(blockName, prmType, paramName, updates) {
-    const def = this.blockDefinitions[blockName];
+    const def = this._findBlock(blockName);
     if (!def) return false;
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const param = params.find(p => p.name === paramName);

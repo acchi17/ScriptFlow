@@ -51,9 +51,9 @@ export default {
     });
 
     function refreshCategories() {
-      categories.value = entryDefinitionService.blockCategories.map(c => ({
+      categories.value = entryDefinitionService.blockDefinitions.map(c => ({
         name: c.name,
-        blocks: [...c.blocks]
+        blocks: c.blocks.map(b => b.name)
       }));
       Object.keys(expanded).forEach(k => delete expanded[k]);
       categories.value.forEach(c => { expanded[c.name] = true; });

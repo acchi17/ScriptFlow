@@ -43,23 +43,23 @@ export default {
     const bumpRefresh = () => { refreshTrigger.value++; };
 
     const selectedCategoryName = ref(
-      entryDefinitionService.blockCategories[0]?.name ?? ''
+      entryDefinitionService.blockDefinitions[0]?.name ?? ''
     );
     const selectedBlockName = ref(
-      entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
+      entryDefinitionService.blockDefinitions[0]?.blocks[0]?.name ?? null
     );
 
     const categoryNames = computed(() => {
       refreshTrigger.value;
-      return entryDefinitionService.blockCategories.map(c => c.name);
+      return entryDefinitionService.blockDefinitions.map(c => c.name);
     });
 
     const activeBlockNames = computed(() => {
       refreshTrigger.value;
-      const cat = entryDefinitionService.blockCategories.find(
+      const cat = entryDefinitionService.blockDefinitions.find(
         c => c.name === selectedCategoryName.value
       );
-      return cat ? [...cat.blocks] : [];
+      return cat ? cat.blocks.map(b => b.name) : [];
     });
 
     function emitSelection() {

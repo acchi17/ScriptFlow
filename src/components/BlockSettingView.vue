@@ -37,7 +37,7 @@ export default {
     provide('entryDefinitionService', localDefs);
 
     const selectedBlock = ref(
-      localDefs.blockCategories[0]?.blocks[0] ?? null
+      localDefs.blockDefinitions[0]?.blocks[0]?.name ?? null
     );
     const isDirty = ref(false);
 
