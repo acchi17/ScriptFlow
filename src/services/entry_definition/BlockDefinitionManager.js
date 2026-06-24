@@ -1,12 +1,16 @@
-export default class BlockDefinition {
+export default class BlockDefinitionManager {
   constructor(blockDefinitions) {
     this._blockDefinitions = blockDefinitions;
   }
 
   get blockDefinitions() { return this._blockDefinitions; }
 
-  _findBlock(blockName) {
+  getBlockDefinition(blockName) {
     return this.blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
+  }
+
+  _findBlock(blockName) {
+    return this.getBlockDefinition(blockName);
   }
 
   moveBlockUp(blockName) {

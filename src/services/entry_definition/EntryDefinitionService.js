@@ -1,30 +1,16 @@
-import BlockDefinition from './BlockDefinition.js';
+import BlockDefinitionManager from './BlockDefinitionManager.js';
 
 /**
  * EntryDefinitionService
  * Owns the authoritative blockDefinitions (array of categories with embedded block defs).
  * I/O is delegated to PlatformService.
- * Use getBlockDefinition() to get an isolated BlockDefinition for editing.
+ * Use getBlockDefinitions() to get an isolated BlockDefinitionManager for editing.
  */
 export default class EntryDefinitionService {
   constructor(config, platformService) {
     this.config = config;
     this.platformService = platformService;
     this.blockDefinitions = [];
-  }
-
-  /**
-   * Returns a new BlockDefinition pre-populated with a deep clone of the
-   * current blockDefinitions.
-   */
-  getBlockDefinition() {
-    return new BlockDefinition(
-      JSON.parse(JSON.stringify(this.blockDefinitions))
-    );
-  }
-
-  getBlockByName(blockName) {
-    return this.blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
   }
 
   _castParamValue(value, dataType) {
@@ -112,8 +98,18 @@ export default class EntryDefinitionService {
     await this.platformService.writeBlockDefinitions(raw);
   }
 
+  getBlockDefinitions() {
+    return new BlockDefinitionManager(
+      JSON.parse(JSON.stringify(this.blockDefinitions))
+    );
+  }
+
+  getBlockDefinition(blockName) {
+    return this.blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
+  }
+
   getBlockParamDef(blockName) {
-    const blockDef = this.getBlockByName(blockName);
+    const blockDef = this.getBlockDefinition(blockName);
     if (!blockDef) return { input: {}, output: {} };
     const input = {};
     const output = {};

@@ -43,11 +43,11 @@ export default {
 
     const inputParams = computed(() => {
       refreshTrigger.value;
-      return [...(entryDefinitionService.getBlockByName(props.blockName)?.parameters?.input ?? [])];
+      return [...(entryDefinitionService.getBlockDefinition(props.blockName)?.parameters?.input ?? [])];
     });
     const outputParams = computed(() => {
       refreshTrigger.value;
-      return [...(entryDefinitionService.getBlockByName(props.blockName)?.parameters?.output ?? [])];
+      return [...(entryDefinitionService.getBlockDefinition(props.blockName)?.parameters?.output ?? [])];
     });
 
     const inputParamNames = computed(() => inputParams.value.map(p => p.name));
