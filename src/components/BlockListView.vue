@@ -51,7 +51,7 @@ export default {
     });
 
     function refreshCategories() {
-      categories.value = entryDefinitionService.blockDefinitions.map(c => ({
+      categories.value = entryDefinitionService.getBlockDefinitions().map(c => ({
         name: c.name,
         blocks: c.blocks.map(b => b.name)
       }));

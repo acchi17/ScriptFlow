@@ -4,13 +4,13 @@ import BlockDefinitionManager from './BlockDefinitionManager.js';
  * EntryDefinitionService
  * Owns the authoritative blockDefinitions (array of categories with embedded block defs).
  * I/O is delegated to PlatformService.
- * Use getBlockDefinitions() to get an isolated BlockDefinitionManager for editing.
+ * Use getBlockDefinitionManager() to get an isolated BlockDefinitionManager for editing.
  */
 export default class EntryDefinitionService {
   constructor(config, platformService) {
     this.config = config;
     this.platformService = platformService;
-    this.blockDefinitions = [];
+    this._blockDefinitions = [];
   }
 
   _castParamValue(value, dataType) {
@@ -26,7 +26,7 @@ export default class EntryDefinitionService {
   }
 
   async loadBlockDefinitions() {
-    this.blockDefinitions = [];
+    this._blockDefinitions = [];
     try {
       const data = await this.platformService.readBlockDefinitions();
       if (Array.isArray(data && data.categories)) {
@@ -68,22 +68,18 @@ export default class EntryDefinitionService {
               categoryEntry.blocks.push(blockDef);
             });
           }
-          this.blockDefinitions.push(categoryEntry);
+          this._blockDefinitions.push(categoryEntry);
         });
       }
-      return this.blockDefinitions;
+      return this._blockDefinitions;
     } catch (error) {
       console.error(`[${this.constructor.name}] loadBlockDefinitions() failed: ${error.message}`);
     }
   }
 
-  updateBlockDefinition(blockDefinitions) {
-    this.blockDefinitions = JSON.parse(JSON.stringify(blockDefinitions));
-  }
-
   async saveBlockDefinitions() {
     const raw = {
-      categories: this.blockDefinitions.map(cat => ({
+      categories: this._blockDefinitions.map(cat => ({
         name: cat.name,
         blocks: cat.blocks.map(def => ({
           name: def.name,
@@ -98,14 +94,22 @@ export default class EntryDefinitionService {
     await this.platformService.writeBlockDefinitions(raw);
   }
 
-  getBlockDefinitions() {
+  getBlockDefinitionManager() {
     return new BlockDefinitionManager(
-      JSON.parse(JSON.stringify(this.blockDefinitions))
+      JSON.parse(JSON.stringify(this._blockDefinitions))
     );
   }
 
+  getBlockDefinitions() {
+    return this._blockDefinitions;
+  }
+
+  setBlockDefinitions(blockDefinitions) {
+    this._blockDefinitions = JSON.parse(JSON.stringify(blockDefinitions));
+  }
+
   getBlockDefinition(blockName) {
-    return this.blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
+    return this._blockDefinitions.flatMap(c => c.blocks).find(b => b.name === blockName);
   }
 
   getBlockParamDef(blockName) {

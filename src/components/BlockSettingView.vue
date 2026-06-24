@@ -30,14 +30,14 @@ export default {
   emits: ['close'],
 
   setup(_, { emit }) {
-    const { localDefs, saveBlockDefinitions } = useEntryDefinition();
+    const { localBlockDefinitions, saveBlockDefinitions } = useEntryDefinition();
 
-    // Shadow the global entryDefinitionService for all descendants so they
+    // Shadow the global blockDefinitions for all descendants so they
     // call BlockDefinitionManager methods on the local clone.
-    provide('entryDefinitionService', localDefs);
+    provide('blockDefinitions', localBlockDefinitions);
 
     const selectedBlock = ref(
-      localDefs.blockDefinitions[0]?.blocks[0]?.name ?? null
+      localBlockDefinitions.getBlockDefinitions()[0]?.blocks[0]?.name ?? null
     );
     const isDirty = ref(false);
 

@@ -36,18 +36,18 @@ export default {
   },
   emits: ['change'],
   setup(props, { emit }) {
-    const entryDefinitionService = inject('entryDefinitionService');
+    const blockDefinitions = inject('blockDefinitions');
 
     const refreshTrigger = ref(0);
     const bumpRefresh = () => { refreshTrigger.value++; };
 
     const inputParams = computed(() => {
       refreshTrigger.value;
-      return [...(entryDefinitionService.getBlockDefinition(props.blockName)?.parameters?.input ?? [])];
+      return [...(blockDefinitions.getBlockDefinition(props.blockName)?.parameters?.input ?? [])];
     });
     const outputParams = computed(() => {
       refreshTrigger.value;
-      return [...(entryDefinitionService.getBlockDefinition(props.blockName)?.parameters?.output ?? [])];
+      return [...(blockDefinitions.getBlockDefinition(props.blockName)?.parameters?.output ?? [])];
     });
 
     const inputParamNames = computed(() => inputParams.value.map(p => p.name));
@@ -78,7 +78,7 @@ export default {
 
     function onAdd(prmType, insertIndex) {
       mutate(() => {
-        const name = entryDefinitionService.addParam(props.blockName, prmType, insertIndex);
+        const name = blockDefinitions.addParam(props.blockName, prmType, insertIndex);
         if (name) {
           if (prmType === 'input') selectedInputName.value = name;
           else selectedOutputName.value = name;
@@ -88,23 +88,23 @@ export default {
 
     function onDelete(prmType, paramName) {
       mutate(() => {
-        entryDefinitionService.removeParam(props.blockName, prmType, paramName);
+        blockDefinitions.removeParam(props.blockName, prmType, paramName);
         if (prmType === 'input' && selectedInputName.value === paramName) selectedInputName.value = null;
         if (prmType === 'output' && selectedOutputName.value === paramName) selectedOutputName.value = null;
       });
     }
 
     function onMoveUp(prmType, paramName) {
-      mutate(() => entryDefinitionService.moveParamUp(props.blockName, prmType, paramName));
+      mutate(() => blockDefinitions.moveParamUp(props.blockName, prmType, paramName));
     }
 
     function onMoveDown(prmType, paramName) {
-      mutate(() => entryDefinitionService.moveParamDown(props.blockName, prmType, paramName));
+      mutate(() => blockDefinitions.moveParamDown(props.blockName, prmType, paramName));
     }
 
     function onRename(prmType, oldName, newName) {
       mutate(() => {
-        if (entryDefinitionService.renameParam(props.blockName, prmType, oldName, newName)) {
+        if (blockDefinitions.renameParam(props.blockName, prmType, oldName, newName)) {
           if (prmType === 'input' && selectedInputName.value === oldName) selectedInputName.value = newName.trim();
           if (prmType === 'output' && selectedOutputName.value === oldName) selectedOutputName.value = newName.trim();
         }
@@ -112,13 +112,13 @@ export default {
     }
 
     function onUpdateInputParam(field, value) {
-      mutate(() => entryDefinitionService.updateParam(
+      mutate(() => blockDefinitions.updateParam(
         props.blockName, 'input', selectedInputName.value, { [field]: value }
       ));
     }
 
     function onUpdateOutputParam(field, value) {
-      mutate(() => entryDefinitionService.updateParam(
+      mutate(() => blockDefinitions.updateParam(
         props.blockName, 'output', selectedOutputName.value, { [field]: value }
       ));
     }

@@ -3,11 +3,12 @@ import { inject, reactive } from 'vue';
 export function useEntryDefinition() {
   const service = inject('entryDefinitionService');
 
-  const localDefs = reactive(service.getBlockDefinitions());
+  const localBlockDefinitions = reactive(service.getBlockDefinitionManager());
 
-  function saveBlockDefinitions() {
-    service.updateBlockDefinition(localDefs.blockDefinitions);
+  async function saveBlockDefinitions() {
+    service.setBlockDefinitions(localBlockDefinitions.getBlockDefinitions());
+    await service.saveBlockDefinitions();
   }
 
-  return { localDefs, saveBlockDefinitions };
+  return { localBlockDefinitions, saveBlockDefinitions };
 }
