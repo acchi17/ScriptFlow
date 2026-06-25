@@ -5,6 +5,7 @@
 ## 1. `electron/main.js` (Electronのメインプロセス)
 
 *   **役割:** Electronアプリケーション全体の制御と管理。
+*   **モジュール形式:** **CJS（CommonJS）**。`require()` / `module.exports` を使用します。Vite でビルドされるレンダラー（ESM）とは異なります。
 *   **実行環境:** Node.js環境。OSレベルの機能（ファイルアクセス、ウィンドウ作成、ネイティブAPI呼び出しなど）に直接アクセスできます。
 *   **主なタスク:**
     *   アプリケーションの起動・終了処理、および `before-quit` 時のユーティリティプロセスの終了。
@@ -139,3 +140,33 @@ scriptRunner = utilityProcess.fork(runnerPath, [getUserScriptsDir()], { ... })
 - **安全性:** スクリプトがクラッシュしてもメインプロセスやUIには影響しない。
 - **セキュリティ:** スクリプト名を `/^[A-Za-z0-9_-]+$/` で検証し、パスをスクリプトディレクトリ内に限定することで、パストラバーサル攻撃を防ぐ。
 - **タイムアウト管理:** メインプロセス側で10秒のタイムアウトを設定し、スクリプトの無限ループなどを検知できる。
+
+---
+
+# forge.config.js のビルド設定
+
+## 1. 役割
+
+`forge.config.js` は **Electron Forge** のビルド設定ファイルです。アプリのコンパイル・パッケージング・インストーラー生成を管理します。
+
+## 2. Viteプラグインによるビルド分割
+
+`@electron-forge/plugin-vite` を使い、プロセスごとに **別々の Vite 設定ファイル** でビルドします。
+
+| ビルド対象 | Vite 設定ファイル | 出力形式 |
+| :--- | :--- | :--- |
+| メインプロセス | `vite.main.config.js` | CJS |
+| プリロード | `vite.preload.config.js` | CJS |
+| スクリプトランナー | `vite.runner.config.js` | CJS |
+| レンダラー (Vue) | `vite.config.js` | ESM (ブラウザ向け) |
+
+メインプロセス・プリロード・ランナーは Node.js で動くため CJS としてビルドされ、Vue アプリ（レンダラー）はブラウザ向け ESM としてビルドされます。
+
+## 3. デフォルトファイルのバンドル
+
+```js
+// forge.config.js
+extraResource: ['./public']
+```
+
+`extraResource` に `'./public'` を指定することで、`public/` ディレクトリがパッケージ済みアプリの内部にバンドルされます。初回起動時に `<app-dir>/scripts/` と `<app-dir>/settings/` が存在しない場合、このバンドルされた `public/` からデフォルトファイルがシードされます（`seedUserDirs()` による）。
