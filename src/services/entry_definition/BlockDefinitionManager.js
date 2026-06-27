@@ -39,7 +39,9 @@ export default class BlockDefinitionManager {
     if (!trimmed || trimmed === oldName || this.getBlockDefinition(trimmed)) return false;
     const cat = this._blockDefinitions.find(c => c.blocks.some(b => b.name === oldName));
     if (!cat) return false;
-    cat.blocks.find(b => b.name === oldName).name = trimmed;
+    const block = cat.blocks.find(b => b.name === oldName);
+    block.name = trimmed;
+    block.command = trimmed;
     return true;
   }
 

@@ -62,10 +62,10 @@ const dataTypeOptions = [
 ];
 
 const ctrlTypeOptions = [
-  { value: 'spinner',   label: 'Spin' },
-  { value: 'check_box', label: 'Check' },
-  { value: 'combo_box', label: 'Combo' },
-  { value: 'text_box',  label: 'Text' },
+  { value: 'spinner',   label: 'Spinner' },
+  { value: 'check_box', label: 'Check Box' },
+  { value: 'text_box',  label: 'Text Box' },
+  { value: 'combo_box', label: 'Combo Box' },
 ];
 
 const ctrlTypeMap = {
