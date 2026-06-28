@@ -109,4 +109,13 @@
 
   /* Connection view styles */
   --connection-lane-width: 96px;
+
+  /* Block Setting UI styles */
+  --block-setting-font-size: 12px;
+  --block-setting-label-width: 100px;
+  --block-setting-label-font-color: #555;
+  --block-setting-input-padding: 2px 4px;
+  --block-setting-input-bg-color: #fff;
+  --block-setting-label-input-gap: 8px;
+  --block-setting-border-radius: 3px;
 }
