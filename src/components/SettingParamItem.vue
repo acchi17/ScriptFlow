@@ -2,9 +2,9 @@
   <div class="param-detail">
     <div class="panel-header">{{ title }}</div>
     <div class="detail-body">
-      <SimpleComboBox
-        labelText="Data Type"
-        :options="dataTypeOptions"
+      <LabeledComboBox
+        label="Data Type"
+        :items="dataTypeOptions"
         :value="param.dataType"
         @update:value="onUpdate('dataType', $event)" />
       <template v-if="!outputMode">
@@ -34,7 +34,7 @@
 import SettingParamNumeric from './SettingParamNumeric.vue';
 import SettingParamBoolean from './SettingParamBoolean.vue';
 import SettingParamText    from './SettingParamText.vue';
-import SimpleComboBox      from './SimpleComboBox.vue';
+import LabeledComboBox     from './LabeledComboBox.vue';
 import SimpleTextBox       from './SimpleTextBox.vue';
 
 const dataTypeOptions = {
@@ -46,7 +46,7 @@ const dataTypeOptions = {
 
 export default {
   name: 'SettingParamItem',
-  components: { SettingParamNumeric, SettingParamBoolean, SettingParamText, SimpleComboBox, SimpleTextBox },
+  components: { SettingParamNumeric, SettingParamBoolean, SettingParamText, LabeledComboBox, SimpleTextBox },
   props: {
     title:      { type: String,  required: true },
     param:      { type: Object,  required: true },
