@@ -21,7 +21,7 @@
           :param="param"
           @update="onUpdate" />
       </template>
-      <SimpleTextBox
+      <LabeledTextBox
         labelText="Comment"
         dataType="string"
         :value="param.comment"
@@ -35,7 +35,7 @@ import SettingParamNumeric from './SettingParamNumeric.vue';
 import SettingParamBoolean from './SettingParamBoolean.vue';
 import SettingParamText    from './SettingParamText.vue';
 import LabeledComboBox     from './LabeledComboBox.vue';
-import SimpleTextBox       from './SimpleTextBox.vue';
+import LabeledTextBox      from './LabeledTextBox.vue';
 
 const dataTypeOptions = {
   Integer: 'integer',
@@ -46,7 +46,7 @@ const dataTypeOptions = {
 
 export default {
   name: 'SettingParamItem',
-  components: { SettingParamNumeric, SettingParamBoolean, SettingParamText, LabeledComboBox, SimpleTextBox },
+  components: { SettingParamNumeric, SettingParamBoolean, SettingParamText, LabeledComboBox, LabeledTextBox },
   props: {
     title:      { type: String,  required: true },
     param:      { type: Object,  required: true },

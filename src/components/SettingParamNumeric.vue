@@ -1,14 +1,14 @@
 <template>
-  <SimpleComboBox
-    labelText="UI Type"
-    :options="ctrlTypeOptions"
+  <LabeledComboBox
+    label="UI Type"
+    :items="ctrlTypeOptions"
     :value="param.ctrlType"
     @update:value="onUpdate('ctrlType', $event)" />
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
     :param="param"
     @update="onUpdate" />
   <template v-else>
-    <SimpleTextBox
+    <LabeledTextBox
       labelText="Initial Value"
       :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       :value="String(param.default)"
@@ -36,8 +36,8 @@
 
 <script>
 import SimpleListEditor from './SimpleListEditor.vue';
-import SimpleComboBox  from './SimpleComboBox.vue';
-import SimpleTextBox   from './SimpleTextBox.vue';
+import LabeledComboBox from './LabeledComboBox.vue';
+import LabeledTextBox  from './LabeledTextBox.vue';
 
 const ctrlTypeOptions = {
   Spinner:   'spinner',
@@ -46,7 +46,7 @@ const ctrlTypeOptions = {
 
 export default {
   name: 'SettingParamNumeric',
-  components: { SimpleListEditor, SimpleComboBox, SimpleTextBox },
+  components: { SimpleListEditor, LabeledComboBox, LabeledTextBox },
   props: {
     param: { type: Object, required: true },
   },
