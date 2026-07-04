@@ -23,18 +23,20 @@ export default {
   setup(props, { emit }) {
     const inputEl = ref(null)
 
-    function normalizeValue(raw, dataType) {
+    function normalizeValue(str, dataType) {
       if (dataType === 'number' || dataType === 'integer') {
-        const n = Number(raw)
-        if (isNaN(n)) return '0'
+        const n = Number(str)
+        if (isNaN(n)) return ''
         if (dataType === 'integer') return String(Math.trunc(n))
       }
-      return raw
+      return str
     }
 
     function correctIfInvalid() {
       const corrected = normalizeValue(props.value, props.dataType)
-      if (corrected !== props.value) emit('update:value', corrected)
+      if (corrected !== props.value) {
+        emit('update:value', corrected)
+      }
     }
     onMounted(correctIfInvalid)
     watch(() => [props.value, props.dataType], correctIfInvalid)
