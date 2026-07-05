@@ -9,28 +9,25 @@
     @update="onUpdate" />
   <template v-else>
     <LabeledTextBox
-      labelText="Initial Value"
-      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
+      label="Initial Value"
       :value="String(param.default)"
+      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       @update:value="onFieldChange('default', $event)" />
-    <div class="detail-row">
-      <span class="detail-label">Step Value</span>
-      <input class="detail-input detail-input-num" type="number"
-        :value="param.step"
-        @change="onFieldChange('step', $event.target.value)" />
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Min Value</span>
-      <input class="detail-input detail-input-num" type="number"
-        :value="param.min"
-        @change="onFieldChange('min', $event.target.value)" />
-    </div>
-    <div class="detail-row">
-      <span class="detail-label">Max Value</span>
-      <input class="detail-input detail-input-num" type="number"
-        :value="param.max"
-        @change="onFieldChange('max', $event.target.value)" />
-    </div>
+    <LabeledTextBox
+      label="Step Value"
+      :value="String(param.step)"
+      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
+      @update:value="onFieldChange('step', $event)" />
+    <LabeledTextBox
+      label="Min Value"
+      :value="String(param.min)"
+      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
+      @update:value="onFieldChange('min', $event)" />
+    <LabeledTextBox
+      label="Max Value"
+      :value="String(param.max)"
+      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
+      @update:value="onFieldChange('max', $event)" />
   </template>
 </template>
 
@@ -39,10 +36,10 @@ import SimpleListEditor from './SimpleListEditor.vue';
 import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledTextBox  from './LabeledTextBox.vue';
 
-const ctrlTypeOptions = {
-  Spinner:   'spinner',
-  ComboBox:  'combo_box',
-};
+const ctrlTypeOptions = new Map([
+  ['Spinner',  'spinner'],
+  ['ComboBox', 'combo_box'],
+]);
 
 export default {
   name: 'SettingParamNumeric',
@@ -64,33 +61,3 @@ export default {
   }
 }
 </script>
-
-<style scoped>
-.detail-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: var(--block-setting-label-input-gap);
-}
-
-.detail-label {
-  width: var(--block-setting-label-width);
-  font-size: var(--block-setting-font-size);
-  color: var(--block-setting-label-font-color);
-  user-select: none;
-}
-
-.detail-input {
-  flex: 1;
-  font-size: var(--block-setting-font-size);
-  padding: var(--block-setting-input-padding);
-  border: var(--base-outline-border);
-  border-radius: var(--block-setting-border-radius);
-  background-color: var(--block-setting-input-bg-color);
-  outline: none;
-}
-
-.detail-input-num {
-  text-align: right;
-}
-</style>

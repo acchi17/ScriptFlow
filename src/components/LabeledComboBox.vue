@@ -2,11 +2,14 @@
   <div class="main-row">
     <span class="main-label">{{ label }}</span>
     <select class="main-select"
-      :value="value"
-      @change="onChange">
-      <option v-for="(itemValue, itemLabel) in items" :key="itemValue" :value="itemValue">
-        {{ itemLabel }}
-      </option>
+            :value="value"
+            :disabled="disabled"
+            @change="onChange">
+      <template v-if="!disabled">
+        <option v-for="[itemLabel, itemValue] in items" :key="itemValue" :value="itemValue">
+          {{ itemLabel }}
+        </option>
+      </template>
     </select>
   </div>
 </template>
@@ -18,9 +21,10 @@ export default {
   name: 'LabeledComboBox',
   props: {
     label:    { type: String, required: true },
-    items:    { type: Object, required: true }, // label → value pairs
+    items:    { type: Map, required: true }, // label → value pairs
     value:    { type: String, required: true },
     dataType: { type: String, default: 'string', validator: v => ['string', 'number', 'integer'].includes(v) },
+    disabled: { type: Boolean, default: false },
   },
   emits: ['update:value'],
   setup(props, { emit }) {
@@ -46,9 +50,9 @@ export default {
     function correctIfInvalid() {
       const corrected = normalizeValue(props.value, props.dataType)
       const converted = convertValue(corrected, props.dataType)
-      const values = Object.values(props.items)
-      if (values.length > 0 && !values.includes(converted)) {
-        emit('update:value', String(values[0]))
+      const values = [...props.items.values()]
+      if (!values.includes(converted)) {
+        emit('update:value', values.length > 0 ? String(values[0]) : '')
       }
     }
     onMounted(correctIfInvalid)
@@ -58,6 +62,7 @@ export default {
       const corrected = normalizeValue(event.target.value, props.dataType)
       emit('update:value', corrected)
     }
+
     return { onChange }
   },
 }

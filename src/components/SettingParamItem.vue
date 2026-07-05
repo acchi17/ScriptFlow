@@ -22,7 +22,7 @@
           @update="onUpdate" />
       </template>
       <LabeledTextBox
-        labelText="Comment"
+        label="Comment"
         dataType="string"
         :value="param.comment"
         @update:value="onUpdate('comment', $event)" />
@@ -37,12 +37,12 @@ import SettingParamText    from './SettingParamText.vue';
 import LabeledComboBox     from './LabeledComboBox.vue';
 import LabeledTextBox      from './LabeledTextBox.vue';
 
-const dataTypeOptions = {
-  Integer: 'integer',
-  Real:    'real',
-  Boolean: 'boolean',
-  String:  'string',
-};
+const dataTypeOptions = new Map([
+  ['Integer', 'integer'],
+  ['Real',    'real'],
+  ['Boolean', 'boolean'],
+  ['String',  'string'],
+]);
 
 export default {
   name: 'SettingParamItem',
