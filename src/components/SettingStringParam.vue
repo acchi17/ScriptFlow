@@ -3,7 +3,8 @@
     <span class="detail-label">UI Type</span>
     <select class="detail-select" :value="param.ctrlType"
       @change="onCtrlTypeChange($event.target.value)">
-      <option value="check_box">Check Box</option>
+      <option value="text_box">Text Box</option>
+      <option value="combo_box">Combo Box</option>
     </select>
   </div>
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
@@ -11,12 +12,9 @@
     @update="onEditorUpdate" />
   <div v-else class="detail-row">
     <span class="detail-label">Initial Value</span>
-    <select class="detail-select"
-      :value="String(param.default)"
-      @change="onFieldChange('default', $event.target.value)">
-      <option value="true">true</option>
-      <option value="false">false</option>
-    </select>
+    <input class="detail-input" type="text"
+      :value="param.default"
+      @change="onFieldChange('default', $event.target.value)" />
   </div>
 </template>
 
@@ -24,7 +22,7 @@
 import SimpleListEditor from './SimpleListEditor.vue';
 
 export default {
-  name: 'SettingParamBoolean',
+  name: 'SettingStringParam',
   components: { SimpleListEditor },
   props: {
     param: { type: Object, required: true },
@@ -36,7 +34,7 @@ export default {
     }
 
     function onFieldChange(field, rawValue) {
-      emit('update', field, rawValue === 'true');
+      emit('update', field, rawValue);
     }
 
     function onEditorUpdate(field, value) {
@@ -72,5 +70,15 @@ export default {
   border-radius: 3px;
   background-color: #fff;
   cursor: pointer;
+}
+
+.detail-input {
+  flex: 1;
+  font-size: 12px;
+  padding: 2px 4px;
+  border: var(--base-outline-border, 1px solid #ccc);
+  border-radius: 3px;
+  background-color: #fff;
+  outline: none;
 }
 </style>

@@ -42,7 +42,7 @@ const ctrlTypeOptions = new Map([
 ]);
 
 export default {
-  name: 'SettingParamNumeric',
+  name: 'SettingNumericParam',
   components: { SimpleListEditor, LabeledComboBox, LabeledTextBox },
   props: {
     param: { type: Object, required: true },

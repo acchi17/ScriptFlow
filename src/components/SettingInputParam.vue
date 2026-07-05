@@ -7,20 +7,18 @@
         :items="dataTypeOptions"
         :value="param.dataType"
         @update:value="onUpdate('dataType', $event)" />
-      <template v-if="!outputMode">
-        <SettingParamNumeric
-          v-if="param.dataType === 'integer' || param.dataType === 'real'"
-          :param="param"
-          @update="onUpdate" />
-        <SettingParamBoolean
-          v-else-if="param.dataType === 'boolean'"
-          :param="param"
-          @update="onUpdate" />
-        <SettingParamText
-          v-else-if="param.dataType === 'string'"
-          :param="param"
-          @update="onUpdate" />
-      </template>
+      <SettingNumericParam
+        v-if="param.dataType === 'integer' || param.dataType === 'real'"
+        :param="param"
+        @update="onUpdate" />
+      <SettingBooleanParam
+        v-else-if="param.dataType === 'boolean'"
+        :param="param"
+        @update="onUpdate" />
+      <SettingStringParam
+        v-else-if="param.dataType === 'string'"
+        :param="param"
+        @update="onUpdate" />
       <LabeledTextBox
         label="Comment"
         dataType="string"
@@ -31,26 +29,19 @@
 </template>
 
 <script>
-import SettingParamNumeric from './SettingParamNumeric.vue';
-import SettingParamBoolean from './SettingParamBoolean.vue';
-import SettingParamText    from './SettingParamText.vue';
+import SettingNumericParam from './SettingNumericParam.vue';
+import SettingBooleanParam from './SettingBooleanParam.vue';
+import SettingStringParam  from './SettingStringParam.vue';
 import LabeledComboBox     from './LabeledComboBox.vue';
 import LabeledTextBox      from './LabeledTextBox.vue';
 
-const dataTypeOptions = new Map([
-  ['Integer', 'integer'],
-  ['Real',    'real'],
-  ['Boolean', 'boolean'],
-  ['String',  'string'],
-]);
-
 export default {
-  name: 'SettingParamItem',
-  components: { SettingParamNumeric, SettingParamBoolean, SettingParamText, LabeledComboBox, LabeledTextBox },
+  name: 'SettingInputParam',
+  components: { SettingNumericParam, SettingBooleanParam, SettingStringParam, LabeledComboBox, LabeledTextBox },
   props: {
-    title:      { type: String,  required: true },
-    param:      { type: Object,  required: true },
-    outputMode: { type: Boolean, default: false },
+    title:           { type: String, required: true },
+    param:           { type: Object, required: true },
+    dataTypeOptions: { type: Map,    required: true },
   },
   emits: ['update'],
   setup(_, { emit }) {
@@ -58,7 +49,7 @@ export default {
       emit('update', field, value);
     }
 
-    return { dataTypeOptions, onUpdate };
+    return { onUpdate };
   }
 }
 </script>

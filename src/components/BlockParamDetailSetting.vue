@@ -1,19 +1,20 @@
 <template>
   <div class="block-param-detail-setting">
     <div class="detail-item">
-      <SettingParamItem :style="{ flex: 1 }"
+      <SettingInputParam :style="{ flex: 1 }"
         v-if="selectedInputParamDef"
         :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
         :param="selectedInputParamDef"
+        :dataTypeOptions="dataTypeOptions"
         @update="(field, value) => $emit('update-input', field, value)"
       />
     </div>
     <div class="detail-item">
-      <SettingParamItem :style="{ flex: 1 }"
+      <SettingOutputParam :style="{ flex: 1 }"
         v-if="selectedOutputParamDef"
         :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
         :param="selectedOutputParamDef"
-        :outputMode="true"
+        :dataTypeOptions="dataTypeOptions"
         @update="(field, value) => $emit('update-output', field, value)"
       />
     </div>
@@ -21,16 +22,27 @@
 </template>
 
 <script>
-import SettingParamItem from './SettingParamItem.vue';
+import SettingInputParam  from './SettingInputParam.vue';
+import SettingOutputParam from './SettingOutputParam.vue';
+
+const dataTypeOptions = new Map([
+  ['Integer', 'integer'],
+  ['Real',    'real'],
+  ['Boolean', 'boolean'],
+  ['String',  'string'],
+]);
 
 export default {
   name: 'BlockParamDetailSetting',
-  components: { SettingParamItem },
+  components: { SettingInputParam, SettingOutputParam },
   props: {
     selectedInputParamDef:  { type: Object, default: null },
     selectedOutputParamDef: { type: Object, default: null },
   },
   emits: ['update-input', 'update-output'],
+  setup() {
+    return { dataTypeOptions };
+  },
 }
 </script>
 
