@@ -18,7 +18,7 @@
     :value="String(param.default)"
     dataType="string"
     :disabled="!param.items.length"
-    @update:value="onDefaultChange" />
+    @update:value="onChange" />
 </template>
 
 <script>
@@ -38,21 +38,27 @@ export default {
       new Map(props.param.items.map(item => [String(item), String(item)]))
     );
 
-    function castDefault(value) {
-      if (props.param.dataType === 'integer' || props.param.dataType === 'real') {
-        return Number(value);
+    function isValid(str, dataType) {
+      if (dataType === 'integer' || dataType === 'real') {
+        return str !== '' && !isNaN(Number(str));
       }
-      return value;
+      return true;
     }
 
     function addItem() {
       const text = newItemText.value.trim();
       if (!text) return;
-      if (props.param.items.includes(text)) return;
-      const newItems = [...props.param.items, text];
+      if (!isValid(text, props.param.dataType)) return;
+
+      const finalText = props.param.dataType === 'integer'
+        ? String(Math.trunc(Number(text)))
+        : text;
+
+      if (props.param.items.includes(finalText)) return;
+      const newItems = [...props.param.items, finalText];
       emit('update', 'items', newItems);
       if (newItems.length === 1) {
-        emit('update', 'default', castDefault(text));
+        emit('update', 'default', finalText);
       }
       newItemText.value = '';
     }
@@ -62,15 +68,15 @@ export default {
       emit('update', 'items', newItems);
       const removedItem = props.param.items[index];
       if (String(removedItem) === String(props.param.default)) {
-        emit('update', 'default', newItems.length ? castDefault(newItems[0]) : '');
+        emit('update', 'default', newItems.length ? String(newItems[0]) : '');
       }
     }
 
-    function onDefaultChange(value) {
-      emit('update', 'default', castDefault(value));
+    function onChange(value) {
+      emit('update', 'default', value);
     }
 
-    return { newItemText, defaultItems, addItem, removeItem, onDefaultChange };
+    return { newItemText, defaultItems, addItem, removeItem, onChange };
   }
 }
 </script>
