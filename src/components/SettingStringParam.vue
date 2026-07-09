@@ -8,13 +8,15 @@
     </select>
   </div>
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
-    :param="param"
+    :items="param.items"
+    :initial="param.initial"
+    :dataType="param.dataType"
     @update="onEditorUpdate" />
   <div v-else class="detail-row">
     <span class="detail-label">Initial Value</span>
     <input class="detail-input" type="text"
-      :value="param.default"
-      @change="onFieldChange('default', $event.target.value)" />
+      :value="param.initial"
+      @change="onFieldChange('initial', $event.target.value)" />
   </div>
 </template>
 

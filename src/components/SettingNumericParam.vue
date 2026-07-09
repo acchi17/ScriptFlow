@@ -5,14 +5,16 @@
     :value="param.ctrlType"
     @update:value="onUpdate('ctrlType', $event)" />
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
-    :param="param"
+    :items="param.items"
+    :initial="param.initial"
+    :dataType="param.dataType"
     @update="onUpdate" />
   <template v-else>
     <LabeledTextBox
       label="Initial Value"
-      :value="String(param.default)"
+      :value="String(param.initial)"
       :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
-      @update:value="onFieldChange('default', $event)" />
+      @update:value="onFieldChange('initial', $event)" />
     <LabeledTextBox
       label="Step Value"
       :value="String(param.step)"

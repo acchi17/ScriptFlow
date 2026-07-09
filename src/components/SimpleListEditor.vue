@@ -6,18 +6,18 @@
         <input class="detail-input" type="text" v-model="newItemText" placeholder="New item" />
         <button class="item-add-btn" @click="addItem">Add</button>
       </div>
-      <div v-for="(item, idx) in param.items" :key="idx" class="item-entry">
+      <div v-for="(item, idx) in items" :key="idx" class="item-entry">
         <span class="item-text">{{ item }}</span>
         <button class="item-remove" @click="removeItem(idx)">×</button>
       </div>
     </div>
   </div>
   <LabeledComboBox
-    label="Default"
+    label="Initial"
     :items="defaultItems"
-    :value="String(param.default)"
+    :value="String(initial)"
     dataType="string"
-    :disabled="!param.items.length"
+    :disabled="!items.length"
     @update:value="onChange" />
 </template>
 
@@ -29,13 +29,15 @@ export default {
   name: 'SimpleListEditor',
   components: { LabeledComboBox },
   props: {
-    param: { type: Object, required: true },
+    items: { type: Array, required: true },
+    initial: { type: [String, Number], required: true },
+    dataType: { type: String, required: true },
   },
   emits: ['update'],
   setup(props, { emit }) {
     const newItemText = ref('');
     const defaultItems = computed(() =>
-      new Map(props.param.items.map(item => [String(item), String(item)]))
+      new Map(props.items.map(item => [String(item), String(item)]))
     );
 
     function isValid(str, dataType) {
@@ -48,32 +50,32 @@ export default {
     function addItem() {
       const text = newItemText.value.trim();
       if (!text) return;
-      if (!isValid(text, props.param.dataType)) return;
+      if (!isValid(text, props.dataType)) return;
 
-      const finalText = props.param.dataType === 'integer'
+      const finalText = props.dataType === 'integer'
         ? String(Math.trunc(Number(text)))
         : text;
 
-      if (props.param.items.includes(finalText)) return;
-      const newItems = [...props.param.items, finalText];
+      if (props.items.includes(finalText)) return;
+      const newItems = [...props.items, finalText];
       emit('update', 'items', newItems);
       if (newItems.length === 1) {
-        emit('update', 'default', finalText);
+        emit('update', 'initial', finalText);
       }
       newItemText.value = '';
     }
 
     function removeItem(index) {
-      const newItems = props.param.items.filter((_, i) => i !== index);
+      const newItems = props.items.filter((_, i) => i !== index);
       emit('update', 'items', newItems);
-      const removedItem = props.param.items[index];
-      if (String(removedItem) === String(props.param.default)) {
-        emit('update', 'default', newItems.length ? String(newItems[0]) : '');
+      const removedItem = props.items[index];
+      if (String(removedItem) === String(props.initial)) {
+        emit('update', 'initial', newItems.length ? String(newItems[0]) : '');
       }
     }
 
     function onChange(value) {
-      emit('update', 'default', value);
+      emit('update', 'initial', value);
     }
 
     return { newItemText, defaultItems, addItem, removeItem, onChange };

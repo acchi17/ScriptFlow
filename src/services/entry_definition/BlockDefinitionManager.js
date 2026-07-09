@@ -109,7 +109,7 @@ export default class BlockDefinitionManager {
     let name = base;
     let i = 1;
     while (params.some(p => p.name === name)) { name = `${base}${i++}`; }
-    const newParam = { name, dataType: 'integer', ctrlType: 'spinner', default: 0, min: -999, max: 999, step: 1, items: [], comment: '' };
+    const newParam = { name, dataType: 'integer', ctrlType: 'spinner', initial: 0, min: -999, max: 999, step: 1, items: [], comment: '' };
     if (insertIndex !== null) params.splice(insertIndex, 0, newParam);
     else params.push(newParam);
     return name;

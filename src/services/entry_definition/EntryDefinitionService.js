@@ -51,7 +51,7 @@ export default class EntryDefinitionService {
                     name: param.name,
                     dataType: param.dataType,
                     ctrlType: param.ctrlType,
-                    default: param.default,
+                    initial: param.initial,
                     min: param.min,
                     max: param.max,
                     step: param.step,
@@ -119,13 +119,13 @@ export default class EntryDefinitionService {
     const output = {};
     blockDef.parameters.input.forEach(param => {
       input[param.name] = {
-        value: param.default !== undefined ? this._castParamValue(param.default, param.dataType) : null,
+        value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
         type: param.dataType
       };
     });
     blockDef.parameters.output.forEach(param => {
       output[param.name] = {
-        value: param.default !== undefined ? this._castParamValue(param.default, param.dataType) : null,
+        value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
         type: param.dataType
       };
     });
