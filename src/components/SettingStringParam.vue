@@ -9,7 +9,7 @@
   </div>
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
     :items="param.items"
-    :initial="param.initial"
+    :initial="String(param.initial)"
     :dataType="param.dataType"
     @update="onEditorUpdate" />
   <div v-else class="detail-row">

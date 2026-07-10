@@ -15,7 +15,7 @@
   <LabeledComboBox
     label="Initial"
     :items="defaultItems"
-    :value="String(initial)"
+    :value="initial"
     dataType="string"
     :disabled="!items.length"
     @update:value="onChange" />
@@ -30,7 +30,7 @@ export default {
   components: { LabeledComboBox },
   props: {
     items: { type: Array, required: true },
-    initial: { type: [String, Number], required: true },
+    initial: { type: String, required: true },
     dataType: { type: String, required: true },
   },
   emits: ['update'],
