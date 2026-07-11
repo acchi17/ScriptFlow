@@ -7,25 +7,25 @@
   <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
     label="Items"
     :items="param.items"
-    :value="String(param.initial)"
-    @update:value="onUpdate('initial', $event)"
-    @update:items="onUpdate('items', $event)" />
+    :value="toEmptyIfNull(param.initial)"
+    @update:value="onFieldChange('initial', $event)"
+    @update:items="onFieldChange('items', $event)" />
   <template v-else>
     <LabeledTextBox
       label="Initial"
-      :value="String(param.initial)"
+      :value="toEmptyIfNull(param.initial)"
       @update:value="onFieldChange('initial', $event)" />
     <LabeledTextBox
       label="Step"
-      :value="String(param.step)"
+      :value="toEmptyIfNull(param.step)"
       @update:value="onFieldChange('step', $event)" />
     <LabeledTextBox
       label="Min"
-      :value="String(param.min)"
+      :value="toEmptyIfNull(param.min)"
       @update:value="onFieldChange('min', $event)" />
     <LabeledTextBox
       label="Max"
-      :value="String(param.max)"
+      :value="toEmptyIfNull(param.max)"
       @update:value="onFieldChange('max', $event)" />
   </template>
 </template>
@@ -48,45 +48,38 @@ export default {
   },
   emits: ['update'],
   setup(props, { emit }) {
-    function normalizeListItem(text) {
+    function toEmptyIfNull(value) {
+      return value == null ? '' : String(value);
+    }
+
+    function convertText(text) {
       const n = Number(text);
       if (isNaN(n)) return null;
       return props.param.dataType === 'integer' ? Math.trunc(n) : n;
     }
 
-    function normalizeItems(items) {
+    function convertTexts(textArray) {
       const result = [];
-      for (const raw of items) {
-        const item = normalizeListItem(String(raw));
+      for (const text of textArray) {
+        const item = convertText(text);
         if (item != null && !result.includes(item)) result.push(item);
       }
       return result;
     }
 
-    function onUpdate(field, value) {
-      if (field === 'items') {
-        emit('update', field, normalizeItems(value));
-        return;
-      }
-      if (field === 'initial') {
-        const normalized = value === '' ? '' : normalizeListItem(value);
-        emit('update', field, normalized ?? '');
-        return;
-      }
-      emit('update', field, value);
-    }
-
-    function onFieldChange(field, rawValue) {
+    function onFieldChange(field, value) {
       if (field === 'ctrlType') {
-        emit('update', field, rawValue);
+        emit('update', field, value);
         return;
       }
-      const n = Number(rawValue);
-      const corrected = isNaN(n) ? 0 : (props.param.dataType === 'integer' ? Math.trunc(n) : n);
-      emit('update', field, corrected);
+      if (field === 'items') {
+        emit('update', field, convertTexts(value));
+        return;
+      }
+      emit('update', field, convertText(value));
     }
 
-    return { ctrlTypeOptions, onUpdate, onFieldChange };
+    return { ctrlTypeOptions, toEmptyIfNull, onFieldChange };
   }
 }
 </script>
