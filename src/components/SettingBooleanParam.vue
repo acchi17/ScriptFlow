@@ -6,10 +6,12 @@
       <option value="check_box">Check Box</option>
     </select>
   </div>
-  <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
+  <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
+    label="Items"
     :items="param.items"
-    :initial="String(param.initial)"
-    @update="onEditorUpdate" />
+    :value="String(param.initial)"
+    @update:value="onEditorUpdate('initial', $event)"
+    @update:items="onEditorUpdate('items', $event)" />
   <div v-else class="detail-row">
     <span class="detail-label">Initial Value</span>
     <select class="detail-select"
@@ -22,11 +24,11 @@
 </template>
 
 <script>
-import SimpleListEditor from './SimpleListEditor.vue';
+import LabeledListEdit from './LabeledListEdit.vue';
 
 export default {
   name: 'SettingBooleanParam',
-  components: { SimpleListEditor },
+  components: { LabeledListEdit },
   props: {
     param: { type: Object, required: true },
   },

@@ -4,10 +4,12 @@
     :items="ctrlTypeOptions"
     :value="param.ctrlType"
     @update:value="onFieldChange('ctrlType', $event)" />
-  <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
+  <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
+    label="Items"
     :items="param.items"
-    :initial="String(param.initial)"
-    @update="onUpdate" />
+    :value="String(param.initial)"
+    @update:value="onUpdate('initial', $event)"
+    @update:items="onUpdate('items', $event)" />
   <template v-else>
     <LabeledTextBox
       label="Initial"
@@ -29,7 +31,7 @@
 </template>
 
 <script>
-import SimpleListEditor from './SimpleListEditor.vue';
+import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledTextBox  from './LabeledTextBox.vue';
 
@@ -40,7 +42,7 @@ const ctrlTypeOptions = new Map([
 
 export default {
   name: 'SettingNumericParam',
-  components: { SimpleListEditor, LabeledComboBox, LabeledTextBox },
+  components: { LabeledListEdit, LabeledComboBox, LabeledTextBox },
   props: {
     param: { type: Object, required: true },
   },

@@ -1,37 +1,38 @@
 <template>
   <div class="main-row">
-    <span class="main-label">Items</span>
+    <span class="main-label">{{ label }}</span>
     <div class="items-body">
       <div class="item-add-row">
-        <input class="detail-input" type="text" v-model="newItemText" placeholder="New item" />
+        <input class="item-add-input" type="text" v-model="newItemText" placeholder="New item" />
         <button class="item-add-btn" @click="addItem">Add</button>
       </div>
       <div v-for="(item, idx) in items" :key="idx" class="item-entry">
         <span class="item-text">{{ item }}</span>
-        <button class="item-remove" @click="removeItem(idx)">×</button>
+        <button class="item-remove-btn" @click="removeItem(idx)">×</button>
       </div>
     </div>
   </div>
   <LabeledComboBox
     label="Initial"
     :items="defaultItems"
-    :value="initial"
+    :value="value"
     :disabled="!items.length"
-    @update:value="onChange" />
+    @update:value="$emit('update:value', $event)" />
 </template>
 
 <script>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import LabeledComboBox from './LabeledComboBox.vue';
 
 export default {
-  name: 'SimpleListEditor',
+  name: 'LabeledListEdit',
   components: { LabeledComboBox },
   props: {
-    initial: { type: String, required: true },
+    label: { type: String, required: true },
+    value: { type: String, required: true },
     items: { type: Array, required: true },
   },
-  emits: ['update'],
+  emits: ['update:value', 'update:items'],
   setup(props, { emit }) {
     const newItemText = ref('');
     const defaultItems = computed(() =>
@@ -44,27 +45,25 @@ export default {
 
       if (props.items.includes(text)) return;
       const newItems = [...props.items, text];
-      emit('update', 'items', newItems);
-      if (newItems.length === 1) {
-        emit('update', 'initial', text);
-      }
+      emit('update:items', newItems);
       newItemText.value = '';
     }
 
     function removeItem(index) {
       const newItems = props.items.filter((_, i) => i !== index);
-      emit('update', 'items', newItems);
-      const removedItem = props.items[index];
-      if (String(removedItem) === String(props.initial)) {
-        emit('update', 'initial', newItems.length ? String(newItems[0]) : '');
+      emit('update:items', newItems);
+    }
+
+    function correctIfInvalid() {
+      const values = props.items.map(String);
+      if (!values.includes(props.value)) {
+        emit('update:value', values.length > 0 ? values[0] : '');
       }
     }
+    onMounted(correctIfInvalid);
+    watch(() => [props.value, props.items], correctIfInvalid, { deep: true });
 
-    function onChange(value) {
-      emit('update', 'initial', value);
-    }
-
-    return { newItemText, defaultItems, addItem, removeItem, onChange };
+    return { newItemText, defaultItems, addItem, removeItem };
   }
 }
 </script>
@@ -85,7 +84,19 @@ export default {
   user-select: none;
 }
 
-.detail-input {
+.items-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.item-add-row {
+  display: flex;
+  gap: 4px;
+}
+
+.item-add-input {
   flex: 1;
   font-size: 12px;
   padding: 2px 4px;
@@ -95,11 +106,20 @@ export default {
   outline: none;
 }
 
-.items-body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.item-add-btn {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 34px;
+  font-size: 11px;
+  padding: 2px 6px;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.item-add-btn:hover {
+  background-color: #f0f0f0;
 }
 
 .item-entry {
@@ -117,9 +137,10 @@ export default {
   background-color: #f8f8f8;
 }
 
-.item-remove {
+.item-remove-btn {
   flex-shrink: 0;
-  width: 18px;
+  box-sizing: border-box;
+  width: 34px;
   height: 18px;
   padding: 0;
   font-size: 13px;
@@ -130,26 +151,7 @@ export default {
   cursor: pointer;
 }
 
-.item-remove:hover {
+.item-remove-btn:hover {
   color: #c00;
-}
-
-.item-add-row {
-  display: flex;
-  gap: 4px;
-}
-
-.item-add-btn {
-  flex-shrink: 0;
-  font-size: 11px;
-  padding: 2px 6px;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  background-color: #fff;
-  cursor: pointer;
-}
-
-.item-add-btn:hover {
-  background-color: #f0f0f0;
 }
 </style>

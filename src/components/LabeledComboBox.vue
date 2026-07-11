@@ -21,8 +21,8 @@ export default {
   name: 'LabeledComboBox',
   props: {
     label:    { type: String, required: true },
-    items:    { type: Map, required: true }, // label → value pairs
     value:    { type: String, required: true },
+    items:    { type: Map, required: true },
     disabled: { type: Boolean, default: false },
   },
   emits: ['update:value'],

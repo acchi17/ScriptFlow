@@ -7,10 +7,12 @@
       <option value="combo_box">Combo Box</option>
     </select>
   </div>
-  <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
+  <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
+    label="Items"
     :items="param.items"
-    :initial="String(param.initial)"
-    @update="onEditorUpdate" />
+    :value="String(param.initial)"
+    @update:value="onFieldChange('initial', $event)"
+    @update:items="onFieldChange('items', $event)" />
   <div v-else class="detail-row">
     <span class="detail-label">Initial Value</span>
     <input class="detail-input" type="text"
@@ -20,11 +22,11 @@
 </template>
 
 <script>
-import SimpleListEditor from './SimpleListEditor.vue';
+import LabeledListEdit from './LabeledListEdit.vue';
 
 export default {
   name: 'SettingStringParam',
-  components: { SimpleListEditor },
+  components: { LabeledListEdit },
   props: {
     param: { type: Object, required: true },
   },
@@ -38,11 +40,7 @@ export default {
       emit('update', field, rawValue);
     }
 
-    function onEditorUpdate(field, value) {
-      emit('update', field, value);
-    }
-
-    return { onCtrlTypeChange, onFieldChange, onEditorUpdate };
+    return { onCtrlTypeChange, onFieldChange };
   }
 }
 </script>
