@@ -3,32 +3,27 @@
     label="UI Type"
     :items="ctrlTypeOptions"
     :value="param.ctrlType"
-    @update:value="onUpdate('ctrlType', $event)" />
+    @update:value="onFieldChange('ctrlType', $event)" />
   <SimpleListEditor v-if="param.ctrlType === 'combo_box'"
     :items="param.items"
     :initial="String(param.initial)"
-    :dataType="param.dataType"
     @update="onUpdate" />
   <template v-else>
     <LabeledTextBox
-      label="Initial Value"
+      label="Initial"
       :value="String(param.initial)"
-      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       @update:value="onFieldChange('initial', $event)" />
     <LabeledTextBox
-      label="Step Value"
+      label="Step"
       :value="String(param.step)"
-      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       @update:value="onFieldChange('step', $event)" />
     <LabeledTextBox
-      label="Min Value"
+      label="Min"
       :value="String(param.min)"
-      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       @update:value="onFieldChange('min', $event)" />
     <LabeledTextBox
-      label="Max Value"
+      label="Max"
       :value="String(param.max)"
-      :dataType="param.dataType === 'integer' ? 'integer' : 'number'"
       @update:value="onFieldChange('max', $event)" />
   </template>
 </template>
@@ -50,13 +45,43 @@ export default {
     param: { type: Object, required: true },
   },
   emits: ['update'],
-  setup(_, { emit }) {
+  setup(props, { emit }) {
+    function normalizeListItem(text) {
+      const n = Number(text);
+      if (isNaN(n)) return null;
+      return props.param.dataType === 'integer' ? Math.trunc(n) : n;
+    }
+
+    function normalizeItems(items) {
+      const result = [];
+      for (const raw of items) {
+        const item = normalizeListItem(String(raw));
+        if (item != null && !result.includes(item)) result.push(item);
+      }
+      return result;
+    }
+
     function onUpdate(field, value) {
+      if (field === 'items') {
+        emit('update', field, normalizeItems(value));
+        return;
+      }
+      if (field === 'initial') {
+        const normalized = value === '' ? '' : normalizeListItem(value);
+        emit('update', field, normalized ?? '');
+        return;
+      }
       emit('update', field, value);
     }
 
     function onFieldChange(field, rawValue) {
-      emit('update', field, Number(rawValue));
+      if (field === 'ctrlType') {
+        emit('update', field, rawValue);
+        return;
+      }
+      const n = Number(rawValue);
+      const corrected = isNaN(n) ? 0 : (props.param.dataType === 'integer' ? Math.trunc(n) : n);
+      emit('update', field, corrected);
     }
 
     return { ctrlTypeOptions, onUpdate, onFieldChange };

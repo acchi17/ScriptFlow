@@ -4,7 +4,7 @@
     <select class="main-select"
             :value="value"
             :disabled="disabled"
-            @change="onChange">
+            @change="$emit('update:value', $event.target.value)">
       <template v-if="!disabled">
         <option v-for="[itemLabel, itemValue] in items" :key="itemValue" :value="itemValue">
           {{ itemLabel }}
@@ -23,47 +23,18 @@ export default {
     label:    { type: String, required: true },
     items:    { type: Map, required: true }, // label → value pairs
     value:    { type: String, required: true },
-    dataType: { type: String, default: 'string', validator: v => ['string', 'number', 'integer'].includes(v) },
     disabled: { type: Boolean, default: false },
   },
   emits: ['update:value'],
   setup(props, { emit }) {
-    function normalizeValue(str, dataType) {
-      if (dataType === 'number' || dataType === 'integer') {
-        const n = Number(str)
-        if (isNaN(n)) return ''
-        if (dataType === 'integer') return String(Math.trunc(n))
-      }
-      return str
-    }
-
-    function convertValue(str, dataType) {
-      if (dataType === 'number' || dataType === 'integer') {
-        const n = Number(str)
-        if (isNaN(n)) return ''
-        if (dataType === 'integer') return Math.trunc(n)
-        return n
-      }
-      return str
-    }
-
     function correctIfInvalid() {
-      const corrected = normalizeValue(props.value, props.dataType)
-      const converted = convertValue(corrected, props.dataType)
       const values = [...props.items.values()]
-      if (!values.includes(converted)) {
+      if (!values.includes(props.value)) {
         emit('update:value', values.length > 0 ? String(values[0]) : '')
       }
     }
     onMounted(correctIfInvalid)
     watch(() => [props.value, props.items], correctIfInvalid, { deep: true })
-
-    function onChange(event) {
-      const corrected = normalizeValue(event.target.value, props.dataType)
-      emit('update:value', corrected)
-    }
-
-    return { onChange }
   },
 }
 </script>

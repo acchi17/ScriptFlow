@@ -21,7 +21,6 @@
         @update="onUpdate" />
       <LabeledTextBox
         label="Comment"
-        dataType="string"
         :value="param.comment"
         @update:value="onUpdate('comment', $event)" />
     </div>

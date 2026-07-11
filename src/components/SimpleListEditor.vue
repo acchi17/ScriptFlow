@@ -16,7 +16,6 @@
     label="Initial"
     :items="defaultItems"
     :value="initial"
-    dataType="string"
     :disabled="!items.length"
     @update:value="onChange" />
 </template>
@@ -29,9 +28,8 @@ export default {
   name: 'SimpleListEditor',
   components: { LabeledComboBox },
   props: {
-    items: { type: Array, required: true },
     initial: { type: String, required: true },
-    dataType: { type: String, required: true },
+    items: { type: Array, required: true },
   },
   emits: ['update'],
   setup(props, { emit }) {
@@ -40,27 +38,15 @@ export default {
       new Map(props.items.map(item => [String(item), String(item)]))
     );
 
-    function isValid(str, dataType) {
-      if (dataType === 'integer' || dataType === 'real') {
-        return str !== '' && !isNaN(Number(str));
-      }
-      return true;
-    }
-
     function addItem() {
       const text = newItemText.value.trim();
       if (!text) return;
-      if (!isValid(text, props.dataType)) return;
 
-      const finalText = props.dataType === 'integer'
-        ? String(Math.trunc(Number(text)))
-        : text;
-
-      if (props.items.includes(finalText)) return;
-      const newItems = [...props.items, finalText];
+      if (props.items.includes(text)) return;
+      const newItems = [...props.items, text];
       emit('update', 'items', newItems);
       if (newItems.length === 1) {
-        emit('update', 'initial', finalText);
+        emit('update', 'initial', text);
       }
       newItemText.value = '';
     }

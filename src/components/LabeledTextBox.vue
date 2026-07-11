@@ -3,52 +3,19 @@
     <span class="main-label">{{ label }}</span>
     <input class="main-input"
       type="text"
-      ref="inputEl"
       :value="value"
-      @change="onChange" />
+      @change="$emit('update:value', $event.target.value)" />
   </div>
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue'
-
 export default {
   name: 'LabeledTextBox',
   props: {
     label: { type: String, required: true },
     value: { type: String, required: true },
-    dataType: { type: String, default: 'string', validator: v => ['string', 'number', 'integer'].includes(v) },
   },
   emits: ['update:value'],
-  setup(props, { emit }) {
-    const inputEl = ref(null)
-
-    function normalizeValue(str, dataType) {
-      if (dataType === 'number' || dataType === 'integer') {
-        const n = Number(str)
-        if (isNaN(n)) return ''
-        if (dataType === 'integer') return String(Math.trunc(n))
-      }
-      return str
-    }
-
-    function correctIfInvalid() {
-      const corrected = normalizeValue(props.value, props.dataType)
-      if (corrected !== props.value) {
-        emit('update:value', corrected)
-      }
-    }
-    onMounted(correctIfInvalid)
-    watch(() => [props.value, props.dataType], correctIfInvalid)
-
-    function onChange(event) {
-      const corrected = normalizeValue(event.target.value, props.dataType)
-      if (corrected !== event.target.value) inputEl.value.value = corrected
-      emit('update:value', corrected)
-    }
-
-    return { inputEl, onChange }
-  },
 }
 </script>
 
