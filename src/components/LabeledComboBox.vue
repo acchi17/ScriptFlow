@@ -1,5 +1,5 @@
 <template>
-  <div class="main-row">
+  <div class="labeled-combo-box">
     <span class="main-label">{{ label }}</span>
     <select class="main-select"
             :value="value"
@@ -40,7 +40,7 @@ export default {
 </script>
 
 <style scoped>
-.main-row {
+.labeled-combo-box {
   flex: 1;
   display: flex;
   align-items: center;
@@ -57,6 +57,7 @@ export default {
 
 .main-select {
   flex: 1;
+  font-family: inherit;
   font-size: 12px;
   padding: 2px 4px;
   border: 1px solid #ccc;

@@ -1,5 +1,5 @@
 <template>
-  <div class="main-row">
+  <div class="labeled-text-box">
     <span class="main-label">{{ label }}</span>
     <input class="main-input"
       type="text"
@@ -20,7 +20,7 @@ export default {
 </script>
 
 <style scoped>
-.main-row {
+.labeled-text-box {
   flex: 1;
   display: flex;
   align-items: center;
@@ -37,6 +37,7 @@ export default {
 
 .main-input {
   flex: 1;
+  font-family: inherit;
   font-size: 12px;
   padding: 2px 4px;
   border: 1px solid #ccc;

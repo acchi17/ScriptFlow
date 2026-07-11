@@ -1,9 +1,9 @@
 <template>
-  <div class="main-row">
+  <div class="labeled-list-edit">
     <span class="main-label">{{ label }}</span>
     <div class="items-body">
       <div class="item-add-row">
-        <input class="item-add-input" type="text" v-model="newItemText" placeholder="New item" />
+        <input class="item-add-input" type="text" v-model="itemText" placeholder="New item" />
         <button class="item-add-btn" @click="addItem">Add</button>
       </div>
       <div v-for="(item, idx) in items" :key="idx" class="item-entry">
@@ -14,7 +14,7 @@
   </div>
   <LabeledComboBox
     label="Initial"
-    :items="defaultItems"
+    :items="itemTexts"
     :value="value"
     :disabled="!items.length"
     @update:value="$emit('update:value', $event)" />
@@ -34,19 +34,19 @@ export default {
   },
   emits: ['update:value', 'update:items'],
   setup(props, { emit }) {
-    const newItemText = ref('');
-    const defaultItems = computed(() =>
+    const itemText = ref('');
+    const itemTexts = computed(() =>
       new Map(props.items.map(item => [String(item), String(item)]))
     );
 
     function addItem() {
-      const text = newItemText.value.trim();
+      const text = itemText.value.trim();
       if (!text) return;
 
       if (props.items.includes(text)) return;
       const newItems = [...props.items, text];
       emit('update:items', newItems);
-      newItemText.value = '';
+      itemText.value = '';
     }
 
     function removeItem(index) {
@@ -63,13 +63,13 @@ export default {
     onMounted(correctIfInvalid);
     watch(() => [props.value, props.items], correctIfInvalid, { deep: true });
 
-    return { newItemText, defaultItems, addItem, removeItem };
+    return { itemText, itemTexts, addItem, removeItem };
   }
 }
 </script>
 
 <style scoped>
-.main-row {
+.labeled-list-edit {
   flex: 1;
   display: flex;
   align-items: flex-start;
@@ -98,6 +98,7 @@ export default {
 
 .item-add-input {
   flex: 1;
+  font-family: inherit;
   font-size: 12px;
   padding: 2px 4px;
   border: 1px solid #ccc;
