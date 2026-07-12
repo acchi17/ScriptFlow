@@ -15,7 +15,7 @@
 import LabeledComboBox from './LabeledComboBox.vue';
 
 const ctrlTypeOptions = new Map([
-  ['Check Box', 'check_box'],
+  ['CheckBox', 'check_box'],
 ]);
 
 const initialValueOptions = new Map([

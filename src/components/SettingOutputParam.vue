@@ -1,7 +1,7 @@
 <template>
-  <div class="param-detail">
-    <div class="panel-header">{{ title }}</div>
-    <div class="detail-body">
+  <div class="setting-output-param">
+    <div class="main-header">{{ title }}</div>
+    <div class="main-body">
       <LabeledComboBox
         label="Data Type"
         :value="param.dataType"
@@ -39,7 +39,7 @@ export default {
 </script>
 
 <style scoped>
-.param-detail {
+.setting-output-param {
   display: flex;
   flex-direction: column;
   border-radius: 4px;
@@ -48,7 +48,7 @@ export default {
   overflow: hidden;
 }
 
-.panel-header {
+.main-header {
   padding: 4px 12px;
   font-weight: 600;
   letter-spacing: 0.05em;
@@ -58,7 +58,7 @@ export default {
   white-space: nowrap;
 }
 
-.detail-body {
+.main-body {
   display: flex;
   flex-direction: column;
   gap: 6px;
