@@ -1,4 +1,18 @@
 export default class BlockDefinitionManager {
+  static CTRL_TYPE_OPTIONS = {
+    numeric: new Map([
+      ['Spinner',  'spinner'],
+      ['ComboBox', 'combo_box'],
+    ]),
+    boolean: new Map([
+      ['CheckBox', 'check_box'],
+    ]),
+    string: new Map([
+      ['TextBox',  'text_box'],
+      ['ComboBox', 'combo_box'],
+    ]),
+  };
+
   constructor(blockDefinitions) {
     this._blockDefinitions = blockDefinitions;
   }

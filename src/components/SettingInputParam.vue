@@ -10,14 +10,17 @@
       <SettingNumericParam
         v-if="param.dataType === 'integer' || param.dataType === 'real'"
         :param="param"
+        :ctrlTypeOptions="ctrlTypeOptions.numeric"
         @update="onUpdate" />
       <SettingBooleanParam
         v-else-if="param.dataType === 'boolean'"
         :param="param"
+        :ctrlTypeOptions="ctrlTypeOptions.boolean"
         @update="onUpdate" />
       <SettingStringParam
         v-else-if="param.dataType === 'string'"
         :param="param"
+        :ctrlTypeOptions="ctrlTypeOptions.string"
         @update="onUpdate" />
       <LabeledTextBox
         label="Comment"
@@ -33,6 +36,9 @@ import SettingBooleanParam from './SettingBooleanParam.vue';
 import SettingStringParam  from './SettingStringParam.vue';
 import LabeledComboBox     from './LabeledComboBox.vue';
 import LabeledTextBox      from './LabeledTextBox.vue';
+import BlockDefinitionManager from '../services/entry_definition/BlockDefinitionManager.js';
+
+const ctrlTypeOptions = BlockDefinitionManager.CTRL_TYPE_OPTIONS;
 
 export default {
   name: 'SettingInputParam',
@@ -48,7 +54,7 @@ export default {
       emit('update', field, value);
     }
 
-    return { onUpdate };
+    return { ctrlTypeOptions, onUpdate };
   }
 }
 </script>

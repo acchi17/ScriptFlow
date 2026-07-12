@@ -14,10 +14,6 @@
 <script>
 import LabeledComboBox from './LabeledComboBox.vue';
 
-const ctrlTypeOptions = new Map([
-  ['CheckBox', 'check_box'],
-]);
-
 const initialValueOptions = new Map([
   ['TRUE', 'true'],
   ['FALSE', 'false'],
@@ -27,7 +23,8 @@ export default {
   name: 'SettingBooleanParam',
   components: { LabeledComboBox },
   props: {
-    param: { type: Object, required: true },
+    param:           { type: Object, required: true },
+    ctrlTypeOptions: { type: Map,    required: true },
   },
   emits: ['update'],
   setup(_, { emit }) {
@@ -43,7 +40,7 @@ export default {
       emit('update', field, value === 'true');
     }
 
-    return { ctrlTypeOptions, initialValueOptions, toEmptyIfNull,onFieldChange };
+    return { initialValueOptions, toEmptyIfNull, onFieldChange };
   }
 }
 </script>

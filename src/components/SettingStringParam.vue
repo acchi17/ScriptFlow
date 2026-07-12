@@ -21,16 +21,12 @@ import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledTextBox from './LabeledTextBox.vue';
 
-const ctrlTypeOptions = new Map([
-  ['TextBox', 'text_box'],
-  ['ComboBox', 'combo_box'],
-]);
-
 export default {
   name: 'SettingStringParam',
   components: { LabeledComboBox, LabeledListEdit, LabeledTextBox },
   props: {
-    param: { type: Object, required: true },
+    param:           { type: Object, required: true },
+    ctrlTypeOptions: { type: Map,    required: true },
   },
   emits: ['update'],
   setup(_, { emit }) {
@@ -42,7 +38,7 @@ export default {
       emit('update', field, value);
     }
 
-    return { ctrlTypeOptions, toEmptyIfNull, onFieldChange };
+    return { toEmptyIfNull, onFieldChange };
   }
 }
 </script>

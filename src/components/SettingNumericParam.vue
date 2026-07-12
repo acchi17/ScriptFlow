@@ -35,16 +35,12 @@ import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledTextBox  from './LabeledTextBox.vue';
 
-const ctrlTypeOptions = new Map([
-  ['Spinner',  'spinner'],
-  ['ComboBox', 'combo_box'],
-]);
-
 export default {
   name: 'SettingNumericParam',
   components: { LabeledListEdit, LabeledComboBox, LabeledTextBox },
   props: {
-    param: { type: Object, required: true },
+    param:           { type: Object, required: true },
+    ctrlTypeOptions: { type: Map,    required: true },
   },
   emits: ['update'],
   setup(props, { emit }) {
@@ -79,7 +75,7 @@ export default {
       emit('update', field, convertText(value));
     }
 
-    return { ctrlTypeOptions, toEmptyIfNull, onFieldChange };
+    return { toEmptyIfNull, onFieldChange };
   }
 }
 </script>
