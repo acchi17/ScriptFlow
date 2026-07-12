@@ -4,8 +4,8 @@
     <div class="detail-body">
       <LabeledComboBox
         label="Data Type"
-        :items="dataTypeOptions"
         :value="param.dataType"
+        :items="dataTypeOptions"
         @update:value="onUpdate('dataType', $event)" />
       <LabeledTextBox
         label="Comment"

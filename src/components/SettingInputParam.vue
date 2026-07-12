@@ -1,11 +1,11 @@
 <template>
-  <div class="param-detail">
+  <div class="setting-input-param">
     <div class="panel-header">{{ title }}</div>
     <div class="detail-body">
       <LabeledComboBox
         label="Data Type"
-        :items="dataTypeOptions"
         :value="param.dataType"
+        :items="dataTypeOptions"
         @update:value="onUpdate('dataType', $event)" />
       <SettingNumericParam
         v-if="param.dataType === 'integer' || param.dataType === 'real'"
@@ -54,7 +54,7 @@ export default {
 </script>
 
 <style scoped>
-.param-detail {
+.setting-input-param {
   display: flex;
   flex-direction: column;
   border-radius: 4px;

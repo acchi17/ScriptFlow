@@ -1,13 +1,13 @@
 <template>
   <LabeledComboBox
     label="UI Type"
-    :items="ctrlTypeOptions"
     :value="param.ctrlType"
+    :items="ctrlTypeOptions"
     @update:value="onFieldChange('ctrlType', $event)" />
   <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
     label="Items"
-    :items="param.items"
     :value="toEmptyIfNull(param.initial)"
+    :items="param.items"
     @update:value="onFieldChange('initial', $event)"
     @update:items="onFieldChange('items', $event)" />
   <template v-else>
@@ -31,8 +31,8 @@
 </template>
 
 <script>
-import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledComboBox from './LabeledComboBox.vue';
+import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledTextBox  from './LabeledTextBox.vue';
 
 const ctrlTypeOptions = new Map([

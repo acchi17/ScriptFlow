@@ -1,79 +1,49 @@
 <template>
-  <div class="detail-row">
-    <span class="detail-label">UI Type</span>
-    <select class="detail-select" :value="param.ctrlType"
-      @change="onCtrlTypeChange($event.target.value)">
-      <option value="check_box">Check Box</option>
-    </select>
-  </div>
-  <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
-    label="Items"
-    :items="param.items"
-    :value="String(param.initial)"
-    @update:value="onEditorUpdate('initial', $event)"
-    @update:items="onEditorUpdate('items', $event)" />
-  <div v-else class="detail-row">
-    <span class="detail-label">Initial Value</span>
-    <select class="detail-select"
-      :value="String(param.initial)"
-      @change="onFieldChange('initial', $event.target.value)">
-      <option value="true">true</option>
-      <option value="false">false</option>
-    </select>
-  </div>
+  <LabeledComboBox
+    label="UI Type"
+    :value="param.ctrlType"
+    :items="ctrlTypeOptions"
+    @update:value="onFieldChange('ctrlType', $event)" />
+  <LabeledComboBox
+    label="Initial Value"
+    :value="toEmptyIfNull(param.initial)"
+    :items="initialValueOptions"
+    @update:value="onFieldChange('initial', $event)" />
 </template>
 
 <script>
-import LabeledListEdit from './LabeledListEdit.vue';
+import LabeledComboBox from './LabeledComboBox.vue';
+
+const ctrlTypeOptions = new Map([
+  ['Check Box', 'check_box'],
+]);
+
+const initialValueOptions = new Map([
+  ['TRUE', 'true'],
+  ['FALSE', 'false'],
+]);
 
 export default {
   name: 'SettingBooleanParam',
-  components: { LabeledListEdit },
+  components: { LabeledComboBox },
   props: {
     param: { type: Object, required: true },
   },
   emits: ['update'],
   setup(_, { emit }) {
-    function onCtrlTypeChange(value) {
-      emit('update', 'ctrlType', value);
+    function toEmptyIfNull(value) {
+      return value == null ? '' : String(value);
     }
 
-    function onFieldChange(field, rawValue) {
-      emit('update', field, rawValue === 'true');
+    function onFieldChange(field, value) {
+      if (field === 'ctrlType') {
+        emit('update', field, value);
+        return;
+      }
+      emit('update', field, value === 'true');
     }
 
-    function onEditorUpdate(field, value) {
-      emit('update', field, value);
-    }
-
-    return { onCtrlTypeChange, onFieldChange, onEditorUpdate };
+    return { ctrlTypeOptions, initialValueOptions, toEmptyIfNull,onFieldChange };
   }
 }
 </script>
-
-<style scoped>
-.detail-row {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.detail-label {
-  width: 90px;
-  flex-shrink: 0;
-  color: #555;
-  user-select: none;
-}
-
-.detail-select {
-  flex: 1;
-  font-size: 12px;
-  padding: 2px 4px;
-  border: var(--base-outline-border, 1px solid #ccc);
-  border-radius: 3px;
-  background-color: #fff;
-  cursor: pointer;
-}
-</style>
