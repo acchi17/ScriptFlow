@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint --ext .js,.vue src",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "electron:start": "electron-forge start",
     "electron:package": "electron-forge package",
     "electron:make": "electron-forge make"
@@ -21,11 +23,14 @@
     "@electron-forge/maker-zip": "^7.4.0",
     "@electron-forge/plugin-vite": "^7.4.0",
     "@vitejs/plugin-vue": "^5.0.0",
+    "@vue/test-utils": "^2.4.6",
     "electron": "^31.0.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.20.0",
+    "jsdom": "^25.0.1",
     "vite": "^5.2.0",
     "vite-plugin-eslint": "^1.8.1",
+    "vitest": "^2.1.8",
     "vue-eslint-parser": "^9.4.0"
   },
   "browserslist": [
