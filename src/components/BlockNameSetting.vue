@@ -1,26 +1,26 @@
 <template>
   <div class="block-name-setting">
     <SettingListItem :style="{ flex: 2.5 }"
-      title="Categories"
-      :items="categoryNames"
-      :selected-item="selectedCategoryName"
-      @update:selected-item="onCategorySelected"
-      @move-up="onMoveUpCategory"
-      @move-down="onMoveDownCategory"
-      @add="onAddCategory"
-      @rename="onRenameCategory"
-      @delete="onDeleteCategory"
+                     title="Categories"
+                     :items="categoryNames"
+                     :selected-item="selectedCategoryName"
+                     @update:selected-item="onCategorySelected"
+                     @move-up="onMoveUpCategory"
+                     @move-down="onMoveDownCategory"
+                     @add="onAddCategory"
+                     @rename="onRenameCategory"
+                     @delete="onDeleteCategory"
     />
     <SettingListItem :style="{ flex: 5.5 }"
-      :title="`Blocks — ${selectedCategoryName}`"
-      :items="activeBlockNames"
-      :selected-item="selectedBlockName"
-      @update:selected-item="onBlockSelected"
-      @move-up="onMoveUpBlock"
-      @move-down="onMoveDownBlock"
-      @add="onAddBlock"
-      @rename="onRenameBlock"
-      @delete="onDeleteBlock"
+                     :title="`Blocks — ${selectedCategoryName}`"
+                     :items="activeBlockNames"
+                     :selected-item="selectedBlockName"
+                     @update:selected-item="onBlockSelected"
+                     @move-up="onMoveUpBlock"
+                     @move-down="onMoveDownBlock"
+                     @add="onAddBlock"
+                     @rename="onRenameBlock"
+                     @delete="onDeleteBlock"
     />
     <BlockScriptSetting :style="{ flex: 2 }" :block-name="selectedBlockName" />
   </div>
@@ -116,7 +116,7 @@ export default {
       const newList = categoryNames.value;
       selectedCategoryName.value = newList.length === 0 ? ''
         : idx > 0 ? newList[idx - 1]
-        : newList[0];
+          : newList[0];
       selectedBlockName.value = null;
       emitSelection();
     }
@@ -154,7 +154,7 @@ export default {
       const newList = activeBlockNames.value;
       selectedBlockName.value = newList.length === 0 ? null
         : idx > 0 ? newList[idx - 1]
-        : newList[0];
+          : newList[0];
       emitSelection();
     }
 

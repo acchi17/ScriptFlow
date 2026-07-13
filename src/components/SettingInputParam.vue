@@ -36,9 +36,6 @@ import SettingBooleanParam from './SettingBooleanParam.vue';
 import SettingStringParam  from './SettingStringParam.vue';
 import LabeledComboBox     from './LabeledComboBox.vue';
 import LabeledTextBox      from './LabeledTextBox.vue';
-import BlockDefinitionManager from '../services/entry_definition/BlockDefinitionManager.js';
-
-const ctrlTypeOptions = BlockDefinitionManager.CTRL_TYPE_OPTIONS;
 
 export default {
   name: 'SettingInputParam',
@@ -47,6 +44,7 @@ export default {
     title:           { type: String, required: true },
     param:           { type: Object, required: true },
     dataTypeOptions: { type: Map,    required: true },
+    ctrlTypeOptions: { type: Object, required: true },
   },
   emits: ['update'],
   setup(_, { emit }) {
@@ -54,7 +52,7 @@ export default {
       emit('update', field, value);
     }
 
-    return { ctrlTypeOptions, onUpdate };
+    return { onUpdate };
   }
 }
 </script>

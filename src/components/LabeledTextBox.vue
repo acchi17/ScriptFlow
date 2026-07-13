@@ -2,9 +2,9 @@
   <div class="labeled-text-box">
     <span class="main-label">{{ label }}</span>
     <input class="main-input"
-      type="text"
-      :value="value"
-      @change="$emit('update:value', $event.target.value)" />
+           type="text"
+           :value="value"
+           @change="$emit('update:value', $event.target.value)" />
   </div>
 </template>
 

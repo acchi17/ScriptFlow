@@ -6,13 +6,13 @@
     </div>
     <div class="body">
       <BlockNameSetting :style="{ flex: '0 0 25%' }"
-        @update:selected-block="selectedBlock = $event"
-        @change="onNamesChange"
+                        @update:selected-block="selectedBlock = $event"
+                        @change="onNamesChange"
       />
       <BlockParamSetting :style="{ flex: 1 }"
-        v-if="selectedBlock"
-        :block-name="selectedBlock"
-        @change="onParamsChange"
+                         v-if="selectedBlock"
+                         :block-name="selectedBlock"
+                         @change="onParamsChange"
       />
     </div>
   </div>

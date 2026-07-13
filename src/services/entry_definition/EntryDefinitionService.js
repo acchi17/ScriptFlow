@@ -1,10 +1,7 @@
-import BlockDefinitionManager from './BlockDefinitionManager.js';
-
 /**
  * EntryDefinitionService
  * Owns the authoritative blockDefinitions (array of categories with embedded block defs).
  * I/O is delegated to PlatformService.
- * Use getBlockDefinitionManager() to get an isolated BlockDefinitionManager for editing.
  */
 export default class EntryDefinitionService {
   constructor(config, platformService) {
@@ -92,12 +89,6 @@ export default class EntryDefinitionService {
       }))
     };
     await this.platformService.writeBlockDefinitions(raw);
-  }
-
-  getBlockDefinitionManager() {
-    return new BlockDefinitionManager(
-      JSON.parse(JSON.stringify(this._blockDefinitions))
-    );
   }
 
   getBlockDefinitions() {

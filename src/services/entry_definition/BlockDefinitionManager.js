@@ -13,6 +13,13 @@ export default class BlockDefinitionManager {
     ]),
   };
 
+  static DATA_TYPE_OPTIONS = new Map([
+    ['Integer', 'integer'],
+    ['Real',    'real'],
+    ['Boolean', 'boolean'],
+    ['String',  'string'],
+  ]);
+
   constructor(blockDefinitions) {
     this._blockDefinitions = blockDefinitions;
   }

@@ -2,20 +2,21 @@
   <div class="block-param-detail-setting">
     <div class="detail-item">
       <SettingInputParam :style="{ flex: 1 }"
-        v-if="selectedInputParamDef"
-        :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
-        :param="selectedInputParamDef"
-        :dataTypeOptions="dataTypeOptions"
-        @update="(field, value) => $emit('update-input', field, value)"
+                         v-if="selectedInputParamDef"
+                         :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
+                         :param="selectedInputParamDef"
+                         :dataTypeOptions="dataTypeOptions"
+                         :ctrlTypeOptions="ctrlTypeOptions"
+                         @update="(field, value) => $emit('update-input', field, value)"
       />
     </div>
     <div class="detail-item">
       <SettingOutputParam :style="{ flex: 1 }"
-        v-if="selectedOutputParamDef"
-        :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
-        :param="selectedOutputParamDef"
-        :dataTypeOptions="dataTypeOptions"
-        @update="(field, value) => $emit('update-output', field, value)"
+                          v-if="selectedOutputParamDef"
+                          :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
+                          :param="selectedOutputParamDef"
+                          :dataTypeOptions="dataTypeOptions"
+                          @update="(field, value) => $emit('update-output', field, value)"
       />
     </div>
   </div>
@@ -24,13 +25,7 @@
 <script>
 import SettingInputParam  from './SettingInputParam.vue';
 import SettingOutputParam from './SettingOutputParam.vue';
-
-const dataTypeOptions = new Map([
-  ['Integer', 'integer'],
-  ['Real',    'real'],
-  ['Boolean', 'boolean'],
-  ['String',  'string'],
-]);
+import { useEntryDefinition } from '../composables/useEntryDefinition.js';
 
 export default {
   name: 'BlockParamDetailSetting',
@@ -41,7 +36,8 @@ export default {
   },
   emits: ['update-input', 'update-output'],
   setup() {
-    return { dataTypeOptions };
+    const { ctrlTypeOptions, dataTypeOptions } = useEntryDefinition();
+    return { ctrlTypeOptions, dataTypeOptions };
   },
 }
 </script>

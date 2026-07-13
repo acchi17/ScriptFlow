@@ -5,11 +5,11 @@
     :items="ctrlTypeOptions"
     @update:value="onFieldChange('ctrlType', $event)" />
   <LabeledListEdit v-if="param.ctrlType === 'combo_box'"
-    label="Items"
-    :value="toEmptyIfNull(param.initial)"
-    :items="param.items"
-    @update:value="onFieldChange('initial', $event)"
-    @update:items="onFieldChange('items', $event)" />
+                   label="Items"
+                   :value="toEmptyIfNull(param.initial)"
+                   :items="param.items"
+                   @update:value="onFieldChange('initial', $event)"
+                   @update:items="onFieldChange('items', $event)" />
   <template v-else>
     <LabeledTextBox
       label="Initial"
