@@ -185,6 +185,11 @@ export default class BlockDefinitionManager {
     const params = prmType === 'input' ? def.parameters.input : def.parameters.output;
     const param = params.find(p => p.name === paramName);
     if (!param) return false;
+    if ('dataType' in updates && updates.dataType !== param.dataType) {
+      Object.assign(param, { ctrlType: '', initial: null, min: null, max: null, step: null, items: [] });
+    } else if ('ctrlType' in updates && updates.ctrlType !== param.ctrlType) {
+      Object.assign(param, { initial: null, min: null, max: null, step: null, items: [] });
+    }
     Object.assign(param, updates);
     return true;
   }
