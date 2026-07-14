@@ -20,6 +20,10 @@ export default class BlockDefinitionManager {
     ['String',  'string'],
   ]);
 
+  _freshParamValueFields() {
+    return { initial: null, min: null, max: null, step: null, items: [] };
+  }
+
   constructor(blockDefinitions) {
     this._blockDefinitions = blockDefinitions;
   }
@@ -130,7 +134,7 @@ export default class BlockDefinitionManager {
     let name = base;
     let i = 1;
     while (params.some(p => p.name === name)) { name = `${base}${i++}`; }
-    const newParam = { name, dataType: '', ctrlType: '', initial: null, min: null, max: null, step: null, items: [], comment: '' };
+    const newParam = { name, dataType: '', ctrlType: '', ...this._freshParamValueFields(), comment: '' };
     if (insertIndex !== null) params.splice(insertIndex, 0, newParam);
     else params.push(newParam);
     return name;
@@ -186,9 +190,9 @@ export default class BlockDefinitionManager {
     const param = params.find(p => p.name === paramName);
     if (!param) return false;
     if ('dataType' in updates && updates.dataType !== param.dataType) {
-      Object.assign(param, { ctrlType: '', initial: null, min: null, max: null, step: null, items: [] });
+      Object.assign(param, { ctrlType: '', ...this._freshParamValueFields() });
     } else if ('ctrlType' in updates && updates.ctrlType !== param.ctrlType) {
-      Object.assign(param, { initial: null, min: null, max: null, step: null, items: [] });
+      Object.assign(param, this._freshParamValueFields());
     }
     Object.assign(param, updates);
     return true;
