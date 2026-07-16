@@ -44,21 +44,24 @@ export default class EntryDefinitionService {
               };
               if (block.parameters && Array.isArray(block.parameters)) {
                 block.parameters.forEach(param => {
-                  const paramDef = {
-                    name: param.name,
-                    dataType: param.dataType,
-                    ctrlType: param.ctrlType,
-                    initial: param.initial,
-                    min: param.min,
-                    max: param.max,
-                    step: param.step,
-                    items: param.items || [],
-                    comment: param.comment || ''
-                  };
                   if (param.prmType === 'input') {
-                    blockDef.parameters.input.push(paramDef);
+                    blockDef.parameters.input.push({
+                      name: param.name,
+                      dataType: param.dataType,
+                      ctrlType: param.ctrlType,
+                      initial: param.initial,
+                      min: param.min,
+                      max: param.max,
+                      step: param.step,
+                      items: param.items || [],
+                      comment: param.comment || ''
+                    });
                   } else if (param.prmType === 'output') {
-                    blockDef.parameters.output.push(paramDef);
+                    blockDef.parameters.output.push({
+                      name: param.name,
+                      dataType: param.dataType,
+                      comment: param.comment || ''
+                    });
                   }
                 });
               }

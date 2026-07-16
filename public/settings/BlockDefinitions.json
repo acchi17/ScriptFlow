@@ -34,8 +34,6 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             }
@@ -72,8 +70,6 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             }
@@ -110,8 +106,6 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             }
@@ -148,16 +142,12 @@
             {
               "name": "Result",
               "dataType": "integer",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             },
             {
               "name": "Mod",
               "dataType": "integer",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             }
@@ -182,8 +172,6 @@
             {
               "name": "Result",
               "dataType": "real",
-              "ctrlType": "spinner",
-              "items": [],
               "comment": "",
               "prmType": "output"
             }

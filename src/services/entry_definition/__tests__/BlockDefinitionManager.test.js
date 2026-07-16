@@ -44,6 +44,36 @@ function buildManager() {
   return new BlockDefinitionManager(blockDefinitions)
 }
 
+describe('BlockDefinitionManager.addParam', () => {
+  it('creates an input param with dataType, ctrlType, and value-constraint fields', () => {
+    const manager = buildManager()
+
+    const name = manager.addParam('Add', 'input')
+
+    const param = manager.getBlockDefinition('Add').parameters.input.find(p => p.name === name)
+    expect(param).toEqual({
+      name,
+      dataType: '',
+      ctrlType: '',
+      initial: null,
+      min: null,
+      max: null,
+      step: null,
+      items: [],
+      comment: '',
+    })
+  })
+
+  it('creates an output param with only name, dataType, and comment', () => {
+    const manager = buildManager()
+
+    const name = manager.addParam('Add', 'output')
+
+    const param = manager.getBlockDefinition('Add').parameters.output.find(p => p.name === name)
+    expect(param).toEqual({ name, dataType: '', comment: '' })
+  })
+})
+
 describe('BlockDefinitionManager.updateParam', () => {
   it('resets ctrlType/initial/min/max/step/items when dataType changes', () => {
     const manager = buildManager()
@@ -138,6 +168,17 @@ describe('BlockDefinitionManager.updateParam', () => {
     expect(param.max).toBeNull()
     expect(param.step).toBeNull()
     expect(param.items).toEqual([])
+  })
+
+  it('changes dataType on an output param without introducing ctrlType or value-constraint fields', () => {
+    const manager = buildManager()
+    manager.addParam('Add', 'output') // real output params only have { name, dataType, comment }
+    const addedName = manager.getBlockDefinition('Add').parameters.output[1].name
+
+    manager.updateParam('Add', 'output', addedName, { dataType: 'string' })
+
+    const param = manager.getBlockDefinition('Add').parameters.output[1]
+    expect(param).toEqual({ name: addedName, dataType: 'string', comment: '' })
   })
 
   it('returns false when the block does not exist', () => {
