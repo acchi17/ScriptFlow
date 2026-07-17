@@ -20,8 +20,12 @@ export default class BlockDefinitionManager {
     ['String',  'string'],
   ]);
 
-  _freshParamValueFields() {
-    return { initial: null, min: null, max: null, step: null, items: [] };
+  _getInitialInputParamFields() {
+    return { dataType: '', ctrlType: '', initial: null, min: null, max: null, step: null, items: [], comment: '' };
+  }
+
+  _getInitialOutputParamFields() {
+    return { dataType: '', comment: '' };
   }
 
   constructor(blockDefinitions) {
@@ -135,8 +139,8 @@ export default class BlockDefinitionManager {
     let i = 1;
     while (params.some(p => p.name === name)) { name = `${base}${i++}`; }
     const newParam = prmType === 'input'
-      ? { name, dataType: '', ctrlType: '', ...this._freshParamValueFields(), comment: '' }
-      : { name, dataType: '', comment: '' };
+      ? { name, ...this._getInitialInputParamFields() }
+      : { name, ...this._getInitialOutputParamFields() };
     if (insertIndex !== null) params.splice(insertIndex, 0, newParam);
     else params.push(newParam);
     return name;
@@ -193,9 +197,16 @@ export default class BlockDefinitionManager {
     if (!param) return false;
     if (prmType === 'input') {
       if ('dataType' in updates && updates.dataType !== param.dataType) {
-        Object.assign(param, { ctrlType: '', ...this._freshParamValueFields() });
+        const temp = this._getInitialInputParamFields();
+        temp.dataType = param.dataType;
+        temp.comment = param.comment;
+        Object.assign(param, temp);
       } else if ('ctrlType' in updates && updates.ctrlType !== param.ctrlType) {
-        Object.assign(param, this._freshParamValueFields());
+        const temp = this._getInitialInputParamFields();
+        temp.dataType = param.dataType;
+        temp.ctrlType = param.ctrlType;
+        temp.comment = param.comment;
+        Object.assign(param, temp);
       }
     }
     Object.assign(param, updates);
