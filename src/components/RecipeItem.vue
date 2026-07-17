@@ -5,7 +5,15 @@
     <div class="recipe-content">
       <div class="recipe-header">
         <button class="recipe-btn recipe-run-btn" title="Run" @click.stop="executeRecipe"></button>
-        <button class="recipe-btn recipe-com-btn" title="Communication Setting" @click.stop="openComSetting"></button>
+        <button
+          class="recipe-btn recipe-com-btn"
+          :class="{
+            'recipe-com-btn--connected': commBtnStatus === 'connected',
+            'recipe-com-btn--failed':    commBtnStatus === 'failed'
+          }"
+          title="Communication Setting"
+          @click.stop="openComSetting"
+        ></button>
         <button class="recipe-btn recipe-clear-btn" title="Clear" @click.stop="clearRecipe"></button>
       </div>
       <div class="recipe-panel">
@@ -30,7 +38,11 @@
         </div>
       </div>
     </div>
-    <CommSettingView v-if="showCommSetting" @close="showCommSetting = false" />
+    <CommSettingView
+      v-if="showCommSetting"
+      :entryId="mainContainer.id"
+      @close="onCommSettingClose"
+    />
   </div>
 </template>
 
@@ -66,9 +78,17 @@ export default {
     }
 
     const showCommSetting = ref(false)
+    const commBtnStatus = ref('none')
 
     const openComSetting = () => {
       showCommSetting.value = true
+    }
+
+    const onCommSettingClose = (connected) => {
+      showCommSetting.value = false
+      if (connected === true)       commBtnStatus.value = 'connected'
+      else if (connected === false) commBtnStatus.value = 'failed'
+      else                          commBtnStatus.value = 'none'
     }
 
     const entryPanelRef = ref(null)
@@ -80,6 +100,8 @@ export default {
       clearRecipe,
       openComSetting,
       showCommSetting,
+      commBtnStatus,
+      onCommSettingClose,
       entryPanelRef,
       entryLayoutMap
     }
@@ -191,5 +213,13 @@ export default {
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;
+}
+
+.recipe-com-btn--connected {
+  background-color: #4caf50;
+}
+
+.recipe-com-btn--failed {
+  background-color: #f44336;
 }
 </style>

@@ -153,17 +153,30 @@ function executeScriptInRunner(scriptName, inputParams) {
 function createSocketInRunner(host, port) {
   const runner = ensureScriptRunner()
   const id = ++executionCounter
-  return new Promise((resolve, reject) => {
-    pendingExecutions.set(id, { resolve, reject })
+  return new Promise((resolve) => {
+    pendingExecutions.set(id, { resolve, reject: resolve })
     runner.postMessage({ type: 'createSocket', id, host, port })
-    // A timed-out connect is reported as a failure (empty string) so the
-    // renderer-side contract — "empty string means create failed" — holds.
     setTimeout(() => {
       if (pendingExecutions.has(id)) {
-        pendingExecutions.get(id).resolve('')
+        pendingExecutions.get(id).resolve(null)
         pendingExecutions.delete(id)
       }
     }, 10000)
+  })
+}
+
+function destroySocketInRunner(socketId) {
+  const runner = ensureScriptRunner()
+  const id = ++executionCounter
+  return new Promise((resolve) => {
+    pendingExecutions.set(id, { resolve, reject: resolve })
+    runner.postMessage({ type: 'destroySocket', id, socketId })
+    setTimeout(() => {
+      if (pendingExecutions.has(id)) {
+        pendingExecutions.delete(id)
+        resolve(false)
+      }
+    }, 5000)
   })
 }
 
@@ -212,6 +225,10 @@ function registerIpcHandlers() {
   ipcMain.handle('socket:create', async (_evt, host, port) => {
     return createSocketInRunner(host, port)
   })
+
+  ipcMain.handle('socket:destroy', async (_evt, socketId) => {
+    return destroySocketInRunner(socketId)
+  })
 }
 
 function createMainWindow() {
@@ -255,9 +272,12 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
 
-app.on('before-quit', () => {
-  if (scriptRunner) {
-    try { scriptRunner.kill() } catch { /* noop */ }
-    scriptRunner = null
-  }
+app.on('before-quit', (event) => {
+  if (!scriptRunner) return
+  event.preventDefault()
+  const runner = scriptRunner
+  scriptRunner = null
+  const forceKill = setTimeout(() => { try { runner.kill() } catch { /* noop */ } }, 2000)
+  runner.once('exit', () => { clearTimeout(forceKill); app.quit() })
+  runner.postMessage({ type: 'shutdown' })
 })

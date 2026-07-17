@@ -1,9 +1,9 @@
 <template>
-  <div class="comm-setting-backdrop" @click.self="$emit('close')">
+  <div class="comm-setting-backdrop" @click.self="onClose">
     <div class="comm-setting-dialog">
       <div class="dialog-header">
         <span class="dialog-title">Communication Setting</span>
-        <button class="close-btn" @click="$emit('close')"></button>
+        <button class="close-btn" @click="onClose"></button>
       </div>
       <div class="dialog-body">
         <label class="row checkbox-row">
@@ -37,39 +37,55 @@
             @input="port = $event.target.value"
           />
         </div>
-        <div class="row check-row">
-          <button class="check-btn" :disabled="!useTcpIp" @click="checkConnection">
-            Check connection
-          </button>
-        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, inject, onMounted, onBeforeUnmount } from 'vue'
 
 export default {
   name: 'CommSettingView',
+  props: {
+    entryId: { type: String, required: true }
+  },
   emits: ['close'],
 
-  setup(_, { emit }) {
+  setup(props, { emit }) {
+    const socketManager = inject('socketManager')
     const useTcpIp = ref(false)
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
 
-    const checkConnection = () => {
-      // TODO: implement connection check
+    const existing = socketManager.getCommSetting(props.entryId)
+    if (existing) {
+      useTcpIp.value = existing.useTcpIp
+      ipParts.value = existing.host.split('.')
+      port.value = String(existing.port)
+    }
+
+    const onClose = async () => {
+      const host = ipParts.value.join('.')
+      const portNum = Number(port.value)
+      socketManager.saveSetting(props.entryId, useTcpIp.value, host, portNum)
+
+      let connected = null
+      if (useTcpIp.value) {
+        connected = await socketManager.create(props.entryId, host, portNum)
+      } else {
+        await socketManager.release(props.entryId)
+      }
+      emit('close', connected)
     }
 
     const onKeydown = (e) => {
-      if (e.key === 'Escape') emit('close')
+      if (e.key === 'Escape') onClose()
     }
     onMounted(()       => document.addEventListener('keydown', onKeydown))
     onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
 
-    return { useTcpIp, ipParts, port, checkConnection }
+    return { useTcpIp, ipParts, port, onClose }
   }
 }
 </script>

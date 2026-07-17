@@ -41,36 +41,45 @@ async function handleExecute({ id, scriptName, inputParams }) {
 
 function handleCreateSocket({ id, host, port }) {
   let settled = false
-  const finish = (socketId) => {
+  const socketId = randomUUID()
+  const socket = new net.Socket()
+  sockets.set(socketId, socket)
+  socket.once('close', () => { sockets.delete(socketId) })
+
+  const finish = (result) => {
     if (settled) return
     settled = true
-    send({ type: 'result', id, result: socketId })
+    send({ type: 'result', id, result })
   }
 
   try {
-    const socket = new net.Socket()
-
     const onConnect = () => {
       socket.removeListener('error', onError)
-      const socketId = randomUUID()
-      sockets.set(socketId, socket)
-      // Drop the entry once the connection is gone so the map cannot leak.
-      socket.once('close', () => { sockets.delete(socketId) })
       finish(socketId)
     }
-
     const onError = () => {
       socket.removeListener('connect', onConnect)
+      sockets.delete(socketId)
       try { socket.destroy() } catch { /* noop */ }
-      finish('')
+      finish(null)
     }
-
     socket.once('connect', onConnect)
     socket.once('error', onError)
     socket.connect(port, host)
   } catch {
-    finish('')
+    sockets.delete(socketId)
+    try { socket.destroy() } catch { /* noop */ }
+    finish(null)
   }
+}
+
+function handleDestroySocket({ id, socketId }) {
+  const socket = sockets.get(socketId)
+  if (socket) {
+    sockets.delete(socketId)
+    try { socket.destroy() } catch { /* noop */ }
+  }
+  send({ type: 'result', id, result: true })
 }
 
 function onMessage(msg) {
@@ -79,6 +88,13 @@ function onMessage(msg) {
     handleExecute(msg)
   } else if (msg.type === 'createSocket') {
     handleCreateSocket(msg)
+  } else if (msg.type === 'destroySocket') {
+    handleDestroySocket(msg)
+  } else if (msg.type === 'shutdown') {
+    for (const socket of sockets.values()) {
+      try { socket.destroy() } catch { /* noop */ }
+    }
+    process.exit(0)
   }
 }
 
