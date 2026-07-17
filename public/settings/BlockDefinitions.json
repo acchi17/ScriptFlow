@@ -176,6 +176,30 @@
               "prmType": "output"
             }
           ]
+        },
+        {
+          "name": "Sin",
+          "command": "Sin",
+          "parameters": [
+            {
+              "name": "Radians",
+              "dataType": "real",
+              "ctrlType": "spinner",
+              "initial": 0,
+              "min": null,
+              "max": null,
+              "step": 0.1,
+              "items": [],
+              "comment": "",
+              "prmType": "input"
+            },
+            {
+              "name": "Result",
+              "dataType": "real",
+              "comment": "",
+              "prmType": "output"
+            }
+          ]
         }
       ]
     }
