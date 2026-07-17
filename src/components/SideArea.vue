@@ -1,7 +1,7 @@
 <template>
   <div class="side-area" :class="{ 'executing': isExecuting }">
     <div class="top-item">
-      <BlockListView @open-setting="$emit('open-setting')" />
+      <BlockListView :refresh-key="refreshKey" @open-setting="$emit('open-setting')" />
     </div>
     <div class="bottom-item">
       <EntryView />
@@ -20,6 +20,9 @@ export default {
   components: {
     BlockListView,
     EntryView,
+  },
+  props: {
+    refreshKey: { type: Number, default: 0 }
   },
   setup() {
     const { isExecuting } = useSystemState()
@@ -44,13 +47,13 @@ export default {
 }
 
 .top-item {
-  flex: 6;
+  flex: 5;
   display: flex;
   overflow-y: auto;
 }
 
 .bottom-item {
-  flex: 4;
+  flex: 5;
   display: flex;
   overflow-y: auto;
 }

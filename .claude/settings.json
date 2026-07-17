@@ -5,7 +5,8 @@
       "Bash(cd *)",
       "Bash(mv *)",
       "Bash(find *)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(git log *)"
     ]
   }
 }

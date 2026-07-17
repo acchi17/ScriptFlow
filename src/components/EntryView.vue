@@ -84,14 +84,14 @@ export default {
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.blockDefinitions[selectedEntry.value.name]
+      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.blockDefinitions[selectedEntry.value.name]
+      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.output : []
     })
 
@@ -135,7 +135,7 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 14px;
+  padding: 12px;
 }
 
 .entry-header {

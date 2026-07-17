@@ -3,7 +3,7 @@
     <MenuArea />
     <div class="row-content">
       <div class="left">
-        <SideArea @open-setting="showBlockSetting = true" />
+        <SideArea :refresh-key="blockListRefreshKey" @open-setting="showBlockSetting = true" />
       </div>
       <div class="center">
         <MainArea />
@@ -12,7 +12,7 @@
     <BlockSettingView
       v-if="showBlockSetting"
       class="block-setting-overlay"
-      @close="showBlockSetting = false"
+      @close="showBlockSetting = false; blockListRefreshKey++"
     />
   </div>
 </template>
@@ -36,6 +36,7 @@ export default {
   setup() {
     const entryExecutionService = inject('entryExecutionService')
     const showBlockSetting = ref(false)
+    const blockListRefreshKey = ref(0)
     const { resetState } = useSystemState()
 
     function handleBeforeUnload() {
@@ -58,7 +59,7 @@ export default {
       }
     })
 
-    return { showBlockSetting }
+    return { showBlockSetting, blockListRefreshKey }
   }
 }
 </script>

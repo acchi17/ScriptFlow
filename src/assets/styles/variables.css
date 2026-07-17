@@ -24,7 +24,7 @@
   --main-bg-color: #f0f0f0;
   --left-side-bg-color: #f0f0f0;
   --popup-bg-color: #fafafa;
-  --left-side-width: 330px;
+  --left-side-width: 30vw;
   --left-side-border: 1px solid #ccc;
   --base-outline-border: 1px solid #ccc;
 
@@ -110,4 +110,13 @@
 
   /* Connection view styles */
   --connection-lane-width: 96px;
+
+  /* Block Setting UI styles */
+  --block-setting-font-size: 12px;
+  --block-setting-label-width: 100px;
+  --block-setting-label-font-color: #555;
+  --block-setting-input-padding: 2px 4px;
+  --block-setting-input-bg-color: #fff;
+  --block-setting-label-input-gap: 8px;
+  --block-setting-border-radius: 3px;
 }

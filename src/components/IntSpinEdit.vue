@@ -2,8 +2,6 @@
   <input
     type="number"
     class="spin-edit-input"
-    :min="min"
-    :max="max"
     :step="effectiveStep"
     :value="value"
     :disabled="disabled"
@@ -45,11 +43,12 @@ export default {
 
 <style scoped>
 .spin-edit-input {
-  width: 90px;
-  padding: 4px 4px;
+  width: 100%;
+  padding: 4px 8px;
   font-size: 14px;
   color: #555;
   border: 1px solid #bbb;
   border-radius: 3px;
+  text-align: left;
 }
 </style>

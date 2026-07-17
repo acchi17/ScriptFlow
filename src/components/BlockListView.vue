@@ -1,59 +1,79 @@
 <template>
   <div class="block-list-view">
     <div class="block-list-header">
-      <!-- <span class="block-list-title">Block List</span> -->
       <button class="setting-icon" @click.stop="$emit('open-setting')"></button>
     </div>
-    <div
-      v-for="blockName in blockNames"
-      :key="blockName"
-      class="block-name-item"
-      draggable="true"
-      @dragstart="onDragStartBlock"
-      @dragend="onDragEndBlock"
-    >{{ blockName }}</div>
+    <div v-for="cat in categories" :key="cat.name" class="block-category">
+      <div class="category-header" @click="toggleCategory(cat.name)">
+        <span class="category-arrow" :class="{ collapsed: !expanded[cat.name] }"></span>
+        <span class="category-name">{{ cat.name }}</span>
+      </div>
+      <div v-show="expanded[cat.name]">
+        <div
+          v-for="blockName in cat.blocks"
+          :key="blockName"
+          class="block-name-item"
+          draggable="true"
+          @dragstart="onDragStartBlock"
+          @dragend="onDragEndBlock"
+        >{{ blockName }}</div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script>
-import { inject, ref, onMounted } from 'vue';
+import { inject, ref, reactive, watch, onMounted } from 'vue';
 import { useDraggable } from '../composables/useDraggable';
 
 export default {
   name: 'BlockListView',
   emits: ['open-setting'],
+  props: {
+    refreshKey: { type: Number, default: 0 }
+  },
 
-  setup() {
-    // Inject EntryDefinitionService
+  setup(props) {
     const entryDefinitionService = inject('entryDefinitionService');
+    const categories = ref([]);
+    const expanded = reactive({});
 
-    // Reactive state for block names
-    const blockNames = ref([]);
-
-    // Get composable
     const {
       onDragStart: onDragStartBlock,
       onDragEnd: onDragEndBlock,
       setOnDragStartCallback: setBlockDragStartCallback
     } = useDraggable();
 
-    // Set custom callbacks for drag start events
     setBlockDragStartCallback((event) => {
       event.dataTransfer.setData('entryType', 'block');
       event.dataTransfer.setData('entryName', event.target.textContent);
       event.dataTransfer.setData('sourceId', undefined);
     });
 
-    // Load block definitions on mounted
+    function refreshCategories() {
+      categories.value = entryDefinitionService.getBlockDefinitions().map(c => ({
+        name: c.name,
+        blocks: c.blocks.map(b => b.name)
+      }));
+      Object.keys(expanded).forEach(k => delete expanded[k]);
+      categories.value.forEach(c => { expanded[c.name] = true; });
+    }
+
+    function toggleCategory(name) {
+      expanded[name] = !expanded[name];
+    }
+
     onMounted(async () => {
       await entryDefinitionService.loadBlockDefinitions();
-      blockNames.value = Object.keys(entryDefinitionService.blockDefinitions);
-      console.log('blockNames:', blockNames.value);
+      refreshCategories();
     });
 
-    // Return values and methods to use in <template>
+    watch(() => props.refreshKey, refreshCategories);
+
     return {
-      blockNames,
+      categories,
+      expanded,
+      toggleCategory,
       onDragStartBlock,
       onDragEndBlock
     };
@@ -71,14 +91,8 @@ export default {
 .block-list-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   padding: 8px 12px;
-}
-
-.block-list-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
 }
 
 .setting-icon {
@@ -96,8 +110,40 @@ export default {
   opacity: 1;
 }
 
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  color: #555;
+  background-color: var(--block-bg-color);
+  border-bottom: var(--base-outline-border);
+  user-select: none;
+}
+
+.category-header:hover {
+  background-color: var(--block-hover-bg-color);
+}
+
+.category-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #555;
+  transition: transform 0.15s;
+}
+
+.category-arrow.collapsed {
+  transform: rotate(-90deg);
+}
+
 .block-name-item {
-  padding: 6px 12px;
+  padding: 6px 12px 6px 20px;
   font-size: 13px;
   color: #333;
   cursor: grab;

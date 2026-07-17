@@ -1,26 +1,26 @@
 <template>
   <div class="block-name-setting">
     <SettingListItem :style="{ flex: 2.5 }"
-      title="Categories"
-      :items="categoryNames"
-      :selected-item="selectedCategoryName"
-      @update:selected-item="onCategorySelected"
-      @move-up="onMoveUpCategory"
-      @move-down="onMoveDownCategory"
-      @add="onAddCategory"
-      @rename="onRenameCategory"
-      @delete="onDeleteCategory"
+                     title="Categories"
+                     :items="categoryNames"
+                     :selected-item="selectedCategoryName"
+                     @update:selected-item="onCategorySelected"
+                     @move-up="onMoveUpCategory"
+                     @move-down="onMoveDownCategory"
+                     @add="onAddCategory"
+                     @rename="onRenameCategory"
+                     @delete="onDeleteCategory"
     />
     <SettingListItem :style="{ flex: 5.5 }"
-      :title="`Blocks — ${selectedCategoryName}`"
-      :items="activeBlockNames"
-      :selected-item="selectedBlockName"
-      @update:selected-item="onBlockSelected"
-      @move-up="onMoveUpBlock"
-      @move-down="onMoveDownBlock"
-      @add="onAddBlock"
-      @rename="onRenameBlock"
-      @delete="onDeleteBlock"
+                     :title="`Blocks — ${selectedCategoryName}`"
+                     :items="activeBlockNames"
+                     :selected-item="selectedBlockName"
+                     @update:selected-item="onBlockSelected"
+                     @move-up="onMoveUpBlock"
+                     @move-down="onMoveDownBlock"
+                     @add="onAddBlock"
+                     @rename="onRenameBlock"
+                     @delete="onDeleteBlock"
     />
     <BlockScriptSetting :style="{ flex: 2 }" :block-name="selectedBlockName" />
   </div>
@@ -37,29 +37,29 @@ export default {
   emits: ['update:selected-block', 'change'],
 
   setup(props, { emit }) {
-    const entryDefinitionService = inject('entryDefinitionService');
+    const blockDefinitions = inject('blockDefinitions');
 
     const refreshTrigger = ref(0);
     const bumpRefresh = () => { refreshTrigger.value++; };
 
     const selectedCategoryName = ref(
-      entryDefinitionService.blockCategories[0]?.name ?? ''
+      blockDefinitions.getBlockDefinitions()[0]?.name ?? ''
     );
     const selectedBlockName = ref(
-      entryDefinitionService.blockCategories[0]?.blocks[0] ?? null
+      blockDefinitions.getBlockDefinitions()[0]?.blocks[0]?.name ?? null
     );
 
     const categoryNames = computed(() => {
       refreshTrigger.value;
-      return entryDefinitionService.blockCategories.map(c => c.name);
+      return blockDefinitions.getBlockDefinitions().map(c => c.name);
     });
 
     const activeBlockNames = computed(() => {
       refreshTrigger.value;
-      const cat = entryDefinitionService.blockCategories.find(
+      const cat = blockDefinitions.getBlockDefinitions().find(
         c => c.name === selectedCategoryName.value
       );
-      return cat ? [...cat.blocks] : [];
+      return cat ? cat.blocks.map(b => b.name) : [];
     });
 
     function emitSelection() {
@@ -84,16 +84,16 @@ export default {
     }
 
     function onMoveUpCategory(catName) {
-      mutate(() => entryDefinitionService.moveCategoryUp(catName));
+      mutate(() => blockDefinitions.moveCategoryUp(catName));
     }
 
     function onMoveDownCategory(catName) {
-      mutate(() => entryDefinitionService.moveCategoryDown(catName));
+      mutate(() => blockDefinitions.moveCategoryDown(catName));
     }
 
     function onAddCategory(insertIndex) {
       mutate(() => {
-        const newName = entryDefinitionService.addCategory(null, insertIndex);
+        const newName = blockDefinitions.addCategory(null, insertIndex);
         if (newName) {
           selectedCategoryName.value = newName;
           selectedBlockName.value = null;
@@ -104,7 +104,7 @@ export default {
 
     function onRenameCategory(oldName, newName) {
       mutate(() => {
-        if (entryDefinitionService.renameCategory(oldName, newName)) {
+        if (blockDefinitions.renameCategory(oldName, newName)) {
           selectedCategoryName.value = newName.trim();
         }
       });
@@ -112,26 +112,26 @@ export default {
 
     function onDeleteCategory(catName) {
       const idx = categoryNames.value.indexOf(catName);
-      mutate(() => entryDefinitionService.removeCategory(catName));
+      mutate(() => blockDefinitions.removeCategory(catName));
       const newList = categoryNames.value;
       selectedCategoryName.value = newList.length === 0 ? ''
         : idx > 0 ? newList[idx - 1]
-        : newList[0];
+          : newList[0];
       selectedBlockName.value = null;
       emitSelection();
     }
 
     function onMoveUpBlock(blockName) {
-      mutate(() => entryDefinitionService.moveBlockUp(blockName));
+      mutate(() => blockDefinitions.moveBlockUp(blockName));
     }
 
     function onMoveDownBlock(blockName) {
-      mutate(() => entryDefinitionService.moveBlockDown(blockName));
+      mutate(() => blockDefinitions.moveBlockDown(blockName));
     }
 
     function onAddBlock(insertIndex) {
       mutate(() => {
-        const newName = entryDefinitionService.addBlock(selectedCategoryName.value, null, insertIndex);
+        const newName = blockDefinitions.addBlock(selectedCategoryName.value, null, insertIndex);
         if (newName) {
           selectedBlockName.value = newName;
           emitSelection();
@@ -141,7 +141,7 @@ export default {
 
     function onRenameBlock(oldName, newName) {
       mutate(() => {
-        if (entryDefinitionService.renameBlock(oldName, newName)) {
+        if (blockDefinitions.renameBlock(oldName, newName)) {
           selectedBlockName.value = newName.trim();
           emitSelection();
         }
@@ -150,11 +150,11 @@ export default {
 
     function onDeleteBlock(blockName) {
       const idx = activeBlockNames.value.indexOf(blockName);
-      mutate(() => entryDefinitionService.removeBlock(blockName));
+      mutate(() => blockDefinitions.removeBlock(blockName));
       const newList = activeBlockNames.value;
       selectedBlockName.value = newList.length === 0 ? null
         : idx > 0 ? newList[idx - 1]
-        : newList[0];
+          : newList[0];
       emitSelection();
     }
 

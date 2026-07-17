@@ -2,8 +2,6 @@
   <input
     type="number"
     class="spin-edit-input"
-    :min="min"
-    :max="max"
     :step="effectiveStep"
     :value="value"
     :disabled="disabled"
@@ -32,6 +30,10 @@ export default {
   methods: {
     onChange(target) {
       let val = parseFloat(target.value);
+      if (isNaN(val)) {
+        target.value = this.value;
+        return;
+      }
       if (this.min !== null) val = Math.max(Number(this.min), val);
       if (this.max !== null) val = Math.min(Number(this.max), val);
       target.value = val;
@@ -45,11 +47,12 @@ export default {
 
 <style scoped>
 .spin-edit-input {
-  width: 90px;
-  padding: 4px 4px;
+  width: 100%;
+  padding: 4px 8px;
   font-size: 16px;
   color: #555;
   border: 1px solid #bbb;
   border-radius: 3px;
+  text-align: left;
 }
 </style>

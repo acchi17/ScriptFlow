@@ -4,7 +4,7 @@
  * @param {Object} inputParams - Input parameters object with 'a' and 'b' properties
  * @returns {Object} Execution result with 'result' field
  */
-export function execute(inputParams) {
+export async function execute(inputParams) {
   let result = {};
 
   result.success = false;

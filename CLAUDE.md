@@ -28,12 +28,13 @@ The project is dual-target:
 - **Browser**: Vite dev/build, scripts/definitions read-only from `public/scripts/` and `public/settings/`.
 - **Electron**: Electron Forge + Vite. User-editable scripts live at `<app-dir>/scripts/*.js` next to the executable, and the app-editable `<app-dir>/settings/BlockDefinitions.json` is written via Node `fs` through IPC. Both folders are seeded from `public/` on first launch if missing.
 
-### Electron Architecture (electron/)
+## Design Process
 
-- `electron/main.js` (CJS): main process — creates the BrowserWindow with `contextIsolation: true`, `nodeIntegration: false`, and `sandbox: true`. Resolves `<app-dir>/scripts/` and `<app-dir>/settings/`, seeds them from `public/` on first launch, and registers IPC handlers (`scripts:list`, `scripts:read`, `defs:read`, `defs:write`, `script:execute`). Spawns and manages a single long-lived utility process for script execution and kills it on `before-quit`.
-- `electron/preload.js`: exposes a typed `window.electronAPI` to the renderer via `contextBridge`. Never exposes raw `fs`, `ipcRenderer`, or `child_process`.
-- `electron/script-runner.js`: utility-process entry point. Receives `{ id, scriptName, inputParams }` over `parentPort`, dynamically imports `<app-dir>/scripts/{name}.js` as an ES module, calls `execute(inputParams)`, and posts `{ type, id, result|errmsg }` back. The script name is validated against `/^[A-Za-z0-9_-]+$/`, and every resolved path is clamped to the scripts directory.
-- `forge.config.js`: Electron Forge config. Uses `@electron-forge/plugin-vite` to build main/preload/runner with `vite.{main,preload,runner}.config.js` and the renderer with `vite.config.js`. `extraResource: ['./public']` ships bundled defaults inside the packaged app.
+Before writing any implementation code, output a Mermaid block diagram when:
+- Creating a new file, class, or module
+- Adding or modifying logic that spans multiple files
+
+Always use `graph TD` (top-down) or `graph LR` (left-right) syntax.
 
 ## Important Patterns
 
@@ -44,3 +45,21 @@ Always use EntryManager methods, never manipulate `children` arrays or parent re
 - `public/scripts/` and `public/settings/BlockDefinitions.json` are the single source of truth for both targets.
 - The browser build serves them directly from `public/`.
 - The Electron build bundles `public/` via `extraResource` and seeds `<app-dir>/scripts/` and `<app-dir>/settings/` from it on first launch.
+
+### Class Design Conventions
+
+The codebase uses a four-layer architecture. Place new classes in the correct layer:
+
+| Layer | Directory | Role |
+|---|---|---|
+| **Models** | `src/models/` | Lightweight data carriers. No Vue imports. Shallow inheritance from `Entry` is allowed. |
+| **Managers** | `src/managers/` | Stateful lifecycle and relationship management (e.g. tree structure, connections, parameters). Injected into composables via `provide/inject`. |
+| **Services** | `src/services/<domain>/` | I/O, orchestration, and engine abstraction. Group by domain subdirectory (e.g. `entry_execution/`, `script_execution/`). Mostly stateless facades. |
+| **Composables** | `src/composables/` | Vue 3 reactive glue only. Use `ref`/`reactive`/`computed` here, not in classes. Delegate business logic to managers and services. |
+
+Rules:
+- One class per file. File name matches class name.
+- Prefer composition over inheritance. Inheritance is reserved for models only.
+- Models must not import from Vue (`reactive`, `ref`, etc.).
+- Composables must not contain business logic — delegate to the appropriate manager or service.
+- If a manager or service exceeds ~250 lines or has more than ~12 public methods, consider splitting it by concern.

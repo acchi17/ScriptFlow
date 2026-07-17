@@ -78,12 +78,11 @@ export default {
 
 <style scoped>
 .panel {
-  min-height: 0;
-  min-width: 0;
   display: flex;
   flex-direction: column;
   border: var(--base-outline-border);
   border-radius: 4px;
+  overflow: hidden ;
 }
 
 .panel-header {
@@ -108,21 +107,21 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
 }
 
 .status-icon {
-  font-size: 20px;
+  font-size: 30px;
+  font-weight: 900;
   color: #4caf50;
 }
 
 .status-label {
-  font-size: 11px;
+  font-size: 18px;
   color: #4caf50;
 }
 
 .status-none .status-icon {
-  font-size: 20px;
+  font-size: 18px;
   color: #bbb;
 }
 
@@ -133,7 +132,6 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
   border: 2px dashed #ccc;
   border-radius: 4px;
   cursor: pointer;
@@ -146,7 +144,8 @@ export default {
 }
 
 .drop-icon {
-  font-size: 16px;
+  font-size: 30px;
+  font-weight: 900;
   color: #aaa;
 }
 
@@ -155,10 +154,9 @@ export default {
 }
 
 .drop-label {
-  font-size: 10px;
+  font-size: 18px;
   color: #aaa;
   text-align: center;
-  line-height: 1.3;
 }
 
 .drop-zone.drag-over .drop-label {

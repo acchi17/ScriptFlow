@@ -1,35 +1,44 @@
 <template>
   <div class="block-param-detail-setting">
     <div class="detail-item">
-      <SettingParamItem :style="{ flex: 1 }"
-        v-if="selectedInputParamDef"
-        :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
-        :param="selectedInputParamDef"
-        @update="(field, value) => $emit('update-input', field, value)"
+      <SettingInputParam :style="{ flex: 1 }"
+                         v-if="selectedInputParamDef"
+                         :title="`Input Parameter Setting - ${selectedInputParamDef.name}`"
+                         :param="selectedInputParamDef"
+                         :dataTypeOptions="dataTypeOptions"
+                         :ctrlTypeOptions="ctrlTypeOptions"
+                         @update="(field, value) => $emit('update-input', field, value)"
       />
     </div>
     <div class="detail-item">
-      <SettingParamItem :style="{ flex: 1 }"
-        v-if="selectedOutputParamDef"
-        :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
-        :param="selectedOutputParamDef"
-        @update="(field, value) => $emit('update-output', field, value)"
+      <SettingOutputParam :style="{ flex: 1 }"
+                          v-if="selectedOutputParamDef"
+                          :title="`Output Parameter Setting - ${selectedOutputParamDef.name}`"
+                          :param="selectedOutputParamDef"
+                          :dataTypeOptions="dataTypeOptions"
+                          @update="(field, value) => $emit('update-output', field, value)"
       />
     </div>
   </div>
 </template>
 
 <script>
-import SettingParamItem from './SettingParamItem.vue';
+import SettingInputParam  from './SettingInputParam.vue';
+import SettingOutputParam from './SettingOutputParam.vue';
+import { useEntryDefinition } from '../composables/useEntryDefinition.js';
 
 export default {
   name: 'BlockParamDetailSetting',
-  components: { SettingParamItem },
+  components: { SettingInputParam, SettingOutputParam },
   props: {
     selectedInputParamDef:  { type: Object, default: null },
     selectedOutputParamDef: { type: Object, default: null },
   },
   emits: ['update-input', 'update-output'],
+  setup() {
+    const { ctrlTypeOptions, dataTypeOptions } = useEntryDefinition();
+    return { ctrlTypeOptions, dataTypeOptions };
+  },
 }
 </script>
 
