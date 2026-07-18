@@ -6,7 +6,7 @@
         {
           "name": "Add",
           "command": "Add",
-          "parameters": [
+          "inputParams": [
             {
               "name": "NumberA",
               "dataType": "integer",
@@ -16,8 +16,7 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
+              "comment": ""
             },
             {
               "name": "NumberB",
@@ -28,21 +27,21 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "integer",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         },
         {
           "name": "Sub",
           "command": "Sub",
-          "parameters": [
+          "inputParams": [
             {
               "name": "NumberA",
               "dataType": "integer",
@@ -52,8 +51,7 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
+              "comment": ""
             },
             {
               "name": "NumberB",
@@ -64,21 +62,21 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "integer",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         },
         {
           "name": "Mul",
           "command": "Mul",
-          "parameters": [
+          "inputParams": [
             {
               "name": "NumberA",
               "dataType": "integer",
@@ -88,8 +86,7 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
+              "comment": ""
             },
             {
               "name": "NumberB",
@@ -100,21 +97,21 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "integer",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         },
         {
           "name": "DivMod",
           "command": "DivMod",
-          "parameters": [
+          "inputParams": [
             {
               "name": "NumberA",
               "dataType": "integer",
@@ -124,8 +121,7 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
+              "comment": ""
             },
             {
               "name": "NumberB",
@@ -136,27 +132,26 @@
               "max": 2147483647,
               "step": 1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "integer",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             },
             {
               "name": "Mod",
               "dataType": "integer",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         },
         {
           "name": "Cos",
           "command": "Cos",
-          "parameters": [
+          "inputParams": [
             {
               "name": "Radians",
               "dataType": "real",
@@ -166,21 +161,21 @@
               "max": 1.79e+308,
               "step": 0.1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "real",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         },
         {
           "name": "Sin",
           "command": "Sin",
-          "parameters": [
+          "inputParams": [
             {
               "name": "Radians",
               "dataType": "real",
@@ -190,14 +185,14 @@
               "max": null,
               "step": 0.1,
               "items": [],
-              "comment": "",
-              "prmType": "input"
-            },
+              "comment": ""
+            }
+          ],
+          "outputParams": [
             {
               "name": "Result",
               "dataType": "real",
-              "comment": "",
-              "prmType": "output"
+              "comment": ""
             }
           ]
         }

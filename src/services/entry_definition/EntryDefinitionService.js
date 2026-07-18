@@ -42,27 +42,28 @@ export default class EntryDefinitionService {
                   output: []
                 }
               };
-              if (block.parameters && Array.isArray(block.parameters)) {
-                block.parameters.forEach(param => {
-                  if (param.prmType === 'input') {
-                    blockDef.parameters.input.push({
-                      name: param.name,
-                      dataType: param.dataType,
-                      ctrlType: param.ctrlType,
-                      initial: param.initial,
-                      min: param.min,
-                      max: param.max,
-                      step: param.step,
-                      items: param.items || [],
-                      comment: param.comment || ''
-                    });
-                  } else if (param.prmType === 'output') {
-                    blockDef.parameters.output.push({
-                      name: param.name,
-                      dataType: param.dataType,
-                      comment: param.comment || ''
-                    });
-                  }
+              if (block.inputParams && Array.isArray(block.inputParams)) {
+                block.inputParams.forEach(param => {
+                  blockDef.parameters.input.push({
+                    name: param.name,
+                    dataType: param.dataType,
+                    ctrlType: param.ctrlType,
+                    initial: param.initial,
+                    min: param.min,
+                    max: param.max,
+                    step: param.step,
+                    items: param.items || [],
+                    comment: param.comment || ''
+                  });
+                });
+              }
+              if (block.outputParams && Array.isArray(block.outputParams)) {
+                block.outputParams.forEach(param => {
+                  blockDef.parameters.output.push({
+                    name: param.name,
+                    dataType: param.dataType,
+                    comment: param.comment || ''
+                  });
                 });
               }
               categoryEntry.blocks.push(blockDef);
@@ -84,10 +85,8 @@ export default class EntryDefinitionService {
         blocks: cat.blocks.map(def => ({
           name: def.name,
           command: def.command,
-          parameters: [
-            ...def.parameters.input.map(p => ({ ...p, prmType: 'input' })),
-            ...def.parameters.output.map(p => ({ ...p, prmType: 'output' }))
-          ]
+          inputParams: def.parameters.input.map(p => ({ ...p })),
+          outputParams: def.parameters.output.map(p => ({ ...p }))
         }))
       }))
     };
