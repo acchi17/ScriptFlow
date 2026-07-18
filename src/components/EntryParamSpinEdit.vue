@@ -2,17 +2,17 @@
   <div class="entry-param-spin-edit">
     <EntryParamItem
       :entry-id="entryId"
-      :param-name="paramName"
+      :param-name="paramDef.name"
       :param-category="paramCategory"
-      :param-type="paramType"
-      :is-param-type-visible="isParamTypeVisible"
-      :is-param-link-visible="isParamLinkVisible"
+      :param-type="paramDef.dataType"
+      :is-param-type-visible="true"
+      :is-param-link-visible="true"
     />
     <RealSpinEdit
       class="entry-param-spin-edit-input"
-      :min="min"
-      :max="max"
-      :step="step"
+      :min="paramDef.min"
+      :max="paramDef.max"
+      :step="paramDef.step"
       :value="value"
       :disabled="disabled"
       @update:value="onValueChange"
@@ -31,18 +31,12 @@ export default {
 
   props: {
     // EntryParamItem props
-    entryId:            { type: String,  required: true },
-    paramName:          { type: String,  required: true },
-    paramCategory:      { type: String,  required: true },
-    paramType:          { type: String,  default: null },
-    isParamTypeVisible: { type: Boolean, default: true },
-    isParamLinkVisible: { type: Boolean, default: true },
+    entryId:       { type: String,  required: true },
+    paramCategory: { type: String,  required: true },
+    paramDef:      { type: Object,  required: true },
     // RealSpinEdit props
-    min:                { type: Number,  default: null },
-    max:                { type: Number,  default: null },
-    step:               { type: Number,  default: null },
-    value:              { type: Number,  default: 0 },
-    disabled:           { type: Boolean, default: false }
+    value:         { type: Number,  default: 0 },
+    disabled:      { type: Boolean, default: false }
   },
 
   emits: ['update:value'],
