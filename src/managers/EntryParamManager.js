@@ -3,14 +3,14 @@ import { reactive } from 'vue'
 /**
  * EntryParamManager class
  * Class that manages parameter values and types of entries
- * Internal storage: { paramName: { value, type } }
+ * Internal storage: { paramName: { value, dataType } }
  */
 export default class EntryParamManager {
   constructor() {
-    // Dictionary of entry IDs and their input parameters: entryId -> { name: { value, type } }
+    // Dictionary of entry IDs and their input parameters: entryId -> { name: { value, dataType } }
     this._inputParamsMap = new Map();
     // Dictionary of entry IDs and their output parameters (reactive for UI updates)
-    this._outputParamsMap = reactive(new Map()); // entryId -> { name: { value, type } }
+    this._outputParamsMap = reactive(new Map()); // entryId -> { name: { value, dataType } }
   }
 
   /**
@@ -60,7 +60,7 @@ export default class EntryParamManager {
    */
   getInputParamType(entryId, paramName) {
     const params = this._inputParamsMap.get(entryId);
-    return params?.[paramName]?.type;
+    return params?.[paramName]?.dataType;
   }
 
   /**
@@ -71,7 +71,7 @@ export default class EntryParamManager {
    */
   getOutputParamType(entryId, paramName) {
     const params = this._outputParamsMap.get(entryId);
-    return params?.[paramName]?.type;
+    return params?.[paramName]?.dataType;
   }
 
   /**
@@ -101,7 +101,7 @@ export default class EntryParamManager {
    */
   getInputParamTypes(entryId) {
     const params = this._inputParamsMap.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.type]));
+    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
   }
 
   /**
@@ -111,7 +111,7 @@ export default class EntryParamManager {
    */
   getOutputParamTypes(entryId) {
     const params = this._outputParamsMap.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.type]));
+    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
   }
 
   /**
@@ -145,7 +145,7 @@ export default class EntryParamManager {
     if (!this._inputParamsMap.has(entryId)) return;
 
     const params = this._inputParamsMap.get(entryId);
-    const type = params[paramName]?.type;
+    const type = params[paramName]?.dataType;
     if (type && !this._validateType(value, type)) {
       console.error(`EntryParamManager: type mismatch for input "${paramName}" (expected ${type})`);
       return;
@@ -166,7 +166,7 @@ export default class EntryParamManager {
     if (!this._outputParamsMap.has(entryId)) return;
 
     const params = this._outputParamsMap.get(entryId);
-    const type = params[paramName]?.type;
+    const type = params[paramName]?.dataType;
     if (type && !this._validateType(value, type)) {
       console.error(`EntryParamManager: type mismatch for output "${paramName}" (expected ${type})`);
       return;
@@ -179,7 +179,7 @@ export default class EntryParamManager {
   /**
    * Set entry input parameter definitions
    * @param {string} entryId - ID of the entry
-   * @param {Object} inputParamDef - Input parameter definitions in the form { name: { value, type } }
+   * @param {Object} inputParamDef - Input parameter definitions in the form { name: { value, dataType } }
    */
   setInputParamDef(entryId, inputParamDef = {}) {
     if (!entryId) return;
@@ -189,7 +189,7 @@ export default class EntryParamManager {
   /**
    * Set entry output parameter definitions
    * @param {string} entryId - ID of the entry
-   * @param {Object} outputParamDef - Output parameter definitions in the form { name: { value, type } }
+   * @param {Object} outputParamDef - Output parameter definitions in the form { name: { value, dataType } }
    */
   setOutputParamDef(entryId, outputParamDef = {}) {
     if (!entryId) return;

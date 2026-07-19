@@ -12,7 +12,7 @@
       class="entry-param-combo-box-input combo-box-input"
       :value="effectiveValue"
       :disabled="disabled"
-      @change="onChange($event.target.value)"
+      @change="$emit('update:value', $event.target.value)"
     >
       <option v-for="item in paramDef.items" :key="item" :value="item">
         {{ item }}
@@ -40,18 +40,13 @@ export default {
 
   emits: ['update:value'],
 
-  setup(props, { emit }) {
+  setup(props) {
     const effectiveValue = computed(() => {
       if (props.value != null) return props.value
       return props.paramDef.items?.[0] ?? ''
     })
 
-    const onChange = (rawValue) => {
-      const matched = props.paramDef.items?.find(item => String(item) === rawValue)
-      emit('update:value', matched !== undefined ? matched : rawValue)
-    }
-
-    return { effectiveValue, onChange }
+    return { effectiveValue }
   }
 }
 </script>

@@ -113,13 +113,13 @@ export default class EntryDefinitionService {
     blockDef.parameters.input.forEach(param => {
       input[param.name] = {
         value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
-        type: param.dataType
+        dataType: param.dataType
       };
     });
     blockDef.parameters.output.forEach(param => {
       output[param.name] = {
         value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
-        type: param.dataType
+        dataType: param.dataType
       };
     });
     return { input, output };
