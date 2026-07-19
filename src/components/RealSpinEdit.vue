@@ -3,7 +3,7 @@
     type="number"
     class="spin-edit-input"
     :step="effectiveStep"
-    :value="value"
+    :value="effectiveValue"
     :disabled="disabled"
     @change="onChange($event.target)"
   />
@@ -17,21 +17,24 @@ export default {
     min:      { type: Number, default: null },
     max:      { type: Number, default: null },
     step:     { type: Number, default: null },
-    value:    { type: Number, default: 0 },
+    value:    { type: Number, default: null },
     disabled: { type: Boolean, default: false }
   },
 
   computed: {
     effectiveStep() {
-      return this.step !== null ? this.step : 0.1;
+      return this.step !== null ? this.step : 1;
+    },
+    effectiveValue() {
+      return this.value !== null ? this.value : 0;
     }
   },
 
   methods: {
     onChange(target) {
-      let val = parseFloat(target.value);
+      let val = Number(target.value);
       if (isNaN(val)) {
-        target.value = this.value;
+        target.value = this.effectiveValue;
         return;
       }
       if (this.min !== null) val = Math.max(Number(this.min), val);
