@@ -1,3 +1,5 @@
+import { convertValue } from '../../utils/common.js'
+
 /**
  * EntryDefinitionService
  * Owns the authoritative blockDefinitions (array of categories with embedded block defs).
@@ -8,18 +10,6 @@ export default class EntryDefinitionService {
     this.config = config;
     this.platformService = platformService;
     this._blockDefinitions = [];
-  }
-
-  _castParamValue(value, dataType) {
-    if (value === null || value === undefined) return value;
-    switch (dataType) {
-      case 'integer': return parseInt(value, 10);
-      case 'real':    return parseFloat(value);
-      case 'boolean':
-        if (typeof value === 'boolean') return value;
-        return value === 'true' || value === true;
-      default:        return value;
-    }
   }
 
   async loadBlockDefinitions() {
@@ -112,13 +102,13 @@ export default class EntryDefinitionService {
     const output = {};
     blockDef.parameters.input.forEach(param => {
       input[param.name] = {
-        value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
+        value: param.initial !== undefined ? convertValue(param.initial, param.dataType) : null,
         dataType: param.dataType
       };
     });
     blockDef.parameters.output.forEach(param => {
       output[param.name] = {
-        value: param.initial !== undefined ? this._castParamValue(param.initial, param.dataType) : null,
+        value: param.initial !== undefined ? convertValue(param.initial, param.dataType) : null,
         dataType: param.dataType
       };
     });

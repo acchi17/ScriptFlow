@@ -1,4 +1,5 @@
 import { reactive } from 'vue'
+import { convertValue } from '../utils/common.js'
 
 /**
  * EntryParamManager class
@@ -11,23 +12,6 @@ export default class EntryParamManager {
     this._inputParamsMap = new Map();
     // Dictionary of entry IDs and their output parameters (reactive for UI updates)
     this._outputParamsMap = reactive(new Map()); // entryId -> { name: { value, dataType } }
-  }
-
-  /**
-   * Validate that a value matches the declared type.
-   * Null/undefined are always allowed (output params start as null).
-   * @param {any} value
-   * @param {string} type
-   * @returns {boolean}
-   */
-  _validateType(value, type) {
-    if (value === null || value === undefined) return true;
-    switch (type) {
-      case 'integer': return Number.isInteger(value);
-      case 'real':    return typeof value === 'number';
-      case 'boolean': return typeof value === 'boolean';
-      default:        return true;
-    }
   }
 
   /**
@@ -145,14 +129,8 @@ export default class EntryParamManager {
     if (!this._inputParamsMap.has(entryId)) return;
 
     const params = this._inputParamsMap.get(entryId);
-    const type = params[paramName]?.dataType;
-    if (type && !this._validateType(value, type)) {
-      console.error(`EntryParamManager: type mismatch for input "${paramName}" (expected ${type})`);
-      return;
-    }
-    if (params[paramName]) {
-      params[paramName].value = value;
-    }
+    if (!params[paramName]) return;
+    params[paramName].value = convertValue(value, params[paramName].dataType);
   }
 
   /**
@@ -166,14 +144,8 @@ export default class EntryParamManager {
     if (!this._outputParamsMap.has(entryId)) return;
 
     const params = this._outputParamsMap.get(entryId);
-    const type = params[paramName]?.dataType;
-    if (type && !this._validateType(value, type)) {
-      console.error(`EntryParamManager: type mismatch for output "${paramName}" (expected ${type})`);
-      return;
-    }
-    if (params[paramName]) {
-      params[paramName].value = value;
-    }
+    if (!params[paramName]) return;
+    params[paramName].value = convertValue(value, params[paramName].dataType);
   }
 
   /**
