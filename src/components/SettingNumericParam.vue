@@ -34,6 +34,7 @@
 import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledTextBox  from './LabeledTextBox.vue';
+import { toEmptyIfNull } from '../utils/common.js';
 
 export default {
   name: 'SettingNumericParam',
@@ -44,10 +45,6 @@ export default {
   },
   emits: ['update'],
   setup(props, { emit }) {
-    function toEmptyIfNull(value) {
-      return value == null ? '' : String(value);
-    }
-
     function convertText(text) {
       const n = Number(text);
       if (isNaN(n)) return null;

@@ -5,39 +5,26 @@
       <div class="section-divider" />
       <div v-if="inputParamDefs.length > 0 || outputParamDefs.length > 0" class="param-grid">
         <template v-if="inputParamDefs.length > 0">
-          <div class="entry-param-header span-all">Input</div>
+          <div class="entry-param-header">Input</div>
           <template v-for="paramDef in inputParamDefs" :key="paramDef.name">
-            <EntryParamItem
-              :entry-id="selectedEntry.id"
-              :param-name="paramDef.name"
-              :param-category="'input'"
-              :param-type="paramDef.dataType"
-            />
             <component
               :is="resolveParamComponent(paramDef)"
-              :min="paramDef.min"
-              :max="paramDef.max"
-              :step="paramDef.step"
+              :entry-id="selectedEntry.id"
+              param-category="input"
+              :param-def="paramDef"
               :value="localInputParams[paramDef.name]"
               @update:value="onParamChange(paramDef.name, $event)"
             />
           </template>
         </template>
         <template v-if="outputParamDefs.length > 0">
-          <div class="entry-param-header span-all">Output</div>
+          <div class="entry-param-header">Output</div>
           <template v-for="paramDef in outputParamDefs" :key="paramDef.name">
-            <EntryParamItem
+            <EntryParamTextBox
               :entry-id="selectedEntry.id"
-              :param-name="paramDef.name"
-              :param-category="'output'"
-              :param-type="paramDef.dataType"
-            />
-            <component
-              :is="resolveParamComponent(paramDef)"
-              :min="paramDef.min"
-              :max="paramDef.max"
-              :step="paramDef.step"
-              :value="localOutputParams[paramDef.name]"
+              param-category="output"
+              :param-def="paramDef"
+              :value="toEmptyIfNull(localOutputParams[paramDef.name])"
               :disabled="true"
             />
           </template>
@@ -50,26 +37,26 @@
 <script>
 import { inject, computed, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
-import EntryParamItem from './EntryParamItem.vue'
-import IntSpinEdit from './IntSpinEdit.vue'
-import RealSpinEdit from './RealSpinEdit.vue'
-import CheckEdit from './CheckEdit.vue'
+import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
+import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
+import EntryParamComboBox from './EntryParamComboBox.vue'
+import EntryParamTextBox from './EntryParamTextBox.vue'
+import { toEmptyIfNull } from '../utils/common.js'
+
+const CTRL_TYPE_COMPONENTS = {
+  spinner: EntryParamSpinEdit,
+  combo_box: EntryParamComboBox,
+  check_box: EntryParamCheckEdit,
+  text_box: EntryParamTextBox,
+}
 
 export default {
   name: 'EntryView',
-  components: { EntryParamItem, IntSpinEdit, RealSpinEdit, CheckEdit },
+  components: { EntryParamSpinEdit, EntryParamCheckEdit, EntryParamComboBox, EntryParamTextBox },
 
   setup() {
     const { getSelectedEntryId } = useSystemState()
-    const paramComponents = {
-      checkbox: CheckEdit,
-    }
-    const resolveParamComponent = (paramDef) => {
-      if (paramDef.ctrlType === 'spinner') {
-        return paramDef.dataType === 'real' ? RealSpinEdit : IntSpinEdit
-      }
-      return paramComponents[paramDef.ctrlType]
-    }
+    const resolveParamComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
     const entryManager = inject('entryManager')
     const entryParamManager = inject('entryParamManager')
     const entryDefinitionService = inject('entryDefinitionService')
@@ -125,6 +112,7 @@ export default {
       localOutputParams,
       onParamChange,
       resolveParamComponent,
+      toEmptyIfNull,
     }
   }
 }
@@ -157,15 +145,9 @@ export default {
 }
 
 .param-grid {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  column-gap: 30px;
-  row-gap: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 10px;
-}
-
-.span-all {
-  grid-column: 1 / -1;
 }
 </style>

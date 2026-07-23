@@ -22,3 +22,12 @@ export function convertValue(value, dataType) {
       return value;
   }
 }
+
+/**
+ * Convert a possibly-null value to its string form, or empty string if null/undefined.
+ * @param {any} value
+ * @returns {string}
+ */
+export function toEmptyIfNull(value) {
+  return value == null ? '' : String(value);
+}
