@@ -8,7 +8,7 @@
           <div class="entry-param-header">Input</div>
           <template v-for="paramDef in inputParamDefs" :key="paramDef.name">
             <component
-              :is="resolveParamComponent(paramDef)"
+              :is="resolveComponent(paramDef)"
               :entry-id="selectedEntry.id"
               param-category="input"
               :param-def="paramDef"
@@ -35,8 +35,10 @@
 </template>
 
 <script>
-import { inject, computed, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
+import { useEntryOperation } from '../composables/useEntryOperation'
+import { useEntryDefinition } from '../composables/useEntryDefinition'
 import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
 import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
 import EntryParamComboBox from './EntryParamComboBox.vue'
@@ -56,29 +58,28 @@ export default {
 
   setup() {
     const { getSelectedEntryId } = useSystemState()
-    const resolveParamComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
-    const entryManager = inject('entryManager')
-    const entryParamManager = inject('entryParamManager')
-    const entryDefinitionService = inject('entryDefinitionService')
+    const { getEntry, getInputParams, getOutputParams, setInputParam } = useEntryOperation()
+    const { getBlockDefinition } = useEntryDefinition()
+    const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
     const selectedIdRef = getSelectedEntryId
 
     const selectedEntry = computed(() => {
       if (!selectedIdRef.value) return null
-      return entryManager.getEntry(selectedIdRef.value)
+      return getEntry(selectedIdRef.value)
     })
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.output : []
     })
 
@@ -89,19 +90,19 @@ export default {
     // so it updates automatically when values change during execution
     const localOutputParams = computed(() => {
       const id = selectedIdRef.value
-      return id ? entryParamManager.getOutputParams(id) : {}
+      return id ? getOutputParams(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedIdRef, (id) => {
-      localInputParams.value = id ? { ...entryParamManager.getInputParams(id) } : {}
+      localInputParams.value = id ? { ...getInputParams(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
       const id = selectedIdRef.value
       if (!id) return
       localInputParams.value[paramName] = value
-      entryParamManager.setInputParam(id, paramName, value)
+      setInputParam(id, paramName, value)
     }
 
     return {
@@ -111,7 +112,7 @@ export default {
       localInputParams,
       localOutputParams,
       onParamChange,
-      resolveParamComponent,
+      resolveComponent,
       toEmptyIfNull,
     }
   }
