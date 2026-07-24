@@ -143,12 +143,16 @@ export default {
   font-size: 18px;
   color: #333;
   padding: 5px 0px;
+  grid-column: 1 / -1;
 }
 
 .param-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 30px;
+  row-gap: 10px;
+  align-items: center;
+  justify-items: start;
   padding: 10px;
 }
 </style>

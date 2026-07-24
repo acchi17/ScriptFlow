@@ -40,9 +40,7 @@ export default {
 
 <style scoped>
 .entry-param-check-edit {
-  display: flex;
-  align-items: center;
-  gap: 30px;
+  display: contents;
 }
 
 .check-edit-input {

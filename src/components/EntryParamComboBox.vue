@@ -53,13 +53,7 @@ export default {
 
 <style scoped>
 .entry-param-combo-box {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.entry-param-combo-box-input {
-  flex: 1;
+  display: contents;
 }
 
 .combo-box-input {

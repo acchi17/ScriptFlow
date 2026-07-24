@@ -65,13 +65,7 @@ export default {
 
 <style scoped>
 .entry-param-spin-edit {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.entry-param-spin-edit-input {
-  flex: 1;
+  display: contents;
 }
 
 .spin-edit-input {

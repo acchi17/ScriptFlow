@@ -40,13 +40,7 @@ export default {
 
 <style scoped>
 .entry-param-text-box {
-  display: flex;
-  align-items: center;
-  gap: 30px;
-}
-
-.entry-param-text-box-input {
-  flex: 1;
+  display: contents;
 }
 
 .text-box-input {
