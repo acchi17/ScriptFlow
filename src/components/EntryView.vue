@@ -5,39 +5,26 @@
       <div class="section-divider" />
       <div v-if="inputParamDefs.length > 0 || outputParamDefs.length > 0" class="param-grid">
         <template v-if="inputParamDefs.length > 0">
-          <div class="entry-param-header span-all">Input</div>
+          <div class="entry-param-header">Input</div>
           <template v-for="paramDef in inputParamDefs" :key="paramDef.name">
-            <EntryParamItem
-              :entry-id="selectedEntry.id"
-              :param-name="paramDef.name"
-              :param-category="'input'"
-              :param-type="paramDef.dataType"
-            />
             <component
-              :is="resolveParamComponent(paramDef)"
-              :min="paramDef.min"
-              :max="paramDef.max"
-              :step="paramDef.step"
+              :is="resolveComponent(paramDef)"
+              :entry-id="selectedEntry.id"
+              param-category="input"
+              :param-def="paramDef"
               :value="localInputParams[paramDef.name]"
               @update:value="onParamChange(paramDef.name, $event)"
             />
           </template>
         </template>
         <template v-if="outputParamDefs.length > 0">
-          <div class="entry-param-header span-all">Output</div>
+          <div class="entry-param-header">Output</div>
           <template v-for="paramDef in outputParamDefs" :key="paramDef.name">
-            <EntryParamItem
+            <EntryParamTextBox
               :entry-id="selectedEntry.id"
-              :param-name="paramDef.name"
-              :param-category="'output'"
-              :param-type="paramDef.dataType"
-            />
-            <component
-              :is="resolveParamComponent(paramDef)"
-              :min="paramDef.min"
-              :max="paramDef.max"
-              :step="paramDef.step"
-              :value="localOutputParams[paramDef.name]"
+              param-category="output"
+              :param-def="paramDef"
+              :value="toEmptyIfNull(localOutputParams[paramDef.name])"
               :disabled="true"
             />
           </template>
@@ -48,50 +35,51 @@
 </template>
 
 <script>
-import { inject, computed, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
-import EntryParamItem from './EntryParamItem.vue'
-import IntSpinEdit from './IntSpinEdit.vue'
-import RealSpinEdit from './RealSpinEdit.vue'
-import CheckEdit from './CheckEdit.vue'
+import { useEntryOperation } from '../composables/useEntryOperation'
+import { useEntryDefinition } from '../composables/useEntryDefinition'
+import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
+import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
+import EntryParamComboBox from './EntryParamComboBox.vue'
+import EntryParamTextBox from './EntryParamTextBox.vue'
+import { toEmptyIfNull } from '../utils/common.js'
+
+const CTRL_TYPE_COMPONENTS = {
+  spinner: EntryParamSpinEdit,
+  combo_box: EntryParamComboBox,
+  check_box: EntryParamCheckEdit,
+  text_box: EntryParamTextBox,
+}
 
 export default {
   name: 'EntryView',
-  components: { EntryParamItem, IntSpinEdit, RealSpinEdit, CheckEdit },
+  components: { EntryParamSpinEdit, EntryParamCheckEdit, EntryParamComboBox, EntryParamTextBox },
 
   setup() {
     const { getSelectedEntryId } = useSystemState()
-    const paramComponents = {
-      checkbox: CheckEdit,
-    }
-    const resolveParamComponent = (paramDef) => {
-      if (paramDef.ctrlType === 'spinner') {
-        return paramDef.dataType === 'real' ? RealSpinEdit : IntSpinEdit
-      }
-      return paramComponents[paramDef.ctrlType]
-    }
-    const entryManager = inject('entryManager')
-    const entryParamManager = inject('entryParamManager')
-    const entryDefinitionService = inject('entryDefinitionService')
+    const { getEntry, getInputParams, getOutputParams, setInputParam } = useEntryOperation()
+    const { getBlockDefinition } = useEntryDefinition()
+    const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
     const selectedIdRef = getSelectedEntryId
 
     const selectedEntry = computed(() => {
       if (!selectedIdRef.value) return null
-      return entryManager.getEntry(selectedIdRef.value)
+      return getEntry(selectedIdRef.value)
     })
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
       if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
-      const blockDef = entryDefinitionService.getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.output : []
     })
 
@@ -102,19 +90,19 @@ export default {
     // so it updates automatically when values change during execution
     const localOutputParams = computed(() => {
       const id = selectedIdRef.value
-      return id ? entryParamManager.getOutputParams(id) : {}
+      return id ? getOutputParams(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedIdRef, (id) => {
-      localInputParams.value = id ? { ...entryParamManager.getInputParams(id) } : {}
+      localInputParams.value = id ? { ...getInputParams(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
       const id = selectedIdRef.value
       if (!id) return
       localInputParams.value[paramName] = value
-      entryParamManager.setInputParam(id, paramName, value)
+      setInputParam(id, paramName, value)
     }
 
     return {
@@ -124,7 +112,8 @@ export default {
       localInputParams,
       localOutputParams,
       onParamChange,
-      resolveParamComponent,
+      resolveComponent,
+      toEmptyIfNull,
     }
   }
 }
@@ -154,18 +143,16 @@ export default {
   font-size: 18px;
   color: #333;
   padding: 5px 0px;
+  grid-column: 1 / -1;
 }
 
 .param-grid {
   display: grid;
   grid-template-columns: auto 1fr;
-  align-items: center;
   column-gap: 30px;
   row-gap: 10px;
+  align-items: center;
+  justify-items: start;
   padding: 10px;
-}
-
-.span-all {
-  grid-column: 1 / -1;
 }
 </style>

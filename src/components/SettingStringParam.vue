@@ -20,6 +20,7 @@
 import LabeledComboBox from './LabeledComboBox.vue';
 import LabeledListEdit from './LabeledListEdit.vue';
 import LabeledTextBox from './LabeledTextBox.vue';
+import { toEmptyIfNull } from '../utils/common.js';
 
 export default {
   name: 'SettingStringParam',
@@ -30,10 +31,6 @@ export default {
   },
   emits: ['update'],
   setup(_, { emit }) {
-    function toEmptyIfNull(value) {
-      return value == null ? '' : String(value);
-    }
-
     function onFieldChange(field, value) {
       emit('update', field, value);
     }

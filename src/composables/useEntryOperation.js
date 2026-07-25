@@ -64,6 +64,22 @@ export function useEntryOperation() {
     return entryManager.getParentId(id)
   }
 
+  const getEntry = (id) => {
+    return entryManager.getEntry(id)
+  }
+
+  const getInputParams = (id) => {
+    return entryParamManager.getInputParams(id)
+  }
+
+  const getOutputParams = (id) => {
+    return entryParamManager.getOutputParams(id)
+  }
+
+  const setInputParam = (id, paramName, value) => {
+    entryParamManager.setInputParam(id, paramName, value)
+  }
+
   return {
     addBlock,
     addContainer,
@@ -73,5 +89,9 @@ export function useEntryOperation() {
     clearContainer,
     getAllDescendantIds,
     getParentId,
+    getEntry,
+    getInputParams,
+    getOutputParams,
+    setInputParam,
   }
 }

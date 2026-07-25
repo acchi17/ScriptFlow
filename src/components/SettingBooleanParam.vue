@@ -13,6 +13,7 @@
 
 <script>
 import LabeledComboBox from './LabeledComboBox.vue';
+import { toEmptyIfNull } from '../utils/common.js';
 
 const initialValueOptions = new Map([
   ['TRUE', 'true'],
@@ -28,10 +29,6 @@ export default {
   },
   emits: ['update'],
   setup(_, { emit }) {
-    function toEmptyIfNull(value) {
-      return value == null ? '' : String(value);
-    }
-
     function onFieldChange(field, value) {
       if (field === 'ctrlType') {
         emit('update', field, value);

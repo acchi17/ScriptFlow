@@ -13,9 +13,14 @@ export function useEntryDefinition() {
     await service.saveBlockDefinitions();
   }
 
+  function getBlockDefinition(name) {
+    return service.getBlockDefinition(name);
+  }
+
   return {
     localBlockDefinitions,
     saveBlockDefinitions,
+    getBlockDefinition,
     ctrlTypeOptions: BlockDefinitionManager.CTRL_TYPE_OPTIONS,
     dataTypeOptions: BlockDefinitionManager.DATA_TYPE_OPTIONS,
   };
