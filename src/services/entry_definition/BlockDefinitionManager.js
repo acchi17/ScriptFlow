@@ -70,6 +70,14 @@ export default class BlockDefinitionManager {
     if (!cat) return false;
     const block = cat.blocks.find(b => b.name === oldName);
     block.name = trimmed;
+    return true;
+  }
+
+  updateCommand(blockName, newCommand) {
+    const trimmed = newCommand?.trim();
+    if (!trimmed) return false;
+    const block = this.getBlockDefinition(blockName);
+    if (!block) return false;
     block.command = trimmed;
     return true;
   }

@@ -14,6 +14,10 @@
                          :block-name="selectedBlock"
                          @change="onParamsChange"
       />
+      <BlockScriptSetting :style="{ flex: '0 0 25%' }"
+                          :block-name="selectedBlock"
+                          @change="onScriptChange"
+      />
     </div>
   </div>
 </template>
@@ -23,10 +27,11 @@ import { provide, ref } from 'vue';
 import { useEntryDefinition } from '../composables/useEntryDefinition.js';
 import BlockNameSetting from './BlockNameSetting.vue';
 import BlockParamSetting from './BlockParamSetting.vue';
+import BlockScriptSetting from './BlockScriptSetting.vue';
 
 export default {
   name: 'BlockSettingView',
-  components: { BlockNameSetting, BlockParamSetting },
+  components: { BlockNameSetting, BlockParamSetting, BlockScriptSetting },
   emits: ['close'],
 
   setup(_, { emit }) {
@@ -57,6 +62,10 @@ export default {
       isDirty.value = true;
     }
 
+    function onScriptChange() {
+      isDirty.value = true;
+    }
+
     async function handleClose() {
       if (isDirty.value) await persist();
       emit('close');
@@ -66,6 +75,7 @@ export default {
       selectedBlock,
       onNamesChange,
       onParamsChange,
+      onScriptChange,
       handleClose,
     };
   }

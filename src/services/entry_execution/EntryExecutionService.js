@@ -11,12 +11,14 @@ export default class EntryExecutionService {
    * @param {EntryParamManager} entryParamManager Entry parameter manager instance (optional)
    * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
+   * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryParamManager = null, entryConnectionManager = null, executionLogService = null) {
+  constructor(config, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
     this.entryParamManager = entryParamManager;
     this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
+    this.entryDefinitionService = entryDefinitionService;
     this._executionStack = []; // Stack to track currently executing entries
     
     // Centralized management of execution IDs
@@ -70,8 +72,12 @@ export default class EntryExecutionService {
   async _executeBlock(block, inputParams = {}) {
     let result = {};
     try {
-      // Execute script based on block name
-      result = await this.scriptExecutionService.executeScript(block.name, inputParams);
+      // Execute script based on the block definition's command
+      const command = this.entryDefinitionService?.getBlockDefinition(block.name)?.command;
+      if (command === undefined) {
+        throw new Error(`No command found for block "${block.name}"`);
+      }
+      result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
       if (this.entryParamManager) {
         const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(block.id));

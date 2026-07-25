@@ -1,24 +1,27 @@
 <template>
   <div class="panel">
-    <div class="panel-header">Block Script file</div>
+    <div class="panel-header">Block Script</div>
     <div class="panel-body">
-      <div v-if="status === 'found'" class="status-found">
-        <span class="status-icon">✓</span>
-        <span class="status-label">found</span>
-      </div>
-      <div
-        v-else-if="status === 'missing'"
-        class="drop-zone"
-        :class="{ 'drag-over': isDragOver }"
-        @dragover.prevent="onDragOver"
-        @dragleave="onDragLeave"
-        @drop.prevent="onDrop"
-      >
-        <span class="drop-icon">⬇</span>
-        <span class="drop-label">Drop .mjs here</span>
-      </div>
-      <div v-else class="status-none">
-        <span class="status-icon">—</span>
+      <LabeledTextBox label="Command" :value="command" @update:value="onUpdateCommand" />
+      <div class="status-area">
+        <div v-if="status === 'found'" class="status-found">
+          <span class="status-icon">✓</span>
+          <span class="status-label">found</span>
+        </div>
+        <div
+          v-else-if="status === 'missing'"
+          class="drop-zone"
+          :class="{ 'drag-over': isDragOver }"
+          @dragover.prevent="onDragOver"
+          @dragleave="onDragLeave"
+          @drop.prevent="onDrop"
+        >
+          <span class="drop-icon">⬇</span>
+          <span class="drop-label">Drop .mjs here</span>
+        </div>
+        <div v-else class="status-none">
+          <span class="status-icon">—</span>
+        </div>
       </div>
     </div>
   </div>
@@ -26,22 +29,32 @@
 
 <script>
 import { inject, ref, computed, onMounted, watch } from 'vue';
+import LabeledTextBox from './LabeledTextBox.vue';
 
 export default {
   name: 'BlockScriptSetting',
+  components: { LabeledTextBox },
   props: {
     blockName: { type: String, default: null },
   },
+  emits: ['change'],
 
-  setup(props) {
+  setup(props, { emit }) {
     const platformService = inject('platformService');
+    const blockDefinitions = inject('blockDefinitions');
     const availableScripts = ref([]);
     const isDragOver = ref(false);
+    const refreshTrigger = ref(0);
+
+    const command = computed(() => {
+      refreshTrigger.value;
+      return blockDefinitions.getBlockDefinition(props.blockName)?.command ?? '';
+    });
 
     const status = computed(() => {
       if (!platformService.isElectron) return 'unavailable';
       if (!props.blockName) return 'none';
-      return availableScripts.value.includes(props.blockName) ? 'found' : 'missing';
+      return availableScripts.value.includes(command.value) ? 'found' : 'missing';
     });
 
     async function loadScripts() {
@@ -67,11 +80,19 @@ export default {
       const file = e.dataTransfer.files[0];
       if (!file || !props.blockName) return;
       const content = await file.text();
-      await platformService.saveScript(props.blockName, content);
+      await platformService.saveScript(command.value, content);
       await loadScripts();
     }
 
-    return { status, isDragOver, onDragOver, onDragLeave, onDrop };
+    function onUpdateCommand(newCommand) {
+      if (!props.blockName) return;
+      if (blockDefinitions.updateCommand(props.blockName, newCommand)) {
+        refreshTrigger.value++;
+        emit('change');
+      }
+    }
+
+    return { command, status, isDragOver, onDragOver, onDragLeave, onDrop, onUpdateCommand };
   }
 }
 </script>
@@ -97,6 +118,14 @@ export default {
 }
 
 .panel-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+.status-area {
   flex: 1;
   display: flex;
   align-items: center;
