@@ -1,8 +1,11 @@
 <template>
-  <div class="panel">
-    <div class="panel-header">Block Script</div>
-    <div class="panel-body">
-      <LabeledTextBox label="Command" :value="command" @update:value="onUpdateCommand" />
+  <div class="block-script-setting">
+    <div class="main-header">Block Script</div>
+    <div class="main-body">
+      <LabeledTextBox style="flex: none"
+                      label="Command"
+                      :value="command"
+                      @update:value="onUpdateCommand" />
       <div class="status-area">
         <div v-if="status === 'found'" class="status-found">
           <span class="status-icon">✓</span>
@@ -98,7 +101,7 @@ export default {
 </script>
 
 <style scoped>
-.panel {
+.block-script-setting {
   display: flex;
   flex-direction: column;
   border: var(--base-outline-border);
@@ -106,7 +109,7 @@ export default {
   overflow: hidden ;
 }
 
-.panel-header {
+.main-header {
   padding: 4px 12px;
   font-size: 12px;
   font-weight: 600;
@@ -117,7 +120,7 @@ export default {
   white-space: nowrap;
 }
 
-.panel-body {
+.main-body {
   flex: 1;
   display: flex;
   flex-direction: column;
