@@ -51,12 +51,14 @@ export default {
     });
 
     function refreshCategories() {
-      categories.value = entryDefinitionService.getBlockDefinitions().map(c => ({
-        name: c.name,
-        blocks: c.blocks.map(b => b.name)
-      }));
+      categories.value = entryDefinitionService.getBlockDefinitions()
+        .map(c => ({
+          name: c.name,
+          blocks: c.blocks.map(b => b.name)
+        }))
+        .filter(c => c.blocks.length > 0);
       Object.keys(expanded).forEach(k => delete expanded[k]);
-      categories.value.forEach(c => { expanded[c.name] = true; });
+      categories.value.forEach(c => { expanded[c.name] = false; });
     }
 
     function toggleCategory(name) {

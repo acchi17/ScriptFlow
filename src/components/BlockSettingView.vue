@@ -15,6 +15,7 @@
                          @change="onParamsChange"
       />
       <BlockScriptSetting :style="{ flex: '0 0 25%' }"
+                          v-if="selectedBlock"
                           :block-name="selectedBlock"
                           @change="onScriptChange"
       />
