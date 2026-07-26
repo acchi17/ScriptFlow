@@ -21,7 +21,6 @@ export default {
 
 <style scoped>
 .labeled-text-box {
-  flex: 1;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -29,14 +28,14 @@ export default {
 }
 
 .main-label {
-  width: 100px;
-  flex-shrink: 0;
+  flex: 4;
   color: #555;
   user-select: none;
 }
 
 .main-input {
-  flex: 1;
+  width: 100%;
+  flex: 6;
   font-family: inherit;
   font-size: 12px;
   padding: 2px 4px;

@@ -28,10 +28,10 @@ const socketManager = new SocketManager()
 const platformService = new PlatformService()
 const fileService = new FileService()
 const executionLogService = new ExecutionLogService()
-const entryExecutionService = new EntryExecutionService(
-  appConfig, entryParamManager, entryConnectionManager, executionLogService
-)
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
+const entryExecutionService = new EntryExecutionService(
+  appConfig, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
+)
 
 // Provide
 app.provide('entryManager', entryManager)
