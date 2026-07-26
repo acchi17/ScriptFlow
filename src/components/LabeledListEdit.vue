@@ -1,12 +1,12 @@
 <template>
   <div class="labeled-list-edit">
     <span class="main-label">{{ label }}</span>
-    <div class="items-body">
-      <div class="item-add-row">
+    <div class="main-body">
+      <div class="item-row">
         <input class="item-add-input" type="text" v-model="itemText" placeholder="New item" />
         <button class="item-add-btn" @click="addItem">Add</button>
       </div>
-      <div v-for="(item, idx) in items" :key="idx" class="item-entry">
+      <div v-for="(item, idx) in items" :key="idx" class="item-row">
         <span class="item-text">{{ item }}</span>
         <button class="item-remove-btn" @click="removeItem(idx)">×</button>
       </div>
@@ -70,34 +70,32 @@ export default {
 
 <style scoped>
 .labeled-list-edit {
-  flex: 1;
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 2px;
   font-size: 12px;
 }
 
 .main-label {
-  width: 100px;
-  flex-shrink: 0;
+  flex: 4;
   color: #555;
   user-select: none;
 }
 
-.items-body {
-  flex: 1;
+.main-body {
+  flex: 6;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.item-add-row {
+.item-row {
   display: flex;
   gap: 4px;
 }
 
 .item-add-input {
-  flex: 1;
+  width: 100%;
   font-family: inherit;
   font-size: 12px;
   padding: 2px 4px;
@@ -123,14 +121,8 @@ export default {
   background-color: #f0f0f0;
 }
 
-.item-entry {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
 .item-text {
-  flex: 1;
+  width: 100%;
   font-size: 12px;
   padding: 2px 4px;
   border: 1px solid #ccc;
@@ -142,9 +134,8 @@ export default {
   flex-shrink: 0;
   box-sizing: border-box;
   width: 34px;
-  height: 18px;
+  font-size: 14px;
   padding: 0;
-  font-size: 13px;
   line-height: 1;
   border: none;
   background: none;
