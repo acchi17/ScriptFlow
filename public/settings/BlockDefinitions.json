@@ -200,7 +200,61 @@
     },
     {
       "name": "Util",
-      "blocks": []
+      "blocks": [
+        {
+          "name": "Compare",
+          "command": "compare",
+          "inputParams": [
+            {
+              "name": "Operator",
+              "dataType": "string",
+              "ctrlType": "combo_box",
+              "initial": "=",
+              "min": null,
+              "max": null,
+              "step": null,
+              "items": [
+                "=",
+                "<>",
+                ">",
+                "<",
+                ">=",
+                "<="
+              ],
+              "comment": ""
+            },
+            {
+              "name": "ValueA",
+              "dataType": "real",
+              "ctrlType": "spinner",
+              "initial": null,
+              "min": null,
+              "max": null,
+              "step": null,
+              "items": [],
+              "comment": ""
+            },
+            {
+              "name": "ValueB",
+              "dataType": "real",
+              "ctrlType": "spinner",
+              "initial": null,
+              "min": null,
+              "max": null,
+              "step": null,
+              "items": [],
+              "comment": ""
+            }
+          ],
+          "outputParams": [
+            {
+              "name": "Result",
+              "dataType": "boolean",
+              "comment": ""
+            }
+          ]
+        }
+      ]
     }
   ]
 }
