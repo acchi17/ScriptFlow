@@ -140,9 +140,9 @@ export default {
 }
 
 .entry-param-header {
-  font-size: 18px;
+  font-size: 14px;
   color: #333;
-  padding: 5px 0px;
+  padding: 4px 0px;
   grid-column: 1 / -1;
 }
 
