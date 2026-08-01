@@ -35,7 +35,7 @@ definitions are *not* embedded — the block name stays the join key, exactly as
 | Input / output params `{ value, dataType }` | `EntryParamManager` | `getInputParams(id)` | `setInputParamDef()` + `setInputParam()` |
 | Connections `{ id, output, input }` | `EntryConnectionManager` | `toJson()` (**already implemented**) | `restoreFromJson()` (**already implemented**) |
 | TCP/IP settings per entry | `SocketManager` (`_entrySettingMap`) | `getCommSetting(id)` | `saveSetting()` + `create()` |
-| Measured Y/height of each entry | `EntryLayoutManager` | — (recomputed by `useEntryRect`) | — |
+| Measured Y/height of each entry | `EntryLayoutManager` | — (recomputed by `useEntryLayout`) | — |
 | Selection / drag / connect-in-progress | `useSystemState` (module-level refs) | — (transient) | `resetState()` before restore |
 
 `EntryConnectionManager` already has `toJson()` / `restoreFromJson()` /

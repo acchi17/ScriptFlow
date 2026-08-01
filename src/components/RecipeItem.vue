@@ -49,7 +49,7 @@
 <script>
 import { ref } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
-import { useEntryRect } from '../composables/useEntryRect'
+import { useEntryLayout } from '../composables/useEntryLayout'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
@@ -92,7 +92,7 @@ export default {
     }
 
     const entryPanelRef = ref(null)
-    const entryLayoutMap = useEntryRect(entryPanelRef)
+    const entryLayoutMap = useEntryLayout(entryPanelRef)
 
     return {
       mainContainer,
