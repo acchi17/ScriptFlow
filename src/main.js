@@ -13,6 +13,7 @@ import PlatformService from './services/platform/PlatformService'
 import EntryExecutionService from './services/entry_execution/EntryExecutionService'
 import ExecutionLogService from './services/log/ExecutionLogService'
 import EntryDefinitionService from './services/entry_definition/EntryDefinitionService'
+import EntryPersistanceService from './services/entry_persistance/EntryPersistanceService'
 import ContainerChildren from './components/ContainerChildren.vue'
 
 const app = createApp(App)
@@ -32,6 +33,10 @@ const entryDefinitionService = new EntryDefinitionService(appConfig, platformSer
 const entryExecutionService = new EntryExecutionService(
   appConfig, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
 )
+const entryPersistanceService = new EntryPersistanceService(
+  platformService, entryManager, entryParamManager, entryConnectionManager,
+  entryLayoutManager, socketManager, entryDefinitionService
+)
 
 // Provide
 app.provide('entryManager', entryManager)
@@ -44,6 +49,7 @@ app.provide('fileService', fileService)
 app.provide('executionLogService', executionLogService)
 app.provide('entryExecutionService', entryExecutionService)
 app.provide('entryDefinitionService', entryDefinitionService)
+app.provide('entryPersistanceService', entryPersistanceService)
 
 app.component('ContainerChildren', ContainerChildren)
 

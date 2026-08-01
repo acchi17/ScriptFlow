@@ -12,6 +12,7 @@ try {
 }
 
 const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
+const RECIPE_FILENAME_PATTERN = /^[A-Za-z0-9_-]+\.json$/
 const DEFS_FILENAME = 'BlockDefinitions.json'
 
 let mainWindow = null
@@ -37,6 +38,12 @@ function getUserSettingsDir() {
     : path.join(app.getAppPath(), 'public', 'settings')
 }
 
+function getUserRecipesDir() {
+  return app.isPackaged
+    ? path.join(getAppRootDir(), 'recipes')
+    : path.join(app.getAppPath(), 'public', 'recipes')
+}
+
 function getDefaultsDir() {
   return app.isPackaged
     ? path.join(process.resourcesPath, 'public')
@@ -60,6 +67,7 @@ function copyDirRecursive(src, dest) {
 function seedUserDirs() {
   const scriptsDir = getUserScriptsDir()
   const settingsDir = getUserSettingsDir()
+  const recipesDir = getUserRecipesDir()
   const defaultsDir = getDefaultsDir()
 
   if (!fs.existsSync(scriptsDir)) {
@@ -71,6 +79,9 @@ function seedUserDirs() {
     if (fs.existsSync(srcDefs)) {
       fs.copyFileSync(srcDefs, path.join(settingsDir, DEFS_FILENAME))
     }
+  }
+  if (!fs.existsSync(recipesDir)) {
+    copyDirRecursive(path.join(defaultsDir, 'recipes'), recipesDir)
   }
 }
 
@@ -88,6 +99,18 @@ function resolveScriptPath(scriptName) {
   const resolved = path.join(scriptsDir, `${scriptName}.mjs`)
   if (!isInsideDir(scriptsDir, resolved)) {
     throw new Error(`Path escapes scripts directory: ${scriptName}`)
+  }
+  return resolved
+}
+
+function resolveRecipePath(fileName) {
+  if (!RECIPE_FILENAME_PATTERN.test(fileName)) {
+    throw new Error(`Invalid recipe file name: ${fileName}`)
+  }
+  const recipesDir = getUserRecipesDir()
+  const resolved = path.join(recipesDir, fileName)
+  if (!isInsideDir(recipesDir, resolved)) {
+    throw new Error(`Path escapes recipes directory: ${fileName}`)
   }
   return resolved
 }
@@ -213,6 +236,23 @@ function registerIpcHandlers() {
     const settingsDir = getUserSettingsDir()
     fs.mkdirSync(settingsDir, { recursive: true })
     const target = path.join(settingsDir, DEFS_FILENAME)
+    const tmp = `${target}.tmp`
+    fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
+    fs.renameSync(tmp, target)
+  })
+
+  ipcMain.handle('recipe:read', async (_evt, fileName) => {
+    const filePath = resolveRecipePath(fileName)
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`Recipe file not found: ${filePath}`)
+    }
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'))
+  })
+
+  ipcMain.handle('recipe:write', async (_evt, fileName, data) => {
+    const recipesDir = getUserRecipesDir()
+    fs.mkdirSync(recipesDir, { recursive: true })
+    const target = resolveRecipePath(fileName)
     const tmp = `${target}.tmp`
     fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8')
     fs.renameSync(tmp, target)

@@ -253,7 +253,21 @@ same map is what an "import/merge into current recipe" feature would later use
 to regenerate *all* ids and avoid collisions — so the indirection is worth
 having even though v1 maps non-root ids to themselves.
 
-Optionally also apply the saved root's `name` to the live root.
+The saved root's `name` **is** applied to the live root on load (confirmed;
+not optional).
+
+This has one downstream effect: `ExecutionLogView.vue:120` currently hides
+the root row from the execution-log table via a hard-coded literal check,
+`execution.entryName === 'root-container'`. `ExecutionLogService.js` itself
+keys everything off `entryId`/`executionId`, never `name`, so there is no
+data-integrity issue — but once the root's name can change, that literal
+check stops matching after a rename, and the root row would start appearing
+in the log table for entries logged from that point on (entries logged
+before the rename still match, since `entryName` is snapshotted per log
+entry at creation time). `ExecutionLogView.vue:120` must be changed to
+compare the execution's root entry by **id** instead of by the literal name
+string, so the hide-root-row behavior stays correct regardless of the root's
+current name.
 
 ### 6.2 Teardown before restore (`_clearRecipe`)
 
@@ -274,23 +288,29 @@ Order matters:
 ### 6.3 Validation rules applied while restoring
 
 `EntryConnectionManager.restoreFromJson()` validates endpoint *shape* and
-duplicates only. The service adds semantic validation, collecting warnings
-instead of throwing so a partially-valid recipe still loads:
+duplicates only. The service adds semantic validation, mostly collecting
+warnings instead of throwing so a partially-valid recipe still loads — the
+sole exception is an unrecoverable `formatVersion` mismatch, which throws
+before any mutation happens:
 
 | Rule | Action on violation |
 | :--- | :--- |
-| `formatVersion` unknown / newer than supported | abort, return error |
+| `formatVersion` unknown / newer than supported | **throw** (same failure contract as `saveRecipe`'s I/O errors — the caller's `try/catch` handles both) |
 | Node `type` not `block`/`container` | skip node and its subtree, warn |
 | Block name absent from `BlockDefinitions.json` | keep the entry (so the user can see and fix it), no params, warn |
 | Saved input param name absent from the definition | ignore that value, warn (`setInputParam` already no-ops) |
 | Connection endpoint `entryId` not in the restored tree | drop the connection, warn |
 | Connection `paramName` no longer exists on that entry | drop the connection, warn |
-| Connection direction violates DFS order (`getSequenceNumber(output) >= getSequenceNumber(input)`) — the invariant enforced interactively by `useSystemState.isConnectingTarget` | drop the connection, warn |
+| Connection direction violates DFS order (`entryManager.getSequenceNumber(output.entryId) >= entryManager.getSequenceNumber(input.entryId)`, a lookup owned by `EntryManager`) — the invariant enforced interactively by `useSystemState.isConnectingTarget` | drop the connection, warn |
 | Endpoint `dataType` differs from the current definition | keep, but warn (a definition edit should be visible, not silently fatal) |
+| Socket connect failure during `_restoreComm` | surfaced only via the existing `commBtnStatus` UI state, **not** added to `warnings` (structural restore already succeeded by this point) |
 
 `restoreRecipe()` returns a report:
 `{ entryCount, connectionCount, warnings: string[] }` so the composable can
-surface it (log popup or a toast) rather than failing silently.
+surface it (log popup or a toast) rather than failing silently. An
+unrecoverable failure (unknown `formatVersion`) throws instead, so
+`restoreRecipe` and `saveRecipe` share the same `try/catch` /
+`lastError` handling in the composable.
 
 ---
 
@@ -347,8 +367,9 @@ export default class EntryPersistanceService {
               entryDefinitionService) { ... }
 
   // --- serialisation (pure, testable) ---
-  buildRecipe(name = '')            // → recipe object
-  restoreRecipe(data)               // → { entryCount, connectionCount, warnings }
+  buildRecipe(name = '')                  // → recipe object
+  async restoreRecipe(data)               // → { entryCount, connectionCount, warnings }
+                                           //   throws on unknown/newer formatVersion
 
   // --- I/O ---
   async saveRecipe(fileName = 'recipe.json', name = '')   // → void, throws on I/O error
@@ -397,9 +418,13 @@ export function useEntryPersistance() {
 
 `src/components/RecipeItem.vue` — add Save and Load buttons to
 `.recipe-header`, next to the existing Run / Comm / Clear buttons, disabled
-while `isExecuting` or `isBusy`. Loading replaces the current recipe, so the
-button should confirm first when the tree is non-empty. Component style must
-follow `.claude/rules/vue-conventions.md`: Options API with `setup()`, explicit
+while `isExecuting` or `isBusy`. `RecipeItem.vue` does not currently import
+`useSystemState`/`isExecuting` (it's only wired into `MainArea.vue`,
+`SideArea.vue`, `ContainerItem.vue`, `BlockItem.vue`), so this change also
+adds `import { useSystemState } from '../composables/useSystemState'` here.
+Loading replaces the current recipe, so the button should confirm first when
+the tree is non-empty. Component style must follow
+`.claude/rules/vue-conventions.md`: Options API with `setup()`, explicit
 `name`, verbose props, declared `emits`.
 
 The tab label in `MainArea.vue:6` is the hard-coded string `Recipe`; binding it
@@ -443,6 +468,7 @@ graph LR
 | `electron/preload.js` | expose the two new channels |
 | `src/composables/useEntryOperation.js` | call `removeParams()` on delete (param-map leak) |
 | `src/managers/EntryConnectionManager.js` | remove now-redundant `loadFromJsonFile()` |
+| `src/components/ExecutionLogView.vue` | fix root-row hide check (line ~120) to compare by root entry id instead of the literal name `'root-container'`, since the root's name can now change on load |
 | `public/recipes/recipe.json` | optional sample recipe for the browser build |
 | `src/services/entry_persistance/__tests__/EntryPersistanceService.test.js` | **new** — unit tests |
 
@@ -481,18 +507,20 @@ real write path).
 
 ---
 
-## 14. Decisions worth confirming before coding
+## 14. Decisions (confirmed)
 
-1. **Root container name** — should loading overwrite the live root's name with
-   the saved one, or keep `root-container` fixed? (Plan assumes: overwrite.)
+1. **Root container name** — loading **overwrites** the live root's name with
+   the saved one. This requires the `ExecutionLogView.vue` fix described in
+   §6.1 (compare the root by id, not by the literal name), landed together
+   with `EntryPersistanceService`.
 2. **Output parameter values** — confirmed as *not* persisted. If the last run's
    results should survive a save/load, `outputParams` needs to join the schema.
-3. **Auto-connect on load** — should a recipe with `comm.useTcpIp: true`
-   immediately open the socket, or only store the setting and let the user press
-   the Comm button? (Plan assumes: connect, and report failure via the existing
-   red/green button state.)
-4. **Browser save** — download-to-disk versus `localStorage`. The plan assumes
-   download, keeping the browser build filesystem-read-only and consistent with
-   `writeBlockDefinitions()`.
+3. **Auto-connect on load** — confirmed: a recipe with `comm.useTcpIp: true`
+   immediately opens the socket; failure is reported via the existing
+   red/green `commBtnStatus` state, not via the restore report's `warnings`
+   (see §6.3).
+4. **Browser save** — confirmed as download-to-disk (Blob +
+   `URL.createObjectURL`), keeping the browser build filesystem-read-only and
+   consistent with `writeBlockDefinitions()`.
 5. **Single file versus many** — v1 uses one fixed `recipe.json`, matching the
    single hard-coded tab. Multiple named recipes are a phase-3 concern.

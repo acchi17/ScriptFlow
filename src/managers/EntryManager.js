@@ -267,6 +267,9 @@ export default class EntryManager {
       this._removeDescendants(childEntry);
     }
 
+    // Remove the entry itself from the registry
+    this._entriesById.delete(entryId);
+
     this._rebuildSequenceNumbers();
     return true;
   }

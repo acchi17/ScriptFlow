@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, toRaw } from 'vue'
 
 /**
  * EntryConnectionManager class
@@ -222,8 +222,16 @@ export default class EntryConnectionManager {
    * @returns {{ connections: Array<Object> }}
    */
   toJson() {
+    // Reading values out of the reactive Map (via getConnections()) wraps each
+    // connection object in a Vue reactive Proxy. Proxies can't cross the Electron
+    // IPC boundary (structured clone), which caused "An object could not be cloned"
+    // when saving a recipe with a wired parameter. toRaw() unwraps back to the
+    // plain object so the recipe payload is cloneable.
+    // return {
+    //   connections: this.getConnections()
+    // };
     return {
-      connections: this.getConnections()
+      connections: this.getConnections().map(conn => toRaw(conn))
     };
   }
 
@@ -279,21 +287,5 @@ export default class EntryConnectionManager {
     });
 
     return count;
-  }
-
-  /**
-   * Load and restore connection states from a JSON file using FileService.
-   * @param {string} filePath - Path to the JSON file
-   * @param {FileService} fileService - FileService instance for file I/O
-   * @returns {Promise<number>} Number of connections successfully restored
-   */
-  async loadFromJsonFile(filePath, fileService) {
-    try {
-      const data = await fileService.readJsonFile(filePath);
-      return this.restoreFromJson(data);
-    } catch (error) {
-      console.error(`EntryConnectionManager.loadFromJsonFile: failed to load "${filePath}": ${error.message}`);
-      return 0;
-    }
   }
 }

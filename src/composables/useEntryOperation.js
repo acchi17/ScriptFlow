@@ -35,8 +35,10 @@ export function useEntryOperation() {
     if (selectedId && (selectedId === id || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    //;[id, ...descendantIds].forEach(eid => entryConnectionManager.removeConnectionsByEntryId(eid))
-    [id, ...descendantIds].forEach(eid => entryConnectionManager.removeConnectionsByEntryId(eid))
+    [id, ...descendantIds].forEach(eid => {
+      entryConnectionManager.removeConnectionsByEntryId(eid)
+      entryParamManager.removeParams(eid)
+    })
     cancelConnection()
     entryManager.removeEntry(id)
   }
