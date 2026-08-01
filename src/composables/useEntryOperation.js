@@ -70,6 +70,10 @@ export function useEntryOperation() {
     return entryManager.getEntry(id)
   }
 
+  const getRootEntry = () => {
+    return entryManager.getRootEntry()
+  }
+
   const getInputParams = (id) => {
     return entryParamManager.getInputParams(id)
   }
@@ -92,6 +96,7 @@ export function useEntryOperation() {
     getAllDescendantIds,
     getParentId,
     getEntry,
+    getRootEntry,
     getInputParams,
     getOutputParams,
     setInputParam,

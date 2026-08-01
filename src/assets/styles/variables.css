@@ -18,9 +18,11 @@
   --setting-icon-image: url('@/assets/images/setting-icon-gray-256.png');
   --edit-icon-image: url('@/assets/images/pensil-icon-gray-256.png');
   --comm-icon-image: url('@/assets/images/comm-icon-gray-256.png');
+  --save-icon-image: url('@/assets/images/save-icon-gray-256.png');
+  --load-icon-image: url('@/assets/images/load-icon-gray-256.png');
 
   /* Base-layout styles */
-  --menu-bar-height: 48px;
+  --menu-bar-height: 60px;
   --main-bg-color: #f0f0f0;
   --left-side-bg-color: #f0f0f0;
   --popup-bg-color: #fafafa;
