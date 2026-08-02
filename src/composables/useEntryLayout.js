@@ -7,7 +7,7 @@ import { watch, nextTick, inject } from 'vue'
  *
  * @param {Ref<HTMLElement>} entryPanelRef - Ref to the entry panel (.entry-panel)
  */
-export function useEntryRect(entryPanelRef) {
+export function useEntryLayout(entryPanelRef) {
   const entryLayoutManager = inject('entryLayoutManager')
   const entryManager = inject('entryManager')
 

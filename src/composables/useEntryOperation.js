@@ -35,8 +35,10 @@ export function useEntryOperation() {
     if (selectedId && (selectedId === id || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    //;[id, ...descendantIds].forEach(eid => entryConnectionManager.removeConnectionsByEntryId(eid))
-    [id, ...descendantIds].forEach(eid => entryConnectionManager.removeConnectionsByEntryId(eid))
+    [id, ...descendantIds].forEach(eid => {
+      entryConnectionManager.removeConnectionsByEntryId(eid)
+      entryParamManager.removeParams(eid)
+    })
     cancelConnection()
     entryManager.removeEntry(id)
   }
@@ -68,6 +70,10 @@ export function useEntryOperation() {
     return entryManager.getEntry(id)
   }
 
+  const getRootEntry = () => {
+    return entryManager.getRootEntry()
+  }
+
   const getInputParams = (id) => {
     return entryParamManager.getInputParams(id)
   }
@@ -90,6 +96,7 @@ export function useEntryOperation() {
     getAllDescendantIds,
     getParentId,
     getEntry,
+    getRootEntry,
     getInputParams,
     getOutputParams,
     setInputParam,

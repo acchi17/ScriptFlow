@@ -4,7 +4,7 @@
   >
     <div class="recipe-content">
       <div class="recipe-header">
-        <button class="recipe-btn recipe-run-btn" title="Run" @click.stop="executeRecipe"></button>
+        <button class="recipe-btn recipe-run-btn" title="Run" :disabled="isExecuting || isBusy" @click.stop="executeRecipe"></button>
         <button
           class="recipe-btn recipe-com-btn"
           :class="{
@@ -14,7 +14,7 @@
           title="Communication Setting"
           @click.stop="openComSetting"
         ></button>
-        <button class="recipe-btn recipe-clear-btn" title="Clear" @click.stop="clearRecipe"></button>
+        <button class="recipe-btn recipe-clear-btn" title="Clear" :disabled="isExecuting || isBusy" @click.stop="clearRecipe"></button>
       </div>
       <div class="recipe-panel">
         <div class="background-panel">
@@ -49,8 +49,10 @@
 <script>
 import { ref } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
-import { useEntryRect } from '../composables/useEntryRect'
+import { useEntryLayout } from '../composables/useEntryLayout'
 import { useEntryExecution } from '../composables/useEntryExecution'
+import { useEntryPersistance } from '../composables/useEntryPersistance'
+import { useSystemState } from '../composables/useSystemState'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
 import CommSettingView from './CommSettingView.vue'
@@ -66,6 +68,8 @@ export default {
   setup() {
     const { addContainer, clearContainer } = useEntryOperation()
     const { executeEntry } = useEntryExecution()
+    const { isExecuting } = useSystemState()
+    const { isBusy } = useEntryPersistance()
 
     const mainContainer = addContainer(null, 'root-container', 0)
 
@@ -92,7 +96,7 @@ export default {
     }
 
     const entryPanelRef = ref(null)
-    const entryLayoutMap = useEntryRect(entryPanelRef)
+    const entryLayoutMap = useEntryLayout(entryPanelRef)
 
     return {
       mainContainer,
@@ -103,7 +107,9 @@ export default {
       commBtnStatus,
       onCommSettingClose,
       entryPanelRef,
-      entryLayoutMap
+      entryLayoutMap,
+      isExecuting,
+      isBusy
     }
   }
 }
@@ -172,7 +178,7 @@ export default {
 }
 
 .bottom-spacer {
-  height: 300px;
+  height: 200px;
 }
 
 .recipe-btn {
@@ -192,6 +198,12 @@ export default {
 
 .recipe-btn:hover {
   background-color: rgba(0, 0, 0, 0.1);
+}
+
+.recipe-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
 }
 
 .recipe-run-btn {

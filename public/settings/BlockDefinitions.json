@@ -5,7 +5,7 @@
       "blocks": [
         {
           "name": "Add",
-          "command": "Add",
+          "command": "add",
           "inputParams": [
             {
               "name": "NumberA",
@@ -40,7 +40,7 @@
         },
         {
           "name": "Sub",
-          "command": "Sub",
+          "command": "sub",
           "inputParams": [
             {
               "name": "NumberA",
@@ -75,7 +75,7 @@
         },
         {
           "name": "Mul",
-          "command": "Mul",
+          "command": "mul",
           "inputParams": [
             {
               "name": "NumberA",
@@ -110,7 +110,7 @@
         },
         {
           "name": "DivMod",
-          "command": "DivMod",
+          "command": "div-mod",
           "inputParams": [
             {
               "name": "NumberA",
@@ -150,7 +150,7 @@
         },
         {
           "name": "Cos",
-          "command": "Cos",
+          "command": "cos",
           "inputParams": [
             {
               "name": "Radians",
@@ -174,7 +174,7 @@
         },
         {
           "name": "Sin",
-          "command": "Sin",
+          "command": "sin",
           "inputParams": [
             {
               "name": "Radians",

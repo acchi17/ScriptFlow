@@ -48,4 +48,29 @@ export default class PlatformService {
     }
     throw new Error('saveScript is not supported in the browser build')
   }
+
+  async readRecipe(fileName) {
+    if (this.isElectron) {
+      return window.electronAPI.readRecipe(fileName)
+    }
+    const res = await fetch(`/recipes/${fileName}`)
+    if (!res.ok) {
+      throw new Error(`Failed to load recipe "${fileName}": HTTP ${res.status}`)
+    }
+    return res.json()
+  }
+
+  async writeRecipe(fileName, data) {
+    if (this.isElectron) {
+      return window.electronAPI.writeRecipe(fileName, data)
+    }
+    // Browser build has no filesystem write access; trigger a download instead.
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fileName
+    link.click()
+    URL.revokeObjectURL(url)
+  }
 }

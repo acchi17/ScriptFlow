@@ -54,12 +54,13 @@
 </template>
 
 <script>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { useEntryExecution } from '../composables/useEntryExecution';
 
 export default {
   name: 'ExecutionLogView',
   setup() {
+    const entryManager = inject('entryManager');
     const { getLogs, clearLogs } = useEntryExecution();
     const logs = getLogs();
 
@@ -115,9 +116,10 @@ export default {
       const result = [];
       try {
         const executionsTree = logs.value;
+        const rootEntryId = entryManager.getRootEntry()?.id;
         for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
           const execution = executionsTree.rootExecutions[i];
-          const isRootContainer = execution.entryName === 'root-container';
+          const isRootContainer = execution.entryId === rootEntryId;
           if (!isRootContainer) {
             result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
           }
