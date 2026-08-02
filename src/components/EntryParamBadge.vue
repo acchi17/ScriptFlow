@@ -6,7 +6,6 @@
   >
     <template v-if="isParamTypeVisible">
       <span class="param-type">{{ paramTypeLabel }}</span>
-      <span class="element-partition"/>
     </template>
     <template v-if="isParamLinkVisible">
       <span
@@ -26,15 +25,16 @@
           :param-category="paramCategory"
         />
       </span>
-      <span class="element-partition"/>
     </template>
-    <span
-      class="param-name"
-      :class="{
-        'restricted': !isParamTypeVisible && isParamLinkVisible,
-        'fixed': !isParamTypeVisible && !isParamLinkVisible
-      }"
-    >{{ paramName }}</span>
+    <template v-if="isParamNameVisible">
+      <span
+        class="param-name"
+        :class="{
+          'restricted': displayMode === 2,
+          'fixed': displayMode === 3
+        }"
+      >{{ paramName }}</span>
+    </template>
   </div>
 </template>
 
@@ -72,13 +72,10 @@ export default {
       type: String,
       default: null
     },
-    isParamTypeVisible: {
-      type: Boolean,
-      default: true
-    },
-    isParamLinkVisible: {
-      type: Boolean,
-      default: true
+    displayMode: {
+      type: Number,
+      required: true,
+      validator: v => [1, 2, 3].includes(v)
     }
   },
 
@@ -122,7 +119,14 @@ export default {
 
     const paramTypeLabel = computed(() => PARAM_TYPE_LABELS[props.paramType] ?? '')
 
-    return { isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible, paramTypeClass, paramTypeLabel }
+    const isParamTypeVisible = computed(() => props.displayMode === 1)
+    const isParamLinkVisible = computed(() => props.displayMode === 1 || props.displayMode === 2)
+    const isParamNameVisible = computed(() => props.displayMode === 2 || props.displayMode === 3)
+
+    return {
+      isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible,
+      paramTypeClass, paramTypeLabel, isParamTypeVisible, isParamLinkVisible, isParamNameVisible
+    }
   }
 }
 </script>
@@ -133,8 +137,8 @@ export default {
   width: fit-content;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 4px;
+  padding: 4px;
   font-size: var(--param-badge-normal-font-size);
   font-weight: 500;
   color: var(--param-badge-font-color);
@@ -176,33 +180,7 @@ export default {
   font-size: var(--param-badge-normal-font-size);
   text-align: center;
   overflow: hidden;
-}
-
-.element-partition {
-  height: 80%;
-  width: 1px;
-  background-color: #666;
-}
-
-.param-name {
-  text-align: center;
-  white-space: nowrap;
   cursor: pointer;
-}
-
-.param-name.restricted {
-  max-width: 160px;
-  font-size: var(--param-badge-compact-font-size);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.param-name.fixed {
-  width: calc(var(--connection-lane-width) - 44px);
-  font-size: var(--param-badge-compact-font-size);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: default;
 }
 
 .link-wrapper {
@@ -240,5 +218,26 @@ export default {
 @keyframes link-button-blink {
   0%, 100% { background-color: var(--param-badge-linked-color); }
   50% { background-color: transparent; }
+}
+
+.param-name {
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.param-name.restricted {
+  max-width: 160px;
+  font-size: var(--param-badge-compact-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.param-name.fixed {
+  width: calc(var(--connection-lane-width) - 44px);
+  font-size: var(--param-badge-compact-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
 }
 </style>

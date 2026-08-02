@@ -1,13 +1,15 @@
 <template>
   <div class="entry-param-spin-edit">
-    <EntryParamBadge
-      :entry-id="entryId"
-      :param-name="paramDef.name"
-      :param-category="paramCategory"
-      :param-type="paramDef.dataType"
-      :is-param-type-visible="true"
-      :is-param-link-visible="true"
-    />
+    <div class="param-badge-group">
+      <EntryParamBadge
+        :entry-id="entryId"
+        :param-name="paramDef.name"
+        :param-category="paramCategory"
+        :param-type="paramDef.dataType"
+        :display-mode="1"
+      />
+      <span class="param-name-label">{{ paramDef.name }}</span>
+    </div>
     <input
       type="number"
       class="entry-param-spin-edit-input spin-edit-input"
@@ -66,6 +68,17 @@ export default {
 <style scoped>
 .entry-param-spin-edit {
   display: contents;
+}
+
+.param-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-name-label {
+  font-size: var(--param-edit-font-size);
+  white-space: nowrap;
 }
 
 .spin-edit-input {

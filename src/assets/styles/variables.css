@@ -94,7 +94,7 @@
   --param-toggle-dark-color: #333;
 
   /* Parameter badge styles */
-  --param-badge-height: 30px;
+  --param-badge-height: 32px;
   --param-badge-font-color: #333;
   --param-badge-normal-font-size: 12px;
   --param-badge-compact-font-size: 10px;
@@ -119,6 +119,9 @@
 
   /* Connection view styles */
   --connection-lane-width: 96px;
+
+  /* Entry edit view styles */
+  --param-edit-font-size: 12px;
 
   /* Block Setting UI styles */
   --block-setting-font-size: 12px;

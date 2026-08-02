@@ -20,7 +20,7 @@
         :param-name="param.name"
         :param-category="param.category"
         :param-type="param.type"
-        :is-param-type-visible="false"
+        :display-mode="2"
       />
     </div>
   </div>

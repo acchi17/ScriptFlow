@@ -15,8 +15,7 @@
           :param-name="outputParamName"
           :param-category="outputParamCategory"
           :param-type="outputParamType"
-          :is-param-type-visible="false"
-          :is-param-link-visible="false"
+          :display-mode="3"
         />
       </div>
     </foreignObject>
@@ -27,8 +26,7 @@
           :param-name="inputParamName"
           :param-category="inputParamCategory"
           :param-type="inputParamType"
-          :is-param-type-visible="false"
-          :is-param-link-visible="false"
+          :display-mode="3"
         />
       </div>
     </foreignObject>
