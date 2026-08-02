@@ -82,7 +82,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 4px 0 20px;
+  padding: 0 4px 0 12px;
   border-top: var(--base-outline-border);
   border-bottom: var(--base-outline-border);
   background-color: var(--main-bg-color);
