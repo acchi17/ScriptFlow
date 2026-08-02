@@ -1,13 +1,15 @@
 <template>
   <div class="entry-param-combo-box">
-    <EntryParamItem
-      :entry-id="entryId"
-      :param-name="paramDef.name"
-      :param-category="paramCategory"
-      :param-type="paramDef.dataType"
-      :is-param-type-visible="true"
-      :is-param-link-visible="true"
-    />
+    <div class="param-badge-group">
+      <EntryParamBadge
+        :entry-id="entryId"
+        :param-name="paramDef.name"
+        :param-category="paramCategory"
+        :param-type="paramDef.dataType"
+        :display-mode="1"
+      />
+      <span class="param-name-label">{{ paramDef.name }}</span>
+    </div>
     <select
       class="entry-param-combo-box-input combo-box-input"
       :value="effectiveValue"
@@ -23,12 +25,12 @@
 
 <script>
 import { computed } from 'vue'
-import EntryParamItem from './EntryParamItem.vue'
+import EntryParamBadge from './EntryParamBadge.vue'
 
 export default {
   name: 'EntryParamComboBox',
 
-  components: { EntryParamItem },
+  components: { EntryParamBadge },
 
   props: {
     entryId:       { type: String,           required: true },
@@ -54,6 +56,17 @@ export default {
 <style scoped>
 .entry-param-combo-box {
   display: contents;
+}
+
+.param-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-name-label {
+  font-size: var(--param-edit-font-size);
+  white-space: nowrap;
 }
 
 .combo-box-input {

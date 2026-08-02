@@ -10,25 +10,23 @@
     />
     <foreignObject :x="laneX - LANE_WIDTH / 2" :y="y1 - BADGE_HEIGHT / 2" :width="LANE_WIDTH" :height="BADGE_HEIGHT">
       <div class="badge-container">
-        <EntryParamItem
+        <EntryParamBadge
           :entry-id="outputEntryId"
           :param-name="outputParamName"
           :param-category="outputParamCategory"
           :param-type="outputParamType"
-          :is-param-type-visible="false"
-          :is-param-link-visible="false"
+          :display-mode="3"
         />
       </div>
     </foreignObject>
     <foreignObject :x="laneX - LANE_WIDTH / 2" :y="y2 - BADGE_HEIGHT / 2" :width="LANE_WIDTH" :height="BADGE_HEIGHT">
       <div class="badge-container">
-        <EntryParamItem
+        <EntryParamBadge
           :entry-id="inputEntryId"
           :param-name="inputParamName"
           :param-category="inputParamCategory"
           :param-type="inputParamType"
-          :is-param-type-visible="false"
-          :is-param-link-visible="false"
+          :display-mode="3"
         />
       </div>
     </foreignObject>
@@ -37,7 +35,7 @@
 
 <script>
 import { computed } from 'vue'
-import EntryParamItem from './EntryParamItem.vue'
+import EntryParamBadge from './EntryParamBadge.vue'
 
 const LANE_WIDTH = parseInt(
   getComputedStyle(document.documentElement).getPropertyValue('--connection-lane-width')
@@ -48,7 +46,7 @@ const BADGE_HEIGHT = parseInt(
 
 export default {
   name: 'ConnectionItem',
-  components: { EntryParamItem },
+  components: { EntryParamBadge },
 
   props: {
     laneIndex: {

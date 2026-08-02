@@ -1,38 +1,34 @@
 <template>
   <div
-    class="param-badge"
+    class="entry-param-badge"
     :class="paramTypeClass"
     @click.stop="isParamLinkVisible && onConnect()"
   >
-    <template v-if="isParamTypeVisible">
-      <span class="param-type">123</span>
-      <span class="element-partition"/>
-    </template>
-    <template v-if="isParamLinkVisible">
-      <span
-        class="link-wrapper"
-        @mouseenter="isListVisible = true"
-        @mouseleave="isListVisible = false"
-      >
-        <span class="link-button"
-              :class="{ 'connected': isConnected,
-                        'connecting-src': isConnectingSrc,
-                        'connecting-tgt': isConnectingTgt }"
-        />
-        <ConnectionListView
-          v-if="isListVisible && isConnected && !isConnecting"
-          :entry-id="entryId"
-          :param-name="paramName"
-          :param-category="paramCategory"
-        />
-      </span>
-      <span class="element-partition"/>
-    </template>
+    <span v-if="isParamTypeVisible" class="param-type">{{ paramTypeLabel }}</span>
     <span
+      v-if="isParamLinkVisible"
+      class="link-wrapper"
+      @mouseenter="isListVisible = true"
+      @mouseleave="isListVisible = false"
+    >
+      <span class="link-button"
+            :class="{ 'connected': isConnected,
+                      'connecting-src': isConnectingSrc,
+                      'connecting-tgt': isConnectingTgt }"
+      />
+      <ConnectionListView
+        v-if="isListVisible && isConnected && !isConnecting"
+        :entry-id="entryId"
+        :param-name="paramName"
+        :param-category="paramCategory"
+      />
+    </span>
+    <span
+      v-if="isParamNameVisible"
       class="param-name"
       :class="{
-        'restricted': !isParamTypeVisible && isParamLinkVisible,
-        'fixed': !isParamTypeVisible && !isParamLinkVisible
+        'restricted': displayMode === 2,
+        'fixed': displayMode === 3
       }"
     >{{ paramName }}</span>
   </div>
@@ -43,8 +39,16 @@ import { ref, computed } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
 import ConnectionListView from './ConnectionListView.vue'
 
+const PARAM_TYPE_LABELS = {
+  integer: '123',
+  real: '1.23',
+  boolean: 'T/F',
+  string: 'Abc',
+  image: 'img'
+}
+
 export default {
-  name: 'EntryParamItem',
+  name: 'EntryParamBadge',
   components: { ConnectionListView },
 
   props: {
@@ -64,13 +68,10 @@ export default {
       type: String,
       default: null
     },
-    isParamTypeVisible: {
-      type: Boolean,
-      default: true
-    },
-    isParamLinkVisible: {
-      type: Boolean,
-      default: true
+    displayMode: {
+      type: Number,
+      required: true,
+      validator: v => [1, 2, 3].includes(v)
     }
   },
 
@@ -112,19 +113,28 @@ export default {
       return `type-${props.paramType}`
     })
 
-    return { isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible, paramTypeClass }
+    const paramTypeLabel = computed(() => PARAM_TYPE_LABELS[props.paramType] ?? '')
+
+    const isParamTypeVisible = computed(() => props.displayMode === 1)
+    const isParamLinkVisible = computed(() => props.displayMode === 1 || props.displayMode === 2)
+    const isParamNameVisible = computed(() => props.displayMode === 2 || props.displayMode === 3)
+
+    return {
+      isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible,
+      paramTypeClass, paramTypeLabel, isParamTypeVisible, isParamLinkVisible, isParamNameVisible
+    }
   }
 }
 </script>
 
 <style scoped>
-.param-badge {
+.entry-param-badge {
   height: var(--param-badge-height);
   width: fit-content;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 0 8px;
+  gap: 4px;
+  padding: 4px;
   font-size: var(--param-badge-normal-font-size);
   font-weight: 500;
   color: var(--param-badge-font-color);
@@ -132,51 +142,41 @@ export default {
   border-radius: var(--param-badge-border-radius);
 }
 
-.param-badge.type-integer {
+.entry-param-badge.type-integer {
   background-color: var(--param-badge-bg-color-integer);
+  border: var(--param-badge-border-integer);
 }
 
-.param-badge.type-real {
+.entry-param-badge.type-real {
   background-color: var(--param-badge-bg-color-real);
+  border: var(--param-badge-border-real); 
 }
 
-.param-badge.type-boolean {
+.entry-param-badge.type-boolean {
   background-color: var(--param-badge-bg-color-boolean);
+  border: var(--param-badge-border-boolean);
 }
 
-.param-badge.type-string {
+.entry-param-badge.type-string {
   background-color: var(--param-badge-bg-color-string);
+  border: var(--param-badge-border-string);
 }
 
-.param-badge.type-image {
+.entry-param-badge.type-image {
   background-color: var(--param-badge-bg-color-image);
+  border: var(--param-badge-border-image);
 }
 
-.element-partition {
-  height: 80%;
-  width: 1px;
-  background-color: #666;
-}
-
-.param-name {
+.param-type {
+  width: 28px;
+  height: var(--param-badge-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--param-badge-normal-font-size);
   text-align: center;
-  white-space: nowrap;
+  overflow: hidden;
   cursor: pointer;
-}
-
-.param-name.restricted {
-  max-width: 160px;
-  font-size: var(--param-badge-compact-font-size);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.param-name.fixed {
-  width: calc(var(--connection-lane-width) - 44px);
-  font-size: var(--param-badge-compact-font-size);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  cursor: default;
 }
 
 .link-wrapper {
@@ -214,5 +214,26 @@ export default {
 @keyframes link-button-blink {
   0%, 100% { background-color: var(--param-badge-linked-color); }
   50% { background-color: transparent; }
+}
+
+.param-name {
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.param-name.restricted {
+  max-width: 160px;
+  font-size: var(--param-badge-compact-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.param-name.fixed {
+  width: calc(var(--connection-lane-width) - 44px);
+  font-size: var(--param-badge-compact-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
 }
 </style>

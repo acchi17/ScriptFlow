@@ -1,13 +1,15 @@
 <template>
   <div class="entry-param-text-box">
-    <EntryParamItem
-      :entry-id="entryId"
-      :param-name="paramDef.name"
-      :param-category="paramCategory"
-      :param-type="paramDef.dataType"
-      :is-param-type-visible="true"
-      :is-param-link-visible="true"
-    />
+    <div class="param-badge-group">
+      <EntryParamBadge
+        :entry-id="entryId"
+        :param-name="paramDef.name"
+        :param-category="paramCategory"
+        :param-type="paramDef.dataType"
+        :display-mode="1"
+      />
+      <span class="param-name-label">{{ paramDef.name }}</span>
+    </div>
     <input
       type="text"
       class="entry-param-text-box-input text-box-input"
@@ -19,12 +21,12 @@
 </template>
 
 <script>
-import EntryParamItem from './EntryParamItem.vue'
+import EntryParamBadge from './EntryParamBadge.vue'
 
 export default {
   name: 'EntryParamTextBox',
 
-  components: { EntryParamItem },
+  components: { EntryParamBadge },
 
   props: {
     entryId:       { type: String,  required: true },
@@ -41,6 +43,17 @@ export default {
 <style scoped>
 .entry-param-text-box {
   display: contents;
+}
+
+.param-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.param-name-label {
+  font-size: var(--param-edit-font-size);
+  white-space: nowrap;
 }
 
 .text-box-input {
