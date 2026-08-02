@@ -96,17 +96,26 @@
   /* Parameter badge styles */
   --param-badge-height: 30px;
   --param-badge-font-color: #333;
-  --param-badge-normal-font-size: 14px;
+  --param-badge-normal-font-size: 12px;
   --param-badge-compact-font-size: 10px;
   --param-badge-border: 1px solid #aaa;
   --param-badge-border-radius: 6px;
   --param-badge-linked-color: #ffcb77;
 
   --param-badge-bg-color-boolean: #fca5a5;
+  --param-badge-border-boolean: 3px solid #f87171;
+
   --param-badge-bg-color-integer: #6ee7b7;
+  --param-badge-border-integer: 3px solid #34d399;
+
   --param-badge-bg-color-real: #93c5fd;
+  --param-badge-border-real: 3px solid #60a5fa;
+
   --param-badge-bg-color-string: #fcd34d;
+  --param-badge-border-string: 3px solid #fbbf24;
+
   --param-badge-bg-color-image: #a5b4fc;
+  --param-badge-border-image: 3px solid #8b5cf6;
 
   /* Connection view styles */
   --connection-lane-width: 96px;

@@ -1,11 +1,11 @@
 <template>
   <div
-    class="param-badge"
+    class="entry-param-badge"
     :class="paramTypeClass"
     @click.stop="isParamLinkVisible && onConnect()"
   >
     <template v-if="isParamTypeVisible">
-      <span class="param-type">123</span>
+      <span class="param-type">{{ paramTypeLabel }}</span>
       <span class="element-partition"/>
     </template>
     <template v-if="isParamLinkVisible">
@@ -43,8 +43,16 @@ import { ref, computed } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
 import ConnectionListView from './ConnectionListView.vue'
 
+const PARAM_TYPE_LABELS = {
+  integer: '123',
+  real: '1.23',
+  boolean: 'T/F',
+  string: 'Abc',
+  image: 'img'
+}
+
 export default {
-  name: 'EntryParamItem',
+  name: 'EntryParamBadge',
   components: { ConnectionListView },
 
   props: {
@@ -112,13 +120,15 @@ export default {
       return `type-${props.paramType}`
     })
 
-    return { isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible, paramTypeClass }
+    const paramTypeLabel = computed(() => PARAM_TYPE_LABELS[props.paramType] ?? '')
+
+    return { isConnecting, isConnectingSrc, isConnectingTgt, isConnected, onConnect, isListVisible, paramTypeClass, paramTypeLabel }
   }
 }
 </script>
 
 <style scoped>
-.param-badge {
+.entry-param-badge {
   height: var(--param-badge-height);
   width: fit-content;
   display: flex;
@@ -132,24 +142,40 @@ export default {
   border-radius: var(--param-badge-border-radius);
 }
 
-.param-badge.type-integer {
+.entry-param-badge.type-integer {
   background-color: var(--param-badge-bg-color-integer);
+  border: var(--param-badge-border-integer);
 }
 
-.param-badge.type-real {
+.entry-param-badge.type-real {
   background-color: var(--param-badge-bg-color-real);
+  border: var(--param-badge-border-real); 
 }
 
-.param-badge.type-boolean {
+.entry-param-badge.type-boolean {
   background-color: var(--param-badge-bg-color-boolean);
+  border: var(--param-badge-border-boolean);
 }
 
-.param-badge.type-string {
+.entry-param-badge.type-string {
   background-color: var(--param-badge-bg-color-string);
+  border: var(--param-badge-border-string);
 }
 
-.param-badge.type-image {
+.entry-param-badge.type-image {
   background-color: var(--param-badge-bg-color-image);
+  border: var(--param-badge-border-image);
+}
+
+.param-type {
+  width: 28px;
+  height: var(--param-badge-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--param-badge-normal-font-size);
+  text-align: center;
+  overflow: hidden;
 }
 
 .element-partition {

@@ -1,6 +1,6 @@
 <template>
   <div class="entry-param-spin-edit">
-    <EntryParamItem
+    <EntryParamBadge
       :entry-id="entryId"
       :param-name="paramDef.name"
       :param-category="paramCategory"
@@ -21,12 +21,12 @@
 
 <script>
 import { computed } from 'vue'
-import EntryParamItem from './EntryParamItem.vue'
+import EntryParamBadge from './EntryParamBadge.vue'
 
 export default {
   name: 'EntryParamSpinEdit',
 
-  components: { EntryParamItem },
+  components: { EntryParamBadge },
 
   props: {
     entryId:       { type: String,  required: true },

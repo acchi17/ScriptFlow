@@ -1,6 +1,6 @@
 <template>
   <div class="entry-param-text-box">
-    <EntryParamItem
+    <EntryParamBadge
       :entry-id="entryId"
       :param-name="paramDef.name"
       :param-category="paramCategory"
@@ -19,12 +19,12 @@
 </template>
 
 <script>
-import EntryParamItem from './EntryParamItem.vue'
+import EntryParamBadge from './EntryParamBadge.vue'
 
 export default {
   name: 'EntryParamTextBox',
 
-  components: { EntryParamItem },
+  components: { EntryParamBadge },
 
   props: {
     entryId:       { type: String,  required: true },
