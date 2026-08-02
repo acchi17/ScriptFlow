@@ -148,7 +148,7 @@ export default {
 
 .param-grid {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 120px;
   column-gap: 30px;
   row-gap: 10px;
   align-items: center;

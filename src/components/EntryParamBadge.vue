@@ -4,37 +4,33 @@
     :class="paramTypeClass"
     @click.stop="isParamLinkVisible && onConnect()"
   >
-    <template v-if="isParamTypeVisible">
-      <span class="param-type">{{ paramTypeLabel }}</span>
-    </template>
-    <template v-if="isParamLinkVisible">
-      <span
-        class="link-wrapper"
-        @mouseenter="isListVisible = true"
-        @mouseleave="isListVisible = false"
-      >
-        <span class="link-button"
-              :class="{ 'connected': isConnected,
-                        'connecting-src': isConnectingSrc,
-                        'connecting-tgt': isConnectingTgt }"
-        />
-        <ConnectionListView
-          v-if="isListVisible && isConnected && !isConnecting"
-          :entry-id="entryId"
-          :param-name="paramName"
-          :param-category="paramCategory"
-        />
-      </span>
-    </template>
-    <template v-if="isParamNameVisible">
-      <span
-        class="param-name"
-        :class="{
-          'restricted': displayMode === 2,
-          'fixed': displayMode === 3
-        }"
-      >{{ paramName }}</span>
-    </template>
+    <span v-if="isParamTypeVisible" class="param-type">{{ paramTypeLabel }}</span>
+    <span
+      v-if="isParamLinkVisible"
+      class="link-wrapper"
+      @mouseenter="isListVisible = true"
+      @mouseleave="isListVisible = false"
+    >
+      <span class="link-button"
+            :class="{ 'connected': isConnected,
+                      'connecting-src': isConnectingSrc,
+                      'connecting-tgt': isConnectingTgt }"
+      />
+      <ConnectionListView
+        v-if="isListVisible && isConnected && !isConnecting"
+        :entry-id="entryId"
+        :param-name="paramName"
+        :param-category="paramCategory"
+      />
+    </span>
+    <span
+      v-if="isParamNameVisible"
+      class="param-name"
+      :class="{
+        'restricted': displayMode === 2,
+        'fixed': displayMode === 3
+      }"
+    >{{ paramName }}</span>
   </div>
 </template>
 
