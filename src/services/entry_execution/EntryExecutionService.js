@@ -1,4 +1,5 @@
 import ScriptExecutionService from '../script_execution/ScriptExecutionService';
+import ContainerExecutionFactory from './ContainerExecutionFactory';
 
 /**
  * Entry Execution Service
@@ -107,14 +108,9 @@ export default class EntryExecutionService {
    */
   async _executeContainer(container, traceId) {
     let result = {};
-    const childResults = [];
     try {
-      // Execute child entries sequentially
-      for (const childEntry of container.children) {
-        const childResult = await this.executeEntry(childEntry, traceId);
-        childResults.push(childResult);
-      }
-      result.success = childResults.every(childResult => childResult.success === true);
+      const strategy = ContainerExecutionFactory.createStrategy(container.containerType);
+      result = await strategy.execute(container, childEntry => this.executeEntry(childEntry, traceId));
     } catch (error) {
       result.errorMessage = error.message;
     }
