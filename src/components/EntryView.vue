@@ -58,7 +58,7 @@ export default {
 
   setup() {
     const { getSelectedEntryId } = useSystemState()
-    const { getEntry, getInputParams, getOutputParams, setInputParam } = useEntryOperation()
+    const { getEntry, getInputParams, getOutputParams, setInputParam, isBlock } = useEntryOperation()
     const { getBlockDefinition } = useEntryDefinition()
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
@@ -71,14 +71,14 @@ export default {
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
-      if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
+      if (!selectedEntry.value || !isBlock(selectedEntry.value)) return []
       const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
-      if (!selectedEntry.value || selectedEntry.value.type !== 'block') return []
+      if (!selectedEntry.value || !isBlock(selectedEntry.value)) return []
       const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.output : []
     })

@@ -53,9 +53,17 @@ export function useEntryOperation() {
 
   const clearContainer = (id) => {
     const entry = entryManager.getEntry(id)
-    if (!entry || entry.type !== 'container') return
+    if (!entry || !entryManager.isContainer(entry)) return
     const childIds = entryManager.getChildren(id).map(c => c.id)
     childIds.forEach(childId => removeEntry(childId))
+  }
+
+  const isContainer = (entry) => {
+    return entryManager.isContainer(entry)
+  }
+
+  const isBlock = (entry) => {
+    return entryManager.isBlock(entry)
   }
 
   const getAllDescendantIds = (id) => {
@@ -105,5 +113,7 @@ export function useEntryOperation() {
     getInputParams,
     getOutputParams,
     setInputParam,
+    isContainer,
+    isBlock,
   }
 }

@@ -34,6 +34,24 @@ export default class EntryManager {
   }
 
   /**
+   * Check whether an entry is a container
+   * @param {Entry} entry - Entry to check
+   * @returns {boolean} Whether the entry is a container
+   */
+  isContainer(entry) {
+    return entry?.type === 'container';
+  }
+
+  /**
+   * Check whether an entry is a block
+   * @param {Entry} entry - Entry to check
+   * @returns {boolean} Whether the entry is a block
+   */
+  isBlock(entry) {
+    return entry?.type === 'block';
+  }
+
+  /**
    * Rebuild the sequence number map using DFS from the root.
    * @private
    */
@@ -42,13 +60,13 @@ export default class EntryManager {
     if (!this._rootId) return;
 
     const root = this._entriesById.get(this._rootId);
-    if (!root || root.type !== 'container') return;
+    if (!root || !this.isContainer(root)) return;
 
     let counter = 0;
     const traverse = (children) => {
       for (const child of children) {
         this._sequenceNumbers.set(child.id, ++counter);
-        if (child.type === 'container') {
+        if (this.isContainer(child)) {
           traverse(this._childrenById.get(child.id));
         }
       }
@@ -70,7 +88,7 @@ export default class EntryManager {
     this._entriesById.set(entry.id, entry);
 
     // Containers get a reactive children array to hold their entries
-    if (entry.type === 'container' && !this._childrenById.has(entry.id)) {
+    if (this.isContainer(entry) && !this._childrenById.has(entry.id)) {
       this._childrenById.set(entry.id, reactive([]));
     }
 
@@ -121,7 +139,7 @@ export default class EntryManager {
       this._parentIdById.delete(child.id);
 
       // If the child is a container, recursively process its descendants
-      if (child.type === 'container') {
+      if (this.isContainer(child)) {
         this._removeDescendants(child);
       }
 
@@ -190,7 +208,7 @@ export default class EntryManager {
     const ids = new Set([entryId]);
 
     const entry = this._entriesById.get(entryId);
-    if (!entry || entry.type !== 'container') return Array.from(ids);
+    if (!entry || !this.isContainer(entry)) return Array.from(ids);
 
     // Recursively get child entries
     for (const childEntry of this._childrenById.get(entryId)) {
@@ -282,7 +300,7 @@ export default class EntryManager {
     this._parentIdById.delete(entryId);
 
     // If the entry is a container, recursively remove all its descendants
-    if (childEntry.type === 'container') {
+    if (this.isContainer(childEntry)) {
       this._removeDescendants(childEntry);
     }
 
@@ -347,7 +365,7 @@ export default class EntryManager {
    */
   findContainerById(containerId) {
     const entry = this._entriesById.get(containerId);
-    if (entry && entry.type === 'container') {
+    if (entry && this.isContainer(entry)) {
       return entry;
     }
     return null;
@@ -392,7 +410,7 @@ export default class EntryManager {
 
     // Check if parent entry exists
     const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || parentEntry.type !== 'container') return false;
+    if (!parentEntry || !this.isContainer(parentEntry)) return false;
 
     // Check if child entry exists
     const childEntry = this._entriesById.get(childId);
