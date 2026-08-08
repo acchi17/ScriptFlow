@@ -3,7 +3,6 @@
  * Class that inherits from Entry class and corresponds to a lime-colored rectangle
  * Container can contain other entries (Block or Container) inside
  */
-import { reactive } from 'vue';
 import Entry from './Entry';
 
 export default class Container extends Entry {
@@ -15,6 +14,5 @@ export default class Container extends Entry {
   constructor(name = '', id = null) {
     super(name, id);
     this.type = 'container';  // Container type
-    this.children = reactive([]); // Array of child elements
   }
 }

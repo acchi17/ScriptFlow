@@ -47,6 +47,7 @@ export default {
       setOnDropCallback
     } = useDroppable()
     const {
+      getChildren,
       addBlock,
       addContainer,
       removeEntry,
@@ -54,7 +55,7 @@ export default {
       moveEntry
     } = useEntryOperation()
 
-    const children = computed(() => props.entry.children)
+    const children = computed(() => getChildren(props.entry.id))
     const dropAllowed = isDroppable(props.entry.id)
 
     setOnDropCallback((event, index) => {

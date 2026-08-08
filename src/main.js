@@ -31,7 +31,7 @@ const fileService = new FileService()
 const executionLogService = new ExecutionLogService()
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
 const entryExecutionService = new EntryExecutionService(
-  appConfig, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
+  appConfig, entryManager, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
 )
 const entryPersistanceService = new EntryPersistanceService(
   platformService, entryManager, entryParamManager, entryConnectionManager,

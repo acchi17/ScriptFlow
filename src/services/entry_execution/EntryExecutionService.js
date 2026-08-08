@@ -9,13 +9,15 @@ export default class EntryExecutionService {
   /**
    * Constructor
    * @param {Object} config Configuration object
+   * @param {EntryManager} entryManager Entry manager instance (optional)
    * @param {EntryParamManager} entryParamManager Entry parameter manager instance (optional)
    * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
+  constructor(config, entryManager = null, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
+    this.entryManager = entryManager;
     this.entryParamManager = entryParamManager;
     this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
@@ -109,7 +111,7 @@ export default class EntryExecutionService {
   async _executeContainer(container, traceId) {
     let result = {};
     try {
-      const strategy = ContainerExecutionFactory.createStrategy(container.containerType);
+      const strategy = ContainerExecutionFactory.createStrategy(container.containerType, this.entryManager);
       result = await strategy.execute(container, childEntry => this.executeEntry(childEntry, traceId));
     } catch (error) {
       result.errorMessage = error.message;

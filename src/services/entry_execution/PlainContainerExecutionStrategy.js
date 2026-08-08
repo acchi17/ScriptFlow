@@ -7,7 +7,7 @@ import IContainerExecutionStrategy from './IContainerExecutionStrategy';
 export default class PlainContainerExecutionStrategy extends IContainerExecutionStrategy {
   async execute(container, runChild) {
     const childResults = [];
-    for (const childEntry of container.children) {
+    for (const childEntry of this.entryManager.getChildren(container.id)) {
       const childResult = await runChild(childEntry);
       childResults.push(childResult);
     }

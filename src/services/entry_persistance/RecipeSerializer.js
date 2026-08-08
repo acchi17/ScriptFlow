@@ -46,7 +46,7 @@ export default class RecipeSerializer {
     if (entry.type === 'block') {
       node.inputParams = this.entryParamManager.getInputParams(entry.id)
     } else if (entry.type === 'container') {
-      node.children = entry.children.map(child => this._serialiseEntry(child))
+      node.children = this.entryManager.getChildren(entry.id).map(child => this._serialiseEntry(child))
     }
 
     const comm = this.socketManager.getCommSetting(entry.id)

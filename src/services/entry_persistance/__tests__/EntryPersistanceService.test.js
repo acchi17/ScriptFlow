@@ -74,11 +74,11 @@ describe('EntryPersistanceService round trip', () => {
     expect(report.connectionCount).toBe(1)
 
     const restoredRoot = ctx.entryManager.getRootEntry()
-    expect(restoredRoot.children.map(c => c.name)).toEqual(['Add', 'Sub'])
+    expect(ctx.entryManager.getChildren(restoredRoot.id).map(c => c.name)).toEqual(['Add', 'Sub'])
     expect(ctx.entryParamManager.getInputParams(addBlockEntry.id)).toEqual({ NumberA: 3, NumberB: 4 })
 
-    const restoredSub = restoredRoot.children[1]
-    const restoredMul = restoredSub.children[0]
+    const restoredSub = ctx.entryManager.getChildren(restoredRoot.id)[1]
+    const restoredMul = ctx.entryManager.getChildren(restoredSub.id)[0]
     expect(ctx.entryParamManager.getInputParams(restoredMul.id)).toEqual({ NumberA: 0, NumberB: 5 })
 
     const connections = ctx.entryConnectionManager.getConnections()
@@ -141,9 +141,10 @@ describe('EntryPersistanceService round trip', () => {
 
     expect(report.warnings.some(w => w.includes('Block definition "GoneBlock" not found'))).toBe(true)
     const restoredRoot = ctx.entryManager.getRootEntry()
-    expect(restoredRoot.children).toHaveLength(1)
-    expect(restoredRoot.children[0].name).toBe('GoneBlock')
-    expect(ctx.entryParamManager.getInputParams(restoredRoot.children[0].id)).toEqual({})
+    const restoredRootChildren = ctx.entryManager.getChildren(restoredRoot.id)
+    expect(restoredRootChildren).toHaveLength(1)
+    expect(restoredRootChildren[0].name).toBe('GoneBlock')
+    expect(ctx.entryParamManager.getInputParams(restoredRootChildren[0].id)).toEqual({})
   })
 
   it('drops an input param that no longer exists on the block definition, with a warning', async () => {
@@ -155,7 +156,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(recipe)
 
     expect(report.warnings.some(w => w.includes('Input param "Extra" no longer exists'))).toBe(true)
-    const restoredBlock = ctx.entryManager.getRootEntry().children[0]
+    const restoredBlock = ctx.entryManager.getChildren(ctx.entryManager.getRootEntry().id)[0]
     expect(ctx.entryParamManager.getInputParams(restoredBlock.id)).toEqual({ NumberA: 0, NumberB: 0 })
   })
 
@@ -193,8 +194,9 @@ describe('EntryPersistanceService round trip', () => {
     await expect(ctx.service.restoreRecipe(badRecipe)).rejects.toThrow(/unsupported recipe formatVersion/)
 
     const root = ctx.entryManager.getRootEntry()
-    expect(root.children).toHaveLength(1)
-    expect(root.children[0].id).toBe(block.id)
+    const rootChildren = ctx.entryManager.getChildren(root.id)
+    expect(rootChildren).toHaveLength(1)
+    expect(rootChildren[0].id).toBe(block.id)
     expect(ctx.entryParamManager.getInputParams(block.id)).toEqual({ NumberA: 7, NumberB: 0 })
   })
 
@@ -212,7 +214,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(smallRecipe)
 
     expect(report.entryCount).toBe(0)
-    expect(ctx.entryManager.getRootEntry().children).toHaveLength(0)
+    expect(ctx.entryManager.getChildren(ctx.entryManager.getRootEntry().id)).toHaveLength(0)
     expect(ctx.entryManager.getEntry(block1.id)).toBeNull()
     expect(ctx.entryManager.getEntry(block2.id)).toBeNull()
     expect(ctx.entryParamManager.hasInputParam(block1.id)).toBe(false)

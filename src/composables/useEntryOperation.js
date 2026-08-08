@@ -54,7 +54,7 @@ export function useEntryOperation() {
   const clearContainer = (id) => {
     const entry = entryManager.getEntry(id)
     if (!entry || entry.type !== 'container') return
-    const childIds = entry.children.map(c => c.id)
+    const childIds = entryManager.getChildren(id).map(c => c.id)
     childIds.forEach(childId => removeEntry(childId))
   }
 
@@ -72,6 +72,10 @@ export function useEntryOperation() {
 
   const getRootEntry = () => {
     return entryManager.getRootEntry()
+  }
+
+  const getChildren = (id) => {
+    return entryManager.getChildren(id)
   }
 
   const getInputParams = (id) => {
@@ -97,6 +101,7 @@ export function useEntryOperation() {
     getParentId,
     getEntry,
     getRootEntry,
+    getChildren,
     getInputParams,
     getOutputParams,
     setInputParam,

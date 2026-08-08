@@ -4,6 +4,14 @@
  */
 export default class IContainerExecutionStrategy {
   /**
+   * Constructor
+   * @param {EntryManager} entryManager Provides access to a container's children
+   */
+  constructor(entryManager) {
+    this.entryManager = entryManager;
+  }
+
+  /**
    * Execute a container's children according to this strategy
    * @param {Container} container Container to execute
    * @param {(childEntry: Entry) => Promise<Object>} runChild Executes a single child entry and resolves with its result

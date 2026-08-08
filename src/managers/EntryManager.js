@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, reactive } from 'vue'
 
 /**
  * EntryManager class
@@ -10,6 +10,8 @@ export default class EntryManager {
     this._entriesById = new Map();
     // Dictionary of child IDs and their parent IDs
     this._parentIdById = new Map();
+    // Dictionary of container IDs and their reactive children arrays
+    this._childrenById = new Map();
     // Cache of entryId → 1-based sequence number (DFS visual order)
     this._sequenceNumbers = new Map();
     // ID of the root container for sequence number computation
@@ -47,11 +49,11 @@ export default class EntryManager {
       for (const child of children) {
         this._sequenceNumbers.set(child.id, ++counter);
         if (child.type === 'container') {
-          traverse(child.children);
+          traverse(this._childrenById.get(child.id));
         }
       }
     };
-    traverse(root.children);
+    traverse(this._childrenById.get(root.id));
     this._updateTick.value++;
   }
 
@@ -66,6 +68,12 @@ export default class EntryManager {
 
     // Overwrite if already registered
     this._entriesById.set(entry.id, entry);
+
+    // Containers get a reactive children array to hold their entries
+    if (entry.type === 'container' && !this._childrenById.has(entry.id)) {
+      this._childrenById.set(entry.id, reactive([]));
+    }
+
     return true;
   }
 
@@ -85,14 +93,14 @@ export default class EntryManager {
     const parentId = this._parentIdById.get(entryId);
     if (!parentId) return true;
 
-    const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || parentEntry.type !== 'container') return false;
-
     // Remove from parent's children array
-    const index = parentEntry.children.findIndex(child => child.id === entryId);
+    const parentChildren = this._childrenById.get(parentId);
+    if (!parentChildren) return false;
+
+    const index = parentChildren.findIndex(child => child.id === entryId);
     if (index === -1) return false;
 
-    parentEntry.children.splice(index, 1);
+    parentChildren.splice(index, 1);
 
     // Delete parent-child relationship
     this._parentIdById.delete(entryId);
@@ -106,8 +114,9 @@ export default class EntryManager {
    * @private
    */
   _removeDescendants(entry) {
-    // Process all children of the container
-    for (const child of entry.children) {
+    // Process a copy since entries are removed from the map while iterating
+    const children = [...this._childrenById.get(entry.id)];
+    for (const child of children) {
       // Remove parent-child relationship
       this._parentIdById.delete(child.id);
 
@@ -120,8 +129,8 @@ export default class EntryManager {
       this._entriesById.delete(child.id);
     }
 
-    // Clear the children array
-    entry.children.length = 0;
+    // Drop the entry's own children entry
+    this._childrenById.delete(entry.id);
   }
 
   /**
@@ -131,6 +140,15 @@ export default class EntryManager {
    */
   getEntry(entryId) {
     return this._entriesById.get(entryId) || null;
+  }
+
+  /**
+   * Get the children of a container
+   * @param {string} entryId - ID of the container
+   * @returns {Array<Entry>} Children of the container, or an empty array if not a registered container
+   */
+  getChildren(entryId) {
+    return this._childrenById.get(entryId) ?? [];
   }
 
   /**
@@ -175,7 +193,7 @@ export default class EntryManager {
     if (!entry || entry.type !== 'container') return Array.from(ids);
 
     // Recursively get child entries
-    for (const childEntry of entry.children) {
+    for (const childEntry of this._childrenById.get(entryId)) {
       const childIds = this.getAllDescendantIds(childEntry.id);
       childIds.forEach(id => ids.add(id));
     }
@@ -217,9 +235,9 @@ export default class EntryManager {
       return this._registerEntry(entry);
     }
 
-    // Get parent entry
-    const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || parentEntry.type !== 'container') return false;
+    // Get parent's children array (only containers have one)
+    const parentChildren = this._childrenById.get(parentId);
+    if (!parentChildren) return false;
 
     // Register child entry
     this._registerEntry(entry);
@@ -228,8 +246,8 @@ export default class EntryManager {
     this._parentIdById.set(entry.id, parentId);
 
     // Add directly to parent's children array
-    if (index >= 0 && index <= parentEntry.children.length) {
-      parentEntry.children.splice(index, 0, entry);
+    if (index >= 0 && index <= parentChildren.length) {
+      parentChildren.splice(index, 0, entry);
       this._rebuildSequenceNumbers();
       return true;
     }
@@ -246,18 +264,19 @@ export default class EntryManager {
     const parentId = this._parentIdById.get(entryId);
     if (!parentId) return false;
 
-    const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || parentEntry.type !== 'container') return false;
+    // Get parent's children array (only containers have one)
+    const parentChildren = this._childrenById.get(parentId);
+    if (!parentChildren) return false;
 
     // Get child entry
     const childEntry = this._entriesById.get(entryId);
     if (!childEntry) return false;
 
     // Remove from parent's children array
-    const index = parentEntry.children.findIndex(child => child.id === entryId);
+    const index = parentChildren.findIndex(child => child.id === entryId);
     if (index === -1) return false;
 
-    parentEntry.children.splice(index, 1);
+    parentChildren.splice(index, 1);
 
     // Delete parent-child relationship
     this._parentIdById.delete(entryId);
@@ -282,19 +301,19 @@ export default class EntryManager {
    * @returns {boolean} Whether the reordering was successful
    */
   reorderEntry(parentId, entryId, index) {
-    // Get parent entry
-    const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || parentEntry.type !== 'container') return false;
+    // Get parent's children array (only containers have one)
+    const parentChildren = this._childrenById.get(parentId);
+    if (!parentChildren) return false;
 
     // Reorder within parent's children array
-    const currentIndex = parentEntry.children.findIndex(child => child.id === entryId);
+    const currentIndex = parentChildren.findIndex(child => child.id === entryId);
     if (currentIndex !== -1) {
       let targetIndex = index;
       if (index > currentIndex) {
         targetIndex = targetIndex - 1;
       }
-      const child = parentEntry.children.splice(currentIndex, 1)[0];
-      parentEntry.children.splice(targetIndex, 0, child);
+      const child = parentChildren.splice(currentIndex, 1)[0];
+      parentChildren.splice(targetIndex, 0, child);
       this._rebuildSequenceNumbers();
       return true;
     }
