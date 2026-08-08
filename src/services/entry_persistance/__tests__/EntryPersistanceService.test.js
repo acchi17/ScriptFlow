@@ -6,8 +6,6 @@ import EntryLayoutManager from '@/managers/EntryLayoutManager.js'
 import SocketManager from '@/managers/SocketManager.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
 import EntryPersistanceService from '@/services/entry_persistance/EntryPersistanceService.js'
-import Block from '@/models/Block.js'
-import Container from '@/models/Container.js'
 import blockDefinitionsRaw from '../../../../public/settings/BlockDefinitions.json'
 
 async function createContext() {
@@ -28,39 +26,36 @@ async function createContext() {
     entryLayoutManager, socketManager, entryDefinitionService
   )
 
-  const root = new Container('root-container')
-  entryManager.addEntry(null, root, 0)
+  const rootId = entryManager.addEntry(null, 'container', 'root-container', 0)
 
   return {
     entryManager, entryParamManager, entryConnectionManager,
-    entryLayoutManager, socketManager, entryDefinitionService, service, root
+    entryLayoutManager, socketManager, entryDefinitionService, service, rootId
   }
 }
 
 function addBlock(ctx, parentId, name, index) {
-  const block = new Block(name)
-  ctx.entryManager.addEntry(parentId, block, index)
+  const blockId = ctx.entryManager.addEntry(parentId, 'block', name, index)
   const defs = ctx.entryDefinitionService.getBlockParamDef(name)
-  ctx.entryParamManager.setInputParamDef(block.id, defs.input)
-  ctx.entryParamManager.setOutputParamDef(block.id, defs.output)
-  return block
+  ctx.entryParamManager.setInputParamDef(blockId, defs.input)
+  ctx.entryParamManager.setOutputParamDef(blockId, defs.output)
+  return blockId
 }
 
 describe('EntryPersistanceService round trip', () => {
   it('round-trips a tree with nested containers, params and a connection', async () => {
     const ctx = await createContext()
-    const addBlockEntry = addBlock(ctx, ctx.root.id, 'Add', 0)
-    ctx.entryParamManager.setInputParam(addBlockEntry.id, 'NumberA', 3)
-    ctx.entryParamManager.setInputParam(addBlockEntry.id, 'NumberB', 4)
+    const addBlockId = addBlock(ctx, ctx.rootId, 'Add', 0)
+    ctx.entryParamManager.setInputParam(addBlockId, 'NumberA', 3)
+    ctx.entryParamManager.setInputParam(addBlockId, 'NumberB', 4)
 
-    const subContainer = new Container('Sub')
-    ctx.entryManager.addEntry(ctx.root.id, subContainer, 1)
-    const mulBlock = addBlock(ctx, subContainer.id, 'Mul', 0)
-    ctx.entryParamManager.setInputParam(mulBlock.id, 'NumberB', 5)
+    const subContainerId = ctx.entryManager.addEntry(ctx.rootId, 'container', 'Sub', 1)
+    const mulBlockId = addBlock(ctx, subContainerId, 'Mul', 0)
+    ctx.entryParamManager.setInputParam(mulBlockId, 'NumberB', 5)
 
     const connId = ctx.entryConnectionManager.addConnection(
-      { entryId: addBlockEntry.id, category: 'output', dataType: 'integer', paramName: 'Result' },
-      { entryId: mulBlock.id, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+      { entryId: addBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
+      { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
     expect(connId).toBeTruthy()
 
@@ -75,7 +70,7 @@ describe('EntryPersistanceService round trip', () => {
 
     const restoredRoot = ctx.entryManager.getRootEntry()
     expect(ctx.entryManager.getChildren(restoredRoot.id).map(c => c.name)).toEqual(['Add', 'Sub'])
-    expect(ctx.entryParamManager.getInputParams(addBlockEntry.id)).toEqual({ NumberA: 3, NumberB: 4 })
+    expect(ctx.entryParamManager.getInputParams(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
 
     const restoredSub = ctx.entryManager.getChildren(restoredRoot.id)[1]
     const restoredMul = ctx.entryManager.getChildren(restoredSub.id)[0]
@@ -83,18 +78,18 @@ describe('EntryPersistanceService round trip', () => {
 
     const connections = ctx.entryConnectionManager.getConnections()
     expect(connections).toHaveLength(1)
-    expect(connections[0].output.entryId).toBe(addBlockEntry.id)
-    expect(connections[0].input.entryId).toBe(mulBlock.id)
+    expect(connections[0].output.entryId).toBe(addBlockId)
+    expect(connections[0].input.entryId).toBe(mulBlockId)
   })
 
   it('produces a clone-safe recipe when a connection exists (regression for "could not be cloned")', async () => {
     const ctx = await createContext()
-    const addBlockEntry = addBlock(ctx, ctx.root.id, 'Add', 0)
-    const mulBlock = addBlock(ctx, ctx.root.id, 'Mul', 1)
+    const addBlockId = addBlock(ctx, ctx.rootId, 'Add', 0)
+    const mulBlockId = addBlock(ctx, ctx.rootId, 'Mul', 1)
 
     ctx.entryConnectionManager.addConnection(
-      { entryId: addBlockEntry.id, category: 'output', dataType: 'integer', paramName: 'Result' },
-      { entryId: mulBlock.id, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+      { entryId: addBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
+      { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
 
     const recipe = ctx.service.buildRecipe('My recipe')
@@ -108,7 +103,7 @@ describe('EntryPersistanceService round trip', () => {
 
   it('remaps connections that reference the saved root id to the live root id', async () => {
     const ctx = await createContext()
-    const block = addBlock(ctx, ctx.root.id, 'Add', 0)
+    const blockId = addBlock(ctx, ctx.rootId, 'Add', 0)
 
     const recipe = ctx.service.buildRecipe()
     // Simulate a recipe saved with a different root id (e.g. from an earlier
@@ -118,7 +113,7 @@ describe('EntryPersistanceService round trip', () => {
     recipe.connections.push({
       id: 'stray',
       output: { entryId: staleRootId, category: 'output', dataType: 'integer', paramName: 'Result' },
-      input: { entryId: block.id, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+      input: { entryId: blockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     })
 
     const report = await ctx.service.restoreRecipe(recipe)
@@ -133,7 +128,7 @@ describe('EntryPersistanceService round trip', () => {
 
   it('keeps an entry with no params when its block definition is missing, and warns', async () => {
     const ctx = await createContext()
-    addBlock(ctx, ctx.root.id, 'Add', 0)
+    addBlock(ctx, ctx.rootId, 'Add', 0)
     const recipe = ctx.service.buildRecipe()
     recipe.root.children[0].name = 'GoneBlock'
 
@@ -149,7 +144,7 @@ describe('EntryPersistanceService round trip', () => {
 
   it('drops an input param that no longer exists on the block definition, with a warning', async () => {
     const ctx = await createContext()
-    addBlock(ctx, ctx.root.id, 'Add', 0)
+    addBlock(ctx, ctx.rootId, 'Add', 0)
     const recipe = ctx.service.buildRecipe()
     recipe.root.children[0].inputParams.Extra = 42
 
@@ -162,13 +157,13 @@ describe('EntryPersistanceService round trip', () => {
 
   it('drops a connection whose output does not precede its input in DFS order, with a warning', async () => {
     const ctx = await createContext()
-    const addBlockEntry = addBlock(ctx, ctx.root.id, 'Add', 0)
-    const mulBlock = addBlock(ctx, ctx.root.id, 'Mul', 1)
+    const addBlockId = addBlock(ctx, ctx.rootId, 'Add', 0)
+    const mulBlockId = addBlock(ctx, ctx.rootId, 'Mul', 1)
 
     // Backwards: the later entry (Mul) as output feeding the earlier one (Add) as input.
     const connId = ctx.entryConnectionManager.addConnection(
-      { entryId: mulBlock.id, category: 'output', dataType: 'integer', paramName: 'Result' },
-      { entryId: addBlockEntry.id, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+      { entryId: mulBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
+      { entryId: addBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
     expect(connId).toBeTruthy()
 
@@ -181,8 +176,8 @@ describe('EntryPersistanceService round trip', () => {
 
   it('throws on an unsupported formatVersion and leaves the current recipe untouched', async () => {
     const ctx = await createContext()
-    const block = addBlock(ctx, ctx.root.id, 'Add', 0)
-    ctx.entryParamManager.setInputParam(block.id, 'NumberA', 7)
+    const blockId = addBlock(ctx, ctx.rootId, 'Add', 0)
+    ctx.entryParamManager.setInputParam(blockId, 'NumberA', 7)
 
     const badRecipe = {
       formatVersion: 999,
@@ -193,20 +188,19 @@ describe('EntryPersistanceService round trip', () => {
 
     await expect(ctx.service.restoreRecipe(badRecipe)).rejects.toThrow(/unsupported recipe formatVersion/)
 
-    const root = ctx.entryManager.getRootEntry()
-    const rootChildren = ctx.entryManager.getChildren(root.id)
+    const rootEntry = ctx.entryManager.getRootEntry()
+    const rootChildren = ctx.entryManager.getChildren(rootEntry.id)
     expect(rootChildren).toHaveLength(1)
-    expect(rootChildren[0].id).toBe(block.id)
-    expect(ctx.entryParamManager.getInputParams(block.id)).toEqual({ NumberA: 7, NumberB: 0 })
+    expect(rootChildren[0].id).toBe(blockId)
+    expect(ctx.entryParamManager.getInputParams(blockId)).toEqual({ NumberA: 7, NumberB: 0 })
   })
 
   it('clears stale entries, params and layout before restoring, even into a smaller recipe', async () => {
     const ctx = await createContext()
-    const block1 = addBlock(ctx, ctx.root.id, 'Add', 0)
-    const container = new Container('ToBeGone')
-    ctx.entryManager.addEntry(ctx.root.id, container, 1)
-    const block2 = addBlock(ctx, container.id, 'Mul', 0)
-    ctx.entryLayoutManager.setLayout(block1.id, 10, 20)
+    const block1Id = addBlock(ctx, ctx.rootId, 'Add', 0)
+    const containerId = ctx.entryManager.addEntry(ctx.rootId, 'container', 'ToBeGone', 1)
+    const block2Id = addBlock(ctx, containerId, 'Mul', 0)
+    ctx.entryLayoutManager.setLayout(block1Id, 10, 20)
 
     const smallRecipe = ctx.service.buildRecipe()
     smallRecipe.root.children = []
@@ -215,10 +209,10 @@ describe('EntryPersistanceService round trip', () => {
 
     expect(report.entryCount).toBe(0)
     expect(ctx.entryManager.getChildren(ctx.entryManager.getRootEntry().id)).toHaveLength(0)
-    expect(ctx.entryManager.getEntry(block1.id)).toBeNull()
-    expect(ctx.entryManager.getEntry(block2.id)).toBeNull()
-    expect(ctx.entryParamManager.hasInputParam(block1.id)).toBe(false)
-    expect(ctx.entryParamManager.hasInputParam(block2.id)).toBe(false)
-    expect(ctx.entryLayoutManager.getLayout(block1.id)).toBeUndefined()
+    expect(ctx.entryManager.getEntry(block1Id)).toBeNull()
+    expect(ctx.entryManager.getEntry(block2Id)).toBeNull()
+    expect(ctx.entryParamManager.hasInputParam(block1Id)).toBe(false)
+    expect(ctx.entryParamManager.hasInputParam(block2Id)).toBe(false)
+    expect(ctx.entryLayoutManager.getLayout(block1Id)).toBeUndefined()
   })
 })

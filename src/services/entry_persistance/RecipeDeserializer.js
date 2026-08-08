@@ -1,5 +1,3 @@
-import Block from '../../models/Block'
-import Container from '../../models/Container'
 import { FORMAT_VERSION } from './recipeFormat'
 
 /**
@@ -110,38 +108,36 @@ export default class RecipeDeserializer {
     }
 
     if (this.entryManager.isContainer(node)) {
-      const container = new Container(node.name, node.id)
-      this.entryManager.addEntry(parentId, container, index)
-      idMap.set(node.id, container.id)
+      const containerId = this.entryManager.addEntry(parentId, 'container', node.name, index, node.id)
+      idMap.set(node.id, containerId)
 
       const children = Array.isArray(node.children) ? node.children : []
       children.forEach((childNode, childIndex) => {
-        this._restoreEntries(childNode, container.id, childIndex, idMap, warnings)
+        this._restoreEntries(childNode, containerId, childIndex, idMap, warnings)
       })
       return
     }
 
-    const block = new Block(node.name, node.id)
-    this.entryManager.addEntry(parentId, block, index)
-    idMap.set(node.id, block.id)
+    const blockId = this.entryManager.addEntry(parentId, 'block', node.name, index, node.id)
+    idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)
     if (!blockDef) {
-      warnings.push(`Block definition "${node.name}" not found (entry ${block.id}) — kept with no params`)
+      warnings.push(`Block definition "${node.name}" not found (entry ${blockId}) — kept with no params`)
       return
     }
 
     const paramDefs = this.entryDefinitionService.getBlockParamDef(node.name)
-    this.entryParamManager.setInputParamDef(block.id, paramDefs.input)
-    this.entryParamManager.setOutputParamDef(block.id, paramDefs.output)
+    this.entryParamManager.setInputParamDef(blockId, paramDefs.input)
+    this.entryParamManager.setOutputParamDef(blockId, paramDefs.output)
 
     const savedInputParams = node.inputParams || {}
     Object.entries(savedInputParams).forEach(([paramName, value]) => {
       if (!(paramName in paramDefs.input)) {
-        warnings.push(`Input param "${paramName}" no longer exists on block "${node.name}" (entry ${block.id}) — value ignored`)
+        warnings.push(`Input param "${paramName}" no longer exists on block "${node.name}" (entry ${blockId}) — value ignored`)
         return
       }
-      this.entryParamManager.setInputParam(block.id, paramName, value)
+      this.entryParamManager.setInputParam(blockId, paramName, value)
     })
   }
 

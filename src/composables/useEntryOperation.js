@@ -1,6 +1,4 @@
 import { inject } from 'vue'
-import Block from '../models/Block'
-import Container from '../models/Container'
 import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
@@ -15,18 +13,16 @@ export function useEntryOperation() {
   } = useSystemState()
 
   const addBlock = (parentId, name, index) => {
-    const newBlock = new Block(name)
-    entryManager.addEntry(parentId, newBlock, index)
+    const blockId = entryManager.addEntry(parentId, 'block', name, index)
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
-    entryParamManager.setInputParamDef(newBlock.id, defaultParams.input)
-    entryParamManager.setOutputParamDef(newBlock.id, defaultParams.output)
-    return newBlock
+    entryParamManager.setInputParamDef(blockId, defaultParams.input)
+    entryParamManager.setOutputParamDef(blockId, defaultParams.output)
+    return entryManager.getEntry(blockId)
   }
 
   const addContainer = (parentId, name, index) => {
-    const newContainer = new Container(name)
-    entryManager.addEntry(parentId, newContainer, index)
-    return newContainer
+    const containerId = entryManager.addEntry(parentId, 'container', name, index)
+    return entryManager.getEntry(containerId)
   }
 
   const removeEntry = (id) => {

@@ -1,4 +1,6 @@
 import { ref, reactive } from 'vue'
+import Block from '../models/Block'
+import Container from '../models/Container'
 
 /**
  * EntryManager class
@@ -34,24 +36,6 @@ export default class EntryManager {
   }
 
   /**
-   * Check whether an entry is a container
-   * @param {Entry} entry - Entry to check
-   * @returns {boolean} Whether the entry is a container
-   */
-  isContainer(entry) {
-    return entry?.type === 'container';
-  }
-
-  /**
-   * Check whether an entry is a block
-   * @param {Entry} entry - Entry to check
-   * @returns {boolean} Whether the entry is a block
-   */
-  isBlock(entry) {
-    return entry?.type === 'block';
-  }
-
-  /**
    * Rebuild the sequence number map using DFS from the root.
    * @private
    */
@@ -76,7 +60,7 @@ export default class EntryManager {
   }
 
   /**
-   * Register an entry (Internal use)
+   * Register an entry
    * @param {Entry} entry - Entry to register
    * @returns {boolean} Whether the registration was successful
    * @private
@@ -93,6 +77,31 @@ export default class EntryManager {
     }
 
     return true;
+  }
+
+  /**
+ * Attach an entry into a parent's children array
+ * @param {string} parentId - ID of the parent entry
+ * @param {Entry} entry - Entry to attach
+ * @param {number} index - Index position to add
+ * @returns {boolean} Whether the attaching was successful
+ * @private
+ */
+  _attachEntry(parentId, entry, index) {
+    // Get parent's children array (only containers have one)
+    const parentChildren = this._childrenById.get(parentId);
+    if (!parentChildren) return false;
+
+    // Set parent-child relationship
+    this._parentIdById.set(entry.id, parentId);
+
+    // Add directly to parent's children array
+    if (index >= 0 && index <= parentChildren.length) {
+      parentChildren.splice(index, 0, entry);
+      this._rebuildSequenceNumbers();
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -149,6 +158,24 @@ export default class EntryManager {
 
     // Drop the entry's own children entry
     this._childrenById.delete(entry.id);
+  }
+
+  /**
+   * Check whether an entry is a container
+   * @param {Entry} entry - Entry to check
+   * @returns {boolean} Whether the entry is a container
+   */
+  isContainer(entry) {
+    return entry?.type === 'container';
+  }
+
+  /**
+   * Check whether an entry is a block
+   * @param {Entry} entry - Entry to check
+   * @returns {boolean} Whether the entry is a block
+   */
+  isBlock(entry) {
+    return entry?.type === 'block';
   }
 
   /**
@@ -237,39 +264,27 @@ export default class EntryManager {
     return this._updateTick;
   }
 
-
   /**
-   * Add an entry to a parent entry
-   * If parentId is null, the entry is just registered without a parent
-   * @param {string|null} parentId - ID of the parent entry, or null to just register
-   * @param {Entry} entry - Entry to add
+   * Create an entry and add it to a parent entry
+   * If parentId is null, the entry is just registered as the root without a parent
+   * @param {string|null} parentId - ID of the parent entry, or null to register as root
+   * @param {string} type - Type of entry to create ('block' or 'container')
+   * @param {string} name - Name of the entry
    * @param {number} index - Index position to add (ignored if parentId is null)
-   * @returns {boolean} Whether the addition was successful
+   * @param {string|null} id - Unique ID of the entry (auto-generated if null)
+   * @returns {string} ID of the created entry
    */
-  addEntry(parentId, entry, index) {
-    // If parentId is null, just register the entry without a parent
-    if (parentId === null) {
-      this._setRoot(entry.id);
-      return this._registerEntry(entry);
-    }
-
-    // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
-
-    // Register child entry
+  addEntry(parentId, type, name, index, id = null) {
+    const entry = type === 'container' ? new Container(name, id) : new Block(name, id);
     this._registerEntry(entry);
 
-    // Set parent-child relationship
-    this._parentIdById.set(entry.id, parentId);
-
-    // Add directly to parent's children array
-    if (index >= 0 && index <= parentChildren.length) {
-      parentChildren.splice(index, 0, entry);
-      this._rebuildSequenceNumbers();
-      return true;
+    if (parentId === null) {
+      this._setRoot(entry.id);
+    } else {
+      this._attachEntry(parentId, entry, index);
     }
-    return false;
+
+    return entry.id;
   }
 
   /**
@@ -353,8 +368,12 @@ export default class EntryManager {
     // Detach from the current parent
     this._detachEntry(entry);
 
-    // Add to the new parent
-    return this.addEntry(newParentId, entry, index);
+    // Attach to the new parent
+    if (newParentId === null) {
+      this._setRoot(entry.id);
+      return true;
+    }
+    return this._attachEntry(newParentId, entry, index);
   }
 
   /**
