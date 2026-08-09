@@ -43,9 +43,9 @@ export default class RecipeSerializer {
   _serialiseEntry(entry) {
     const node = { id: entry.id, type: entry.type, name: entry.name }
 
-    if (this.entryManager.isBlock(entry)) {
+    if (this.entryManager.isBlock(entry.id)) {
       node.inputParams = this.entryParamManager.getInputParams(entry.id)
-    } else if (this.entryManager.isContainer(entry)) {
+    } else if (this.entryManager.isContainer(entry.id)) {
       node.children = this.entryManager.getChildren(entry.id).map(child => this._serialiseEntry(child))
     }
 

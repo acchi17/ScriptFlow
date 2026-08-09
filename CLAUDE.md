@@ -11,6 +11,10 @@ npm run build            # Build for production (output: dist/)
 npm run preview          # Preview the production build
 npm run lint             # Run ESLint (Vue 3 essential config)
 
+# Tests — Vitest + @vue/test-utils (jsdom environment)
+npm test                 # Run the test suite once
+npm run test:watch       # Run the test suite in watch mode
+
 # Electron (desktop) target — Electron Forge + Vite
 npm run electron:start   # Run the desktop app in dev mode
 npm run electron:package # Package the desktop app (output: out/)
@@ -18,7 +22,7 @@ npm run electron:make    # Build installer artefacts (Squirrel/zip)
 
 ```
 
-No automated test runner is configured. For UI verification, run `npm run dev` (browser) or `npm run electron:start` (desktop).
+Unit tests live alongside their subject in `__tests__/` directories (e.g. `src/managers/__tests__/EntryManager.test.js`). For UI verification beyond what unit tests cover, run `npm run dev` (browser) or `npm run electron:start` (desktop).
 
 ## Project Overview
 

@@ -25,18 +25,18 @@ export function useEntryOperation() {
     return entryManager.getEntry(containerId)
   }
 
-  const removeEntry = (id) => {
+  const removeEntry = (entryId) => {
     const selectedId = getSelectedEntryId.value
-    const descendantIds = entryManager.getAllDescendantIds(id)
-    if (selectedId && (selectedId === id || descendantIds.includes(selectedId))) {
+    const descendantIds = entryManager.getAllDescendantIds(entryId)
+    if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    [id, ...descendantIds].forEach(eid => {
+    [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
       entryParamManager.removeParams(eid)
     })
     cancelConnection()
-    entryManager.removeEntry(id)
+    entryManager.removeEntry(entryId)
   }
 
   const reorderEntry = (parentId, entryId, index) => {
@@ -47,51 +47,50 @@ export function useEntryOperation() {
     entryManager.moveEntry(entryId, targetParentId, index)
   }
 
-  const clearContainer = (id) => {
-    const entry = entryManager.getEntry(id)
-    if (!entry || !entryManager.isContainer(entry)) return
-    const childIds = entryManager.getChildren(id).map(c => c.id)
+  const clearContainer = (entryId) => {
+    if (!entryManager.isContainer(entryId)) return
+    const childIds = entryManager.getChildren(entryId).map(c => c.id)
     childIds.forEach(childId => removeEntry(childId))
   }
 
-  const isContainer = (entry) => {
-    return entryManager.isContainer(entry)
+  const isContainer = (entryId) => {
+    return entryManager.isContainer(entryId)
   }
 
-  const isBlock = (entry) => {
-    return entryManager.isBlock(entry)
+  const isBlock = (entryId) => {
+    return entryManager.isBlock(entryId)
   }
 
-  const getAllDescendantIds = (id) => {
-    return entryManager.getAllDescendantIds(id)
+  const getAllDescendantIds = (entryId) => {
+    return entryManager.getAllDescendantIds(entryId)
   }
 
-  const getParentId = (id) => {
-    return entryManager.getParentId(id)
+  const getParentId = (entryId) => {
+    return entryManager.getParentId(entryId)
   }
 
-  const getEntry = (id) => {
-    return entryManager.getEntry(id)
+  const getEntry = (entryId) => {
+    return entryManager.getEntry(entryId)
   }
 
   const getRootEntry = () => {
     return entryManager.getRootEntry()
   }
 
-  const getChildren = (id) => {
-    return entryManager.getChildren(id)
+  const getChildren = (entryId) => {
+    return entryManager.getChildren(entryId)
   }
 
-  const getInputParams = (id) => {
-    return entryParamManager.getInputParams(id)
+  const getInputParams = (entryId) => {
+    return entryParamManager.getInputParams(entryId)
   }
 
-  const getOutputParams = (id) => {
-    return entryParamManager.getOutputParams(id)
+  const getOutputParams = (entryId) => {
+    return entryParamManager.getOutputParams(entryId)
   }
 
-  const setInputParam = (id, paramName, value) => {
-    entryParamManager.setInputParam(id, paramName, value)
+  const setInputParam = (entryId, paramName, value) => {
+    entryParamManager.setInputParam(entryId, paramName, value)
   }
 
   return {

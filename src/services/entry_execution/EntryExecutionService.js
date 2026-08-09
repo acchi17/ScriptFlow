@@ -149,9 +149,9 @@ export default class EntryExecutionService {
         this.executionLogService.addLog(entry, inputParams, executionId, traceId);
       }
       // Execute an entry
-      if (this.entryManager.isBlock(entry)) {
+      if (this.entryManager.isBlock(entry.id)) {
         result = await this._executeBlock(entry, inputParams);
-      } else if (this.entryManager.isContainer(entry)) {
+      } else if (this.entryManager.isContainer(entry.id)) {
         result = await this._executeContainer(entry, executionId);
       }
       // Log execution result if execution log service is available

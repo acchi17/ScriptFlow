@@ -43,20 +43,18 @@ export default class EntryManager {
     this._sequenceNumbers.clear();
     if (!this._rootId) return;
 
-    const root = this._entriesById.get(this._rootId);
-    if (!root || !this.isContainer(root)) return;
+    if (!this.isContainer(this._rootId)) return;
 
     let counter = 0;
     const traverse = (childIds) => {
       for (const childId of childIds) {
         this._sequenceNumbers.set(childId, ++counter);
-        const child = this._entriesById.get(childId);
-        if (this.isContainer(child)) {
+        if (this.isContainer(childId)) {
           traverse(this._childrenById.get(childId));
         }
       }
     };
-    traverse(this._childrenById.get(root.id));
+    traverse(this._childrenById.get(this._rootId));
     this._updateTick.value++;
   }
 
@@ -73,7 +71,7 @@ export default class EntryManager {
     this._entriesById.set(entry.id, entry);
 
     // Containers get a reactive array to hold their child entry IDs
-    if (this.isContainer(entry) && !this._childrenById.has(entry.id)) {
+    if (this.isContainer(entry.id) && !this._childrenById.has(entry.id)) {
       this._childrenById.set(entry.id, reactive([]));
     }
 
@@ -138,20 +136,19 @@ export default class EntryManager {
 
   /**
    * Recursively remove all descendants of a entry
-   * @param {Entry} entry - Entry whose descendants should be removed
+   * @param {string} entryId - ID of the entry whose descendants should be removed
    * @private
    */
-  _removeDescendants(entry) {
+  _removeDescendants(entryId) {
     // Process a copy since entries are removed from the map while iterating
-    const childIds = [...this._childrenById.get(entry.id)];
+    const childIds = [...this._childrenById.get(entryId)];
     for (const childId of childIds) {
       // Remove parent-child relationship
       this._parentIdById.delete(childId);
 
       // If the child is a container, recursively process its descendants
-      const child = this._entriesById.get(childId);
-      if (this.isContainer(child)) {
-        this._removeDescendants(child);
+      if (this.isContainer(childId)) {
+        this._removeDescendants(childId);
       }
 
       // Remove from entries map
@@ -159,25 +156,25 @@ export default class EntryManager {
     }
 
     // Drop the entry's own children entry
-    this._childrenById.delete(entry.id);
+    this._childrenById.delete(entryId);
   }
 
   /**
  * Check whether an entry is a block
- * @param {Entry} entry - Entry to check
+ * @param {string} entryId - ID of the entry to check
  * @returns {boolean} Whether the entry is a block
  */
-  isBlock(entry) {
-    return entry?.type === 'block';
+  isBlock(entryId) {
+    return this.getEntry(entryId)?.type === 'block';
   }
 
   /**
    * Check whether an entry is a container
-   * @param {Entry} entry - Entry to check
+   * @param {string} entryId - ID of the entry to check
    * @returns {boolean} Whether the entry is a container
    */
-  isContainer(entry) {
-    return entry?.type === 'container';
+  isContainer(entryId) {
+    return this.getEntry(entryId)?.type === 'container';
   }
 
   /**
@@ -238,8 +235,7 @@ export default class EntryManager {
   getAllDescendantIds(entryId) {
     const ids = new Set([entryId]);
 
-    const entry = this._entriesById.get(entryId);
-    if (!entry || !this.isContainer(entry)) return Array.from(ids);
+    if (!this.isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
     for (const childId of this._childrenById.get(entryId)) {
@@ -305,10 +301,6 @@ export default class EntryManager {
     const parentChildren = this._childrenById.get(parentId);
     if (!parentChildren) return false;
 
-    // Get child entry
-    const childEntry = this._entriesById.get(entryId);
-    if (!childEntry) return false;
-
     // Remove from parent's children array
     const index = parentChildren.indexOf(entryId);
     if (index === -1) return false;
@@ -319,8 +311,8 @@ export default class EntryManager {
     this._parentIdById.delete(entryId);
 
     // If the entry is a container, recursively remove all its descendants
-    if (this.isContainer(childEntry)) {
-      this._removeDescendants(childEntry);
+    if (this.isContainer(entryId)) {
+      this._removeDescendants(entryId);
     }
 
     // Remove the entry itself from the registry
@@ -388,7 +380,7 @@ export default class EntryManager {
    */
   findContainerById(containerId) {
     const entry = this._entriesById.get(containerId);
-    if (entry && this.isContainer(entry)) {
+    if (this.isContainer(containerId)) {
       return entry;
     }
     return null;
@@ -415,49 +407,4 @@ export default class EntryManager {
     return this._parentIdById.get(entryId) === parentId;
   }
 
-  /**
-   * Set parent-child relationship (overwrites existing relationship)
-   * @param {string} childId - ID of the child entry
-   * @param {string|null} parentId - ID of the parent entry (null to set as parentless)
-   * @returns {boolean} Whether the setting was successful
-   * @unused This method is currently not used but kept for future extensibility
-   */
-  setParentChildRelation(childId, parentId) {
-    if (!childId) return false;
-
-    if (parentId === null) {
-      // Set as parentless
-      this._parentIdById.delete(childId);
-      return true;
-    }
-
-    // Check if parent entry exists
-    const parentEntry = this._entriesById.get(parentId);
-    if (!parentEntry || !this.isContainer(parentEntry)) return false;
-
-    // Check if child entry exists
-    const childEntry = this._entriesById.get(childId);
-    if (!childEntry) return false;
-
-    // Set parent-child relationship
-    this._parentIdById.set(childId, parentId);
-    return true;
-  }
-
-  /**
-   * Remove parent-child relationship
-   * @param {string} childId - ID of the child entry
-   * @returns {boolean} Whether the removal was successful
-   * @unused This method is currently not used but kept for future extensibility
-   */
-  removeParentChildRelation(childId) {
-    if (!childId) return false;
-
-    if (this._parentIdById.has(childId)) {
-      this._parentIdById.delete(childId);
-      return true;
-    }
-
-    return false;
-  }
 }

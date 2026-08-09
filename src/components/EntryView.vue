@@ -71,14 +71,14 @@ export default {
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
-      if (!selectedEntry.value || !isBlock(selectedEntry.value)) return []
+      if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
       const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
-      if (!selectedEntry.value || !isBlock(selectedEntry.value)) return []
+      if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
       const blockDef = getBlockDefinition(selectedEntry.value.name)
       return blockDef ? blockDef.parameters.output : []
     })

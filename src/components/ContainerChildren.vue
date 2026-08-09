@@ -7,7 +7,7 @@
     />
     <template v-for="(child, index) in children" :key="child.id">
       <component
-        :is="isBlock(child) ? 'BlockItem' : 'ContainerItem'"
+        :is="isBlock(child.id) ? 'BlockItem' : 'ContainerItem'"
         :entry="child"
         @remove="removeChild"
       />
