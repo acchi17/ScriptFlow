@@ -102,13 +102,13 @@ export default class RecipeDeserializer {
    * @private
    */
   _restoreEntries(node, parentId, index, idMap, warnings) {
-    if (!node || (!this.entryManager.isBlock(node) && !this.entryManager.isContainer(node))) {
+    if (!node || (node.type !== 'block' && node.type !== 'container')) {
       warnings.push(`Skipped node with unknown type "${node?.type}" (id ${node?.id})`)
       return
     }
 
-    if (this.entryManager.isContainer(node)) {
-      const containerId = this.entryManager.addEntry(parentId, 'container', node.name, index, node.id)
+    if (node.type === 'container') {
+      const containerId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
       idMap.set(node.id, containerId)
 
       const children = Array.isArray(node.children) ? node.children : []
@@ -118,7 +118,7 @@ export default class RecipeDeserializer {
       return
     }
 
-    const blockId = this.entryManager.addEntry(parentId, 'block', node.name, index, node.id)
+    const blockId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
     idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)
