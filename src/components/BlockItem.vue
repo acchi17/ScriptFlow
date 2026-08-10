@@ -16,11 +16,11 @@
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="block-header-tail">
           <div
-            v-if="(isSelected || isConnectingTgt) && hasParams"
+            v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="block-content-param"
             :class="{ 'selected': isSelected }"
           >        
-            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTgt" />
+            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTargetValue" />
           </div>            
         </div>
       </div>
@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import { useEntryOperation } from '../composables/useEntryOperation'
@@ -50,8 +50,6 @@ export default {
   emits: ['remove'],
 
   setup(props, { emit }) {
-    const entryParamManager = inject('entryParamManager')
-
     // Get composables
     const {
       isDragging,
@@ -60,7 +58,7 @@ export default {
       setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
-    const { getParentId } = useEntryOperation()
+    const { getParentId, hasParams } = useEntryOperation()
     const {
       isExecuting,
       getSelectedEntryId,
@@ -75,12 +73,9 @@ export default {
       return selectedId === props.entry.id
     })
 
-    const isConnectingTgt = isConnectingTarget(props.entry.id)
+    const isConnectingTargetValue = isConnectingTarget(props.entry.id)
 
-    const hasParams = computed(() =>
-      Object.keys(entryParamManager.getInputParamTypes(props.entry.id)).length > 0 ||
-      Object.keys(entryParamManager.getOutputParamTypes(props.entry.id)).length > 0
-    )
+    const hasParamsValue = computed(() => hasParams(props.entry.id))
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -133,8 +128,8 @@ export default {
     return {
       isDragging,
       isSelected,
-      isConnectingTgt,
-      hasParams,
+      isConnectingTargetValue,
+      hasParamsValue ,
       onDragStart,
       onDragEnd,
       onSelect,

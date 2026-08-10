@@ -94,6 +94,11 @@ export function useEntryOperation() {
     entryParamManager.setInputParam(entryId, paramName, value)
   }
 
+  const hasParams = (entryId) => {
+    return Object.keys(entryParamManager.getInputParamTypes(entryId)).length > 0 ||
+      Object.keys(entryParamManager.getOutputParamTypes(entryId)).length > 0
+  }
+
   /**
    * Watches the entry panel for structural changes and, on each change, remeasures the
    * Y position and height of every entry's header element, writing them into
@@ -144,6 +149,7 @@ export function useEntryOperation() {
     getInputParams,
     getOutputParams,
     setInputParam,
+    hasParams,
     isContainer,
     isBlock,
     trackEntryLayout,

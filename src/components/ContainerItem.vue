@@ -16,11 +16,11 @@
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="container-header-tail">
           <div
-            v-if="(isSelected || isConnectingTgt) && hasParams"
+            v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="container-content-param"
             :class="{ 'selected': isSelected }"
           >
-            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTgt" />
+            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTargetValue" />
           </div>   
         </div>
       </div>
@@ -30,7 +30,7 @@
 </template>
 
 <script>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useDraggable } from '../composables/useDraggable'
 import { useEntryExecution } from '../composables/useEntryExecution'
@@ -51,8 +51,6 @@ export default {
   emits: ['remove'],
 
   setup(props, { emit }) {
-    const entryParamManager = inject('entryParamManager')
-
     // Get composable
     const {
       isDragging,
@@ -65,6 +63,7 @@ export default {
     const {
       getAllDescendantIds,
       getParentId,
+      hasParams,
     } = useEntryOperation()
     const {
       isExecuting,
@@ -80,12 +79,9 @@ export default {
       return selectedId === props.entry.id
     })
     
-    const isConnectingTgt = isConnectingTarget(props.entry.id)
+    const isConnectingTargetValue = isConnectingTarget(props.entry.id)
 
-    const hasParams = computed(() =>
-      Object.keys(entryParamManager.getInputParamTypes(props.entry.id)).length > 0 ||
-      Object.keys(entryParamManager.getOutputParamTypes(props.entry.id)).length > 0
-    )
+    const hasParamsValue = computed(() => hasParams(props.entry.id))
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -142,8 +138,8 @@ export default {
     return {
       isDragging,
       isSelected,
-      isConnectingTgt,
-      hasParams,
+      isConnectingTargetValue,
+      hasParamsValue,
       onDragStart,
       onDragEnd,
       onSelect,
