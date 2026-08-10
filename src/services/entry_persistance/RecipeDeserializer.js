@@ -84,7 +84,7 @@ export default class RecipeDeserializer {
       this.entryLayoutManager.deleteLayout(id)
     })
 
-    const childIds = this.entryManager.getChildren(root.id).map(child => child.id)
+    const childIds = this.entryManager.getChildren(root.id)
     childIds.forEach(childId => this.entryManager.removeEntry(childId))
 
     await this.socketManager.release(root.id)

@@ -189,12 +189,11 @@ export default class EntryManager {
   /**
    * Get the children of a container
    * @param {string} entryId - ID of the container
-   * @returns {Array<Entry>} Children of the container, or an empty array if not a registered container
+   * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
    */
   getChildren(entryId) {
     const childIds = this._childrenById.get(entryId);
-    if (!childIds) return [];
-    return childIds.map(id => this._entriesById.get(id)).filter(Boolean);
+    return childIds ? [...childIds] : [];
   }
 
   /**
@@ -406,5 +405,4 @@ export default class EntryManager {
   isChildOf(entryId, parentId) {
     return this._parentIdById.get(entryId) === parentId;
   }
-
 }

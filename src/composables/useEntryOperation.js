@@ -49,7 +49,7 @@ export function useEntryOperation() {
 
   const clearContainer = (entryId) => {
     if (!entryManager.isContainer(entryId)) return
-    const childIds = entryManager.getChildren(entryId).map(c => c.id)
+    const childIds = entryManager.getChildren(entryId)
     childIds.forEach(childId => removeEntry(childId))
   }
 

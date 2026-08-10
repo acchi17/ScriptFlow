@@ -69,12 +69,12 @@ describe('EntryPersistanceService round trip', () => {
     expect(report.connectionCount).toBe(1)
 
     const restoredRoot = ctx.entryManager.getRootEntry()
-    expect(ctx.entryManager.getChildren(restoredRoot.id).map(c => c.name)).toEqual(['Add', 'Sub'])
+    expect(ctx.entryManager.getChildren(restoredRoot.id).map(id => ctx.entryManager.getEntry(id).name)).toEqual(['Add', 'Sub'])
     expect(ctx.entryParamManager.getInputParams(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
 
-    const restoredSub = ctx.entryManager.getChildren(restoredRoot.id)[1]
-    const restoredMul = ctx.entryManager.getChildren(restoredSub.id)[0]
-    expect(ctx.entryParamManager.getInputParams(restoredMul.id)).toEqual({ NumberA: 0, NumberB: 5 })
+    const restoredSubId = ctx.entryManager.getChildren(restoredRoot.id)[1]
+    const restoredMulId = ctx.entryManager.getChildren(restoredSubId)[0]
+    expect(ctx.entryParamManager.getInputParams(restoredMulId)).toEqual({ NumberA: 0, NumberB: 5 })
 
     const connections = ctx.entryConnectionManager.getConnections()
     expect(connections).toHaveLength(1)
@@ -136,10 +136,10 @@ describe('EntryPersistanceService round trip', () => {
 
     expect(report.warnings.some(w => w.includes('Block definition "GoneBlock" not found'))).toBe(true)
     const restoredRoot = ctx.entryManager.getRootEntry()
-    const restoredRootChildren = ctx.entryManager.getChildren(restoredRoot.id)
-    expect(restoredRootChildren).toHaveLength(1)
-    expect(restoredRootChildren[0].name).toBe('GoneBlock')
-    expect(ctx.entryParamManager.getInputParams(restoredRootChildren[0].id)).toEqual({})
+    const restoredRootChildIds = ctx.entryManager.getChildren(restoredRoot.id)
+    expect(restoredRootChildIds).toHaveLength(1)
+    expect(ctx.entryManager.getEntry(restoredRootChildIds[0]).name).toBe('GoneBlock')
+    expect(ctx.entryParamManager.getInputParams(restoredRootChildIds[0])).toEqual({})
   })
 
   it('drops an input param that no longer exists on the block definition, with a warning', async () => {
@@ -151,8 +151,8 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(recipe)
 
     expect(report.warnings.some(w => w.includes('Input param "Extra" no longer exists'))).toBe(true)
-    const restoredBlock = ctx.entryManager.getChildren(ctx.entryManager.getRootEntry().id)[0]
-    expect(ctx.entryParamManager.getInputParams(restoredBlock.id)).toEqual({ NumberA: 0, NumberB: 0 })
+    const restoredBlockId = ctx.entryManager.getChildren(ctx.entryManager.getRootEntry().id)[0]
+    expect(ctx.entryParamManager.getInputParams(restoredBlockId)).toEqual({ NumberA: 0, NumberB: 0 })
   })
 
   it('drops a connection whose output does not precede its input in DFS order, with a warning', async () => {
@@ -189,9 +189,9 @@ describe('EntryPersistanceService round trip', () => {
     await expect(ctx.service.restoreRecipe(badRecipe)).rejects.toThrow(/unsupported recipe formatVersion/)
 
     const rootEntry = ctx.entryManager.getRootEntry()
-    const rootChildren = ctx.entryManager.getChildren(rootEntry.id)
-    expect(rootChildren).toHaveLength(1)
-    expect(rootChildren[0].id).toBe(blockId)
+    const rootChildIds = ctx.entryManager.getChildren(rootEntry.id)
+    expect(rootChildIds).toHaveLength(1)
+    expect(rootChildIds[0]).toBe(blockId)
     expect(ctx.entryParamManager.getInputParams(blockId)).toEqual({ NumberA: 7, NumberB: 0 })
   })
 
