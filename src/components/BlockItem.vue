@@ -81,7 +81,7 @@ export default {
       if (isSelected.value) {
         clearSelection()
       } else {
-        setSelection(props.entry)
+        setSelection(props.entry.id)
       }
     }
     

@@ -40,7 +40,7 @@ export function useSystemState() {
   // --- selection ---
   const isSelected = (entryId) => computed(() => selectedEntryId.value === entryId)
   const getSelectedEntryId = computed(() => selectedEntryId.value)
-  const setSelection = (entry) => { selectedEntryId.value = entry?.id || null }
+  const setSelection = (entryId) => { selectedEntryId.value = entryId || null }
   const clearSelection = () => { selectedEntryId.value = null }
 
   // --- connection ---

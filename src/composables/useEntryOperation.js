@@ -19,13 +19,13 @@ export function useEntryOperation() {
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
     entryParamManager.setInputParamDef(blockId, defaultParams.input)
     entryParamManager.setOutputParamDef(blockId, defaultParams.output)
-    entryTypeStore.setEntry(blockId, 'block', name)
+    entryTypeStore.add(blockId, 'block', name)
     return entryManager.getEntry(blockId)
   }
 
   const addContainer = (parentId, name, index) => {
     const containerId = entryManager.addEntry(parentId, 'container', name, index)
-    entryTypeStore.setEntry(containerId, 'container', name)
+    entryTypeStore.add(containerId, 'container', name)
     return entryManager.getEntry(containerId)
   }
 
@@ -38,7 +38,7 @@ export function useEntryOperation() {
     [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
       entryParamManager.removeParams(eid)
-      entryTypeStore.removeEntry(eid)
+      entryTypeStore.remove(eid)
     })
     cancelConnection()
     entryManager.removeEntry(entryId)
