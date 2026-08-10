@@ -128,8 +128,8 @@ export default class RecipeDeserializer {
     }
 
     const paramDefs = this.entryDefinitionService.getBlockParamDef(node.name)
-    this.entryParamManager.setInputParamDef(blockId, paramDefs.input)
-    this.entryParamManager.setOutputParamDef(blockId, paramDefs.output)
+    this.entryParamManager.setInputParams(blockId, paramDefs.input)
+    this.entryParamManager.setOutputParams(blockId, paramDefs.output)
 
     const savedInputParams = node.inputParams || {}
     Object.entries(savedInputParams).forEach(([paramName, value]) => {

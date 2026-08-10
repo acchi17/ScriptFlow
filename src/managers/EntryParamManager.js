@@ -153,7 +153,7 @@ export default class EntryParamManager {
    * @param {string} entryId - ID of the entry
    * @param {Object} inputParamDef - Input parameter definitions in the form { name: { value, dataType } }
    */
-  setInputParamDef(entryId, inputParamDef = {}) {
+  setInputParams(entryId, inputParamDef = {}) {
     if (!entryId) return;
     this._inputParamsMap.set(entryId, inputParamDef);
   }
@@ -163,7 +163,7 @@ export default class EntryParamManager {
    * @param {string} entryId - ID of the entry
    * @param {Object} outputParamDef - Output parameter definitions in the form { name: { value, dataType } }
    */
-  setOutputParamDef(entryId, outputParamDef = {}) {
+  setOutputParams(entryId, outputParamDef = {}) {
     if (!entryId) return;
     this._outputParamsMap.set(entryId, outputParamDef);
   }

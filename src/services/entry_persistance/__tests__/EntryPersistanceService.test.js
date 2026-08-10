@@ -37,8 +37,8 @@ async function createContext() {
 function addBlock(ctx, parentId, name, index) {
   const blockId = ctx.entryManager.addEntry(parentId, 'block', name, index)
   const defs = ctx.entryDefinitionService.getBlockParamDef(name)
-  ctx.entryParamManager.setInputParamDef(blockId, defs.input)
-  ctx.entryParamManager.setOutputParamDef(blockId, defs.output)
+  ctx.entryParamManager.setInputParams(blockId, defs.input)
+  ctx.entryParamManager.setOutputParams(blockId, defs.output)
   return blockId
 }
 
