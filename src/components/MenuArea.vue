@@ -38,7 +38,7 @@ export default {
       event.dataTransfer.setData('sourceId', undefined)
     })
     const { showLog, toggleLog, isExecuting } = useSystemState()
-    const { getRootEntry } = useEntryOperation()
+    const { getRootEntry, getChildren } = useEntryOperation()
     const { isBusy, lastError, lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
 
     const onSaveRecipe = async () => {
@@ -50,7 +50,7 @@ export default {
 
     const onLoadRecipe = async () => {
       const rootEntry = getRootEntry()
-      if (rootEntry?.children.length > 0) {
+      if (rootEntry && getChildren(rootEntry.id).length > 0) {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }

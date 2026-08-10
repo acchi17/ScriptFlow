@@ -49,7 +49,6 @@
 <script>
 import { ref } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
-import { useEntryLayout } from '../composables/useEntryLayout'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import { useEntryPersistance } from '../composables/useEntryPersistance'
 import { useSystemState } from '../composables/useSystemState'
@@ -66,7 +65,7 @@ export default {
   },
 
   setup() {
-    const { addContainer, clearContainer } = useEntryOperation()
+    const { addContainer, clearContainer, trackEntryLayout } = useEntryOperation()
     const { executeEntry } = useEntryExecution()
     const { isExecuting } = useSystemState()
     const { isBusy } = useEntryPersistance()
@@ -96,7 +95,7 @@ export default {
     }
 
     const entryPanelRef = ref(null)
-    const entryLayoutMap = useEntryLayout(entryPanelRef)
+    const entryLayoutMap = trackEntryLayout(entryPanelRef)
 
     return {
       mainContainer,

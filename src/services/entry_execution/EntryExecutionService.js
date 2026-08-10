@@ -1,4 +1,5 @@
 import ScriptExecutionService from '../script_execution/ScriptExecutionService';
+import ContainerExecutionFactory from './ContainerExecutionFactory';
 
 /**
  * Entry Execution Service
@@ -8,13 +9,15 @@ export default class EntryExecutionService {
   /**
    * Constructor
    * @param {Object} config Configuration object
+   * @param {EntryManager} entryManager Entry manager instance (optional)
    * @param {EntryParamManager} entryParamManager Entry parameter manager instance (optional)
    * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
+  constructor(config, entryManager = null, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
+    this.entryManager = entryManager;
     this.entryParamManager = entryParamManager;
     this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
@@ -107,14 +110,9 @@ export default class EntryExecutionService {
    */
   async _executeContainer(container, traceId) {
     let result = {};
-    const childResults = [];
     try {
-      // Execute child entries sequentially
-      for (const childEntry of container.children) {
-        const childResult = await this.executeEntry(childEntry, traceId);
-        childResults.push(childResult);
-      }
-      result.success = childResults.every(childResult => childResult.success === true);
+      const strategy = ContainerExecutionFactory.createStrategy(container.containerType, this.entryManager);
+      result = await strategy.execute(container, childEntry => this.executeEntry(childEntry, traceId));
     } catch (error) {
       result.errorMessage = error.message;
     }
@@ -151,9 +149,9 @@ export default class EntryExecutionService {
         this.executionLogService.addLog(entry, inputParams, executionId, traceId);
       }
       // Execute an entry
-      if (entry.type === 'block') {
+      if (this.entryManager.isBlock(entry.id)) {
         result = await this._executeBlock(entry, inputParams);
-      } else if (entry.type === 'container') {
+      } else if (this.entryManager.isContainer(entry.id)) {
         result = await this._executeContainer(entry, executionId);
       }
       // Log execution result if execution log service is available

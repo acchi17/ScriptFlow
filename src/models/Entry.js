@@ -37,6 +37,5 @@ export default class Entry {
     this.name = name; // Name of the entry
     this.id = id || Entry.generateUUID(); // Unique ID (auto-generated if null)
     this.type = '';
-    this.children = []; // Array of child elements (empty array by default)
   }
 }

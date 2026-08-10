@@ -7,7 +7,7 @@
     />
     <template v-for="(child, index) in children" :key="child.id">
       <component
-        :is="child.type === 'block' ? 'BlockItem' : 'ContainerItem'"
+        :is="isBlock(child.id) ? 'BlockItem' : 'ContainerItem'"
         :entry="child"
         @remove="removeChild"
       />
@@ -47,14 +47,17 @@ export default {
       setOnDropCallback
     } = useDroppable()
     const {
+      getChildren,
+      getEntry,
       addBlock,
       addContainer,
       removeEntry,
       reorderEntry,
-      moveEntry
+      moveEntry,
+      isBlock
     } = useEntryOperation()
 
-    const children = computed(() => props.entry.children)
+    const children = computed(() => getChildren(props.entry.id).map(getEntry))
     const dropAllowed = isDroppable(props.entry.id)
 
     setOnDropCallback((event, index) => {
@@ -80,7 +83,7 @@ export default {
       removeEntry(id)
     }
 
-    return { children, dropAllowed, onDrop, onDragOver, removeChild }
+    return { children, dropAllowed, onDrop, onDragOver, removeChild, isBlock }
   }
 }
 </script>

@@ -1,6 +1,4 @@
-import { inject } from 'vue'
-import Block from '../models/Block'
-import Container from '../models/Container'
+import { inject, watch, nextTick } from 'vue'
 import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
@@ -8,6 +6,7 @@ export function useEntryOperation() {
   const entryParamManager = inject('entryParamManager')
   const entryDefinitionService = inject('entryDefinitionService')
   const entryConnectionManager = inject('entryConnectionManager')
+  const entryLayoutManager = inject('entryLayoutManager')
   const {
     getSelectedEntryId,
     clearSelection,
@@ -15,32 +14,30 @@ export function useEntryOperation() {
   } = useSystemState()
 
   const addBlock = (parentId, name, index) => {
-    const newBlock = new Block(name)
-    entryManager.addEntry(parentId, newBlock, index)
+    const blockId = entryManager.addEntry(parentId, 'block', name, index)
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
-    entryParamManager.setInputParamDef(newBlock.id, defaultParams.input)
-    entryParamManager.setOutputParamDef(newBlock.id, defaultParams.output)
-    return newBlock
+    entryParamManager.setInputParamDef(blockId, defaultParams.input)
+    entryParamManager.setOutputParamDef(blockId, defaultParams.output)
+    return entryManager.getEntry(blockId)
   }
 
   const addContainer = (parentId, name, index) => {
-    const newContainer = new Container(name)
-    entryManager.addEntry(parentId, newContainer, index)
-    return newContainer
+    const containerId = entryManager.addEntry(parentId, 'container', name, index)
+    return entryManager.getEntry(containerId)
   }
 
-  const removeEntry = (id) => {
+  const removeEntry = (entryId) => {
     const selectedId = getSelectedEntryId.value
-    const descendantIds = entryManager.getAllDescendantIds(id)
-    if (selectedId && (selectedId === id || descendantIds.includes(selectedId))) {
+    const descendantIds = entryManager.getAllDescendantIds(entryId)
+    if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    [id, ...descendantIds].forEach(eid => {
+    [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
       entryParamManager.removeParams(eid)
     })
     cancelConnection()
-    entryManager.removeEntry(id)
+    entryManager.removeEntry(entryId)
   }
 
   const reorderEntry = (parentId, entryId, index) => {
@@ -51,39 +48,85 @@ export function useEntryOperation() {
     entryManager.moveEntry(entryId, targetParentId, index)
   }
 
-  const clearContainer = (id) => {
-    const entry = entryManager.getEntry(id)
-    if (!entry || entry.type !== 'container') return
-    const childIds = entry.children.map(c => c.id)
+  const clearContainer = (entryId) => {
+    if (!entryManager.isContainer(entryId)) return
+    const childIds = entryManager.getChildren(entryId)
     childIds.forEach(childId => removeEntry(childId))
   }
 
-  const getAllDescendantIds = (id) => {
-    return entryManager.getAllDescendantIds(id)
+  const isContainer = (entryId) => {
+    return entryManager.isContainer(entryId)
   }
 
-  const getParentId = (id) => {
-    return entryManager.getParentId(id)
+  const isBlock = (entryId) => {
+    return entryManager.isBlock(entryId)
   }
 
-  const getEntry = (id) => {
-    return entryManager.getEntry(id)
+  const getAllDescendantIds = (entryId) => {
+    return entryManager.getAllDescendantIds(entryId)
+  }
+
+  const getParentId = (entryId) => {
+    return entryManager.getParentId(entryId)
+  }
+
+  const getEntry = (entryId) => {
+    return entryManager.getEntry(entryId)
   }
 
   const getRootEntry = () => {
     return entryManager.getRootEntry()
   }
 
-  const getInputParams = (id) => {
-    return entryParamManager.getInputParams(id)
+  const getChildren = (entryId) => {
+    return entryManager.getChildren(entryId)
   }
 
-  const getOutputParams = (id) => {
-    return entryParamManager.getOutputParams(id)
+  const getInputParams = (entryId) => {
+    return entryParamManager.getInputParams(entryId)
   }
 
-  const setInputParam = (id, paramName, value) => {
-    entryParamManager.setInputParam(id, paramName, value)
+  const getOutputParams = (entryId) => {
+    return entryParamManager.getOutputParams(entryId)
+  }
+
+  const setInputParam = (entryId, paramName, value) => {
+    entryParamManager.setInputParam(entryId, paramName, value)
+  }
+
+  /**
+   * Watches the entry panel for structural changes and, on each change, remeasures the
+   * Y position and height of every entry's header element, writing them into
+   * EntryLayoutManager. Used to align horizontal lines in the connection panel with
+   * entry headers.
+   *
+   * @param {Ref<HTMLElement>} entryPanelRef - Ref to the entry panel (.entry-panel)
+   * @returns {Map<string, { y: number, height: number }>} Reactive layout map keyed by
+   *   entryId, kept in sync by EntryLayoutManager. Consumers (e.g. ConnectionView) read it
+   *   to position connection lines against entry headers.
+   */
+  const trackEntryLayout = (entryPanelRef) => {
+    function measureEntries() {
+      if (!entryPanelRef.value) return
+
+      const panelRect = entryPanelRef.value.getBoundingClientRect()
+
+      const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
+      entryLayoutManager.clearAll()
+      for (const node of nodes) {
+        const rect = node.getBoundingClientRect()
+        entryLayoutManager.setLayout(
+          node.dataset.entryId,
+          rect.top - panelRect.top,
+          rect.height
+        )
+      }
+    }
+
+    // Re-measure on structural changes (add/remove/reorder entries)
+    watch(() => entryManager.updateTick.value, () => nextTick(() => measureEntries()))
+
+    return entryLayoutManager.layoutMap
   }
 
   return {
@@ -97,8 +140,12 @@ export function useEntryOperation() {
     getParentId,
     getEntry,
     getRootEntry,
+    getChildren,
     getInputParams,
     getOutputParams,
     setInputParam,
+    isContainer,
+    isBlock,
+    trackEntryLayout,
   }
 }

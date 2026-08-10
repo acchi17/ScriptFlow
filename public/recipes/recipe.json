@@ -2,10 +2,10 @@
   "formatVersion": 1,
   "meta": {
     "name": "",
-    "savedAt": "2026-08-01T09:15:52.029Z"
+    "savedAt": "2026-08-09T08:26:35.655Z"
   },
   "root": {
-    "id": "a3ec6680-fbb3-4d70-ba05-e25ac204f01d",
+    "id": "9386586d-ca44-479f-99e8-d6429d08b57c",
     "type": "container",
     "name": "root-container",
     "children": [
@@ -35,13 +35,29 @@
         ]
       },
       {
-        "id": "4b0b677b-f2ee-48fa-953f-bda6edb8ee71",
-        "type": "block",
-        "name": "DivMod",
-        "inputParams": {
-          "NumberA": 5,
-          "NumberB": 1
-        }
+        "id": "887c71dd-4769-4d83-b330-200bb700a819",
+        "type": "container",
+        "name": "Container",
+        "children": [
+          {
+            "id": "4b0b677b-f2ee-48fa-953f-bda6edb8ee71",
+            "type": "block",
+            "name": "DivMod",
+            "inputParams": {
+              "NumberA": 5,
+              "NumberB": 1
+            }
+          },
+          {
+            "id": "b82a7533-6f49-4842-9fed-242c1f69f921",
+            "type": "block",
+            "name": "Add",
+            "inputParams": {
+              "NumberA": 0,
+              "NumberB": -4
+            }
+          }
+        ]
       }
     ]
   },
@@ -74,6 +90,21 @@
         "category": "input",
         "dataType": "integer",
         "paramName": "NumberB"
+      }
+    },
+    {
+      "id": "1e84a67d-db40-4ae9-a951-3a432b984aba",
+      "output": {
+        "entryId": "4b0b677b-f2ee-48fa-953f-bda6edb8ee71",
+        "category": "output",
+        "dataType": "integer",
+        "paramName": "Mod"
+      },
+      "input": {
+        "entryId": "b82a7533-6f49-4842-9fed-242c1f69f921",
+        "category": "input",
+        "dataType": "integer",
+        "paramName": "NumberA"
       }
     }
   ]
