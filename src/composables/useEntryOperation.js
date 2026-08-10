@@ -1,4 +1,4 @@
-import { inject } from 'vue'
+import { inject, watch, nextTick } from 'vue'
 import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
@@ -6,6 +6,7 @@ export function useEntryOperation() {
   const entryParamManager = inject('entryParamManager')
   const entryDefinitionService = inject('entryDefinitionService')
   const entryConnectionManager = inject('entryConnectionManager')
+  const entryLayoutManager = inject('entryLayoutManager')
   const {
     getSelectedEntryId,
     clearSelection,
@@ -93,6 +94,41 @@ export function useEntryOperation() {
     entryParamManager.setInputParam(entryId, paramName, value)
   }
 
+  /**
+   * Watches the entry panel for structural changes and, on each change, remeasures the
+   * Y position and height of every entry's header element, writing them into
+   * EntryLayoutManager. Used to align horizontal lines in the connection panel with
+   * entry headers.
+   *
+   * @param {Ref<HTMLElement>} entryPanelRef - Ref to the entry panel (.entry-panel)
+   * @returns {Map<string, { y: number, height: number }>} Reactive layout map keyed by
+   *   entryId, kept in sync by EntryLayoutManager. Consumers (e.g. ConnectionView) read it
+   *   to position connection lines against entry headers.
+   */
+  const trackEntryLayout = (entryPanelRef) => {
+    function measureEntries() {
+      if (!entryPanelRef.value) return
+
+      const panelRect = entryPanelRef.value.getBoundingClientRect()
+
+      const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
+      entryLayoutManager.clearAll()
+      for (const node of nodes) {
+        const rect = node.getBoundingClientRect()
+        entryLayoutManager.setLayout(
+          node.dataset.entryId,
+          rect.top - panelRect.top,
+          rect.height
+        )
+      }
+    }
+
+    // Re-measure on structural changes (add/remove/reorder entries)
+    watch(() => entryManager.updateTick.value, () => nextTick(() => measureEntries()))
+
+    return entryLayoutManager.layoutMap
+  }
+
   return {
     addBlock,
     addContainer,
@@ -110,5 +146,6 @@ export function useEntryOperation() {
     setInputParam,
     isContainer,
     isBlock,
+    trackEntryLayout,
   }
 }
