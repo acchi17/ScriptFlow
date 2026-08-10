@@ -9,6 +9,7 @@ import EntryLayoutManager from './managers/EntryLayoutManager'
 import EntryConnectionManager from './managers/EntryConnectionManager'
 import SocketManager from './managers/SocketManager'
 import EntryTypeStore from './stores/EntryTypeStore'
+import { World } from './ecs/core/World'
 import FileService from './services/file/FileService'
 import PlatformService from './services/platform/PlatformService'
 import EntryExecutionService from './services/entry_execution/EntryExecutionService'
@@ -26,6 +27,7 @@ const entryLayoutManager = new EntryLayoutManager()
 const entryConnectionManager = new EntryConnectionManager()
 const socketManager = new SocketManager()
 const entryTypeStore = new EntryTypeStore()
+const world = new World()
 
 // Create Services
 const platformService = new PlatformService()
@@ -46,6 +48,7 @@ app.provide('entryParamManager', entryParamManager)
 app.provide('entryLayoutManager', entryLayoutManager)
 app.provide('entryConnectionManager', entryConnectionManager)
 app.provide('entryTypeStore', entryTypeStore)
+app.provide('world', world)
 app.provide('socketManager', socketManager)
 app.provide('platformService', platformService)
 app.provide('fileService', fileService)
