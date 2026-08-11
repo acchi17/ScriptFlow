@@ -1,13 +1,16 @@
 import { ref, reactive } from 'vue'
 import Block from '../models/Block'
 import Container from '../models/Container'
+import { World } from '../ecs/core/World'
 
 /**
  * EntryManager class
  * Class that manages parent-child relationships between entries
  */
 export default class EntryManager {
-  constructor() {
+  constructor(world = new World()) {
+    // ECS world holding entry type components
+    this._world = world;
     // Dictionary of entry IDs and objects
     this._entriesById = new Map();
     // Dictionary of child IDs and their parent IDs
@@ -151,6 +154,7 @@ export default class EntryManager {
 
       // Remove from entries map
       this._entriesById.delete(childId);
+      this._world.entryTypes.remove(childId);
     }
 
     // Drop the entry's own children entry
@@ -163,7 +167,7 @@ export default class EntryManager {
  * @returns {boolean} Whether the entry is a block
  */
   isBlock(entryId) {
-    return this.getEntry(entryId)?.type === 'block';
+    return this._world.entryTypes.get(entryId)?.type === 'block';
   }
 
   /**
@@ -172,7 +176,7 @@ export default class EntryManager {
    * @returns {boolean} Whether the entry is a container
    */
   isContainer(entryId) {
-    return this.getEntry(entryId)?.type === 'container';
+    return this._world.entryTypes.get(entryId)?.type === 'container';
   }
 
   /**
@@ -222,15 +226,11 @@ export default class EntryManager {
   }
 
   /**
-   * Get the parent of an entry
-   * @param {string} entryId - ID of the child entry
-   * @returns {Entry|null} Parent entry or null
+   * Get the root entry's ID
+   * @returns {string|null} Root entry ID or null
    */
-  getParentEntry(entryId) {
-    const parentId = this._parentIdById.get(entryId);
-    if (!parentId) return null;
-
-    return this._entriesById.get(parentId) || null;
+  getRootEntryId() {
+    return this._rootId;
   }
 
   /**
@@ -291,6 +291,7 @@ export default class EntryManager {
    */
   addEntry(parentId, type, name, index, id = null) {
     const entry = type === 'container' ? new Container(name, id) : new Block(name, id);
+    this._world.entryTypes.add(entry.id, { name, type });
     this._registerEntry(entry);
 
     if (parentId === null) {
@@ -332,6 +333,7 @@ export default class EntryManager {
 
     // Remove the entry itself from the registry
     this._entriesById.delete(entryId);
+    this._world.entryTypes.remove(entryId);
 
     this._rebuildSequenceNumbers();
     return true;

@@ -21,13 +21,13 @@ import ContainerChildren from './components/ContainerChildren.vue'
 const app = createApp(App)
 
 // Create Managers
-const entryManager = new EntryManager()
+const world = new World()
+const entryManager = new EntryManager(world)
 const entryParamManager = new EntryParamManager()
 const entryLayoutManager = new EntryLayoutManager()
 const entryConnectionManager = new EntryConnectionManager()
 const socketManager = new SocketManager()
 const entryTypeStore = new EntryTypeStore()
-const world = new World()
 
 // Create Services
 const platformService = new PlatformService()
