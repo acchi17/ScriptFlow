@@ -207,6 +207,17 @@ export default class EntryManager {
   }
 
   /**
+   * Set the name of an entry
+   * @param {string} entryId - ID of the entry
+   * @param {string} name - New name for the entry
+   */
+  setEntryName(entryId, name) {
+    const entry = this.getEntry(entryId);
+    if (!entry) return;
+    entry.name = name;
+  }
+
+  /**
    * Get the children of a container
    * @param {string} entryId - ID of the container
    * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
