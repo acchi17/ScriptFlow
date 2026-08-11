@@ -20,7 +20,7 @@ export function useEntryExecution() {
     
     setExecuting(true, entry.id);
     try {
-      await entryExecutionService.executeEntry(entry);
+      await entryExecutionService.executeEntry(entry.id);
     } finally {
       await new Promise(resolve => setTimeout(resolve, 500));
       setExecuting(false);

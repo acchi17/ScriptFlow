@@ -13,8 +13,8 @@ export default class IContainerExecutionStrategy {
 
   /**
    * Execute a container's children according to this strategy
-   * @param {Container} container Container to execute
-   * @param {(childEntry: Entry) => Promise<Object>} runChild Executes a single child entry and resolves with its result
+   * @param {string} entryId ID of the container entry to execute
+   * @param {(entryId: string) => Promise<Object>} runChild Executes a single child entry and resolves with its result
    * @return {Promise<Object>} Execution result object (must include `success`)
    */
   async execute() {
