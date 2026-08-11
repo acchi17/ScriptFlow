@@ -20,13 +20,13 @@ export function useEntryOperation() {
     entryParamManager.setInputParams(blockId, defaultParams.input)
     entryParamManager.setOutputParams(blockId, defaultParams.output)
     entryTypeStore.add(blockId, 'block', name)
-    return entryManager.getEntry(blockId)
+    return blockId
   }
 
   const addContainer = (parentId, name, index) => {
     const containerId = entryManager.addEntry(parentId, 'container', name, index)
     entryTypeStore.add(containerId, 'container', name)
-    return entryManager.getEntry(containerId)
+    return containerId
   }
 
   const removeEntry = (entryId) => {
