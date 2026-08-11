@@ -78,8 +78,8 @@ export function useEntryOperation() {
     return entryManager.getEntry(entryId)
   }
 
-  const getRootEntry = () => {
-    return entryManager.getRootEntry()
+  const getRootEntryId = () => {
+    return entryManager.getRootEntryId()
   }
 
   const getChildren = (entryId) => {
@@ -148,7 +148,7 @@ export function useEntryOperation() {
     getAllDescendantIds,
     getParentId,
     getEntry,
-    getRootEntry,
+    getRootEntryId,
     getChildren,
     getInputParams,
     getOutputParams,

@@ -228,15 +228,6 @@ export default class EntryManager {
   }
 
   /**
-   * Get the root entry
-   * @returns {Entry|null} Root entry or null
-   */
-  getRootEntry() {
-    if (!this._rootId) return null;
-    return this._entriesById.get(this._rootId) || null;
-  }
-
-  /**
    * Get the root entry's ID
    * @returns {string|null} Root entry ID or null
    */
