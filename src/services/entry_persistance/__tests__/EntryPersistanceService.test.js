@@ -69,7 +69,7 @@ describe('EntryPersistanceService round trip', () => {
     expect(report.connectionCount).toBe(1)
 
     const restoredRootId = ctx.entryManager.getRootEntryId()
-    expect(ctx.entryManager.getChildren(restoredRootId).map(id => ctx.entryManager.getEntry(id).name)).toEqual(['Add', 'Sub'])
+    expect(ctx.entryManager.getChildren(restoredRootId).map(id => ctx.entryManager.getEntryName(id))).toEqual(['Add', 'Sub'])
     expect(ctx.entryParamManager.getInputParams(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
 
     const restoredSubId = ctx.entryManager.getChildren(restoredRootId)[1]
@@ -138,7 +138,7 @@ describe('EntryPersistanceService round trip', () => {
     const restoredRootId = ctx.entryManager.getRootEntryId()
     const restoredRootChildIds = ctx.entryManager.getChildren(restoredRootId)
     expect(restoredRootChildIds).toHaveLength(1)
-    expect(ctx.entryManager.getEntry(restoredRootChildIds[0]).name).toBe('GoneBlock')
+    expect(ctx.entryManager.getEntryName(restoredRootChildIds[0])).toBe('GoneBlock')
     expect(ctx.entryParamManager.getInputParams(restoredRootChildIds[0])).toEqual({})
   })
 

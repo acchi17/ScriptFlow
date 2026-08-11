@@ -194,7 +194,7 @@ export default class EntryManager {
    * @returns {string|null} Entry type ('block' or 'container'), or null if not found
    */
   getEntryType(entryId) {
-    return this.getEntry(entryId)?.type ?? null;
+    return this._world.entryTypes.get(entryId)?.type ?? null;
   }
 
   /**
@@ -203,7 +203,7 @@ export default class EntryManager {
    * @returns {string|null} Entry name, or null if not found
    */
   getEntryName(entryId) {
-    return this.getEntry(entryId)?.name ?? null;
+    return this._world.entryTypes.get(entryId)?.name ?? null;
   }
 
   /**
@@ -212,9 +212,9 @@ export default class EntryManager {
    * @param {string} name - New name for the entry
    */
   setEntryName(entryId, name) {
-    const entry = this.getEntry(entryId);
-    if (!entry) return;
-    entry.name = name;
+    const entryType = this._world.entryTypes.get(entryId);
+    if (!entryType) return;
+    entryType.name = name;
   }
 
   /**

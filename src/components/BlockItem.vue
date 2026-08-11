@@ -10,7 +10,7 @@
     <div class="block-content">
       <div class="block-header" :data-entry-id="entry.id">
         <div class="entry-spacer"/>
-        <div class="entry-text">{{ entry.name }}</div>
+        <div class="entry-text">{{ getEntryName(entry.id) }}</div>
         <div class="entry-button entry-button-play"
              :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
@@ -58,7 +58,7 @@ export default {
       setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
-    const { getParentId, hasParams } = useEntryOperation()
+    const { getParentId, getEntryName, hasParams } = useEntryOperation()
     const {
       isExecuting,
       getSelectedEntryId,
@@ -130,6 +130,7 @@ export default {
       isSelected,
       isConnectingTargetValue,
       hasParamsValue ,
+      getEntryName,
       onDragStart,
       onDragEnd,
       onSelect,

@@ -1,7 +1,7 @@
 <template>
   <div class="entry-view" @click.stop>
     <div v-if="selectedEntry">
-      <div class="entry-header">{{ selectedEntry?.name }}</div>
+      <div class="entry-header">{{ entryName }}</div>
       <div class="section-divider" />
       <div v-if="inputParamDefs.length > 0 || outputParamDefs.length > 0" class="param-grid">
         <template v-if="inputParamDefs.length > 0">
@@ -58,7 +58,7 @@ export default {
 
   setup() {
     const { getSelectedEntryId } = useSystemState()
-    const { getEntry, getInputParams, getOutputParams, setInputParam, isBlock } = useEntryOperation()
+    const { getEntry, getEntryName, getInputParams, getOutputParams, setInputParam, isBlock } = useEntryOperation()
     const { getBlockDefinition } = useEntryDefinition()
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
@@ -69,17 +69,21 @@ export default {
       return getEntry(selectedIdRef.value)
     })
 
+    const entryName = computed(() => {
+      return selectedEntry.value ? getEntryName(selectedEntry.value.id) : null
+    })
+
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
       if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
-      const blockDef = getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
       if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
-      const blockDef = getBlockDefinition(selectedEntry.value.name)
+      const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.output : []
     })
 
@@ -107,6 +111,7 @@ export default {
 
     return {
       selectedEntry,
+      entryName,
       inputParamDefs,
       outputParamDefs,
       localInputParams,

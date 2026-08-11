@@ -10,7 +10,7 @@
     <div class="container-content">
       <div class="container-header" :data-entry-id="entry.id">
         <div class="entry-spacer"/>
-        <div class="entry-text">{{ entry.name }}</div>
+        <div class="entry-text">{{ getEntryName(entry.id) }}</div>
         <div class="entry-button entry-button-play"
              :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
@@ -63,6 +63,7 @@ export default {
     const {
       getAllDescendantIds,
       getParentId,
+      getEntryName,
       hasParams,
     } = useEntryOperation()
     const {
@@ -140,6 +141,7 @@ export default {
       isSelected,
       isConnectingTargetValue,
       hasParamsValue,
+      getEntryName,
       onDragStart,
       onDragEnd,
       onSelect,
