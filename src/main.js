@@ -32,7 +32,7 @@ const world = new World()
 // Create Services
 const platformService = new PlatformService()
 const fileService = new FileService()
-const executionLogService = new ExecutionLogService()
+const executionLogService = new ExecutionLogService(entryManager)
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
 const entryExecutionService = new EntryExecutionService(
   appConfig, entryManager, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService

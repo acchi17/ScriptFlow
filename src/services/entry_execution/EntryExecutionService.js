@@ -146,7 +146,7 @@ export default class EntryExecutionService {
       // Log execution start if execution log service is available
       const inputParams = this._resolveInputParams(entry.id);
       if (this.executionLogService) {
-        this.executionLogService.addLog(entry, inputParams, executionId, traceId);
+        this.executionLogService.addLog(entry.id, inputParams, executionId, traceId);
       }
       // Execute an entry
       if (this.entryManager.isBlock(entry.id)) {
