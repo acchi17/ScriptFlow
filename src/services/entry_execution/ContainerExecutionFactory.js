@@ -16,7 +16,7 @@ export default class ContainerExecutionFactory {
    *
    * @example
    * const strategy = ContainerExecutionFactory.createStrategy('plain', entryManager);
-   * const result = await strategy.execute(container, runChild);
+   * const result = await strategy.execute(entryId, runChild);
    */
   static createStrategy(containerType = 'plain', entryManager) {
     switch ((containerType || 'plain').toLowerCase()) {

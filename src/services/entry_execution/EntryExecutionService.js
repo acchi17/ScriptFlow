@@ -66,27 +66,28 @@ export default class EntryExecutionService {
 
   /**
    * Execute a block entry
-   * @param {Block} block Block to execute
+   * @param {string} entryId ID of the block entry to execute
    * @param {Object} inputParams Input parameters for the block (optional)
    * @return {Promise<ScriptExecutionResult>}
    *         Execution result object conforming to ScriptExecutionResult type
    * @private
    */
-  async _executeBlock(block, inputParams = {}) {
+  async _executeBlock(entryId, inputParams = {}) {
     let result = {};
     try {
       // Execute script based on the block definition's command
-      const command = this.entryDefinitionService?.getBlockDefinition(block.name)?.command;
+      const entryName = this.entryManager.getEntryName(entryId);
+      const command = this.entryDefinitionService?.getBlockDefinition(entryName)?.command;
       if (command === undefined) {
-        throw new Error(`No command found for block "${block.name}"`);
+        throw new Error(`No command found for block "${entryName}"`);
       }
       result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
       if (this.entryParamManager) {
-        const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(block.id));
+        const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(entryId));
         for (const key of outputParamNames) {
           if (key in result) {
-            this.entryParamManager.setOutputParam(block.id, key, result[key]);
+            this.entryParamManager.setOutputParam(entryId, key, result[key]);
           }
         }
       }
@@ -102,17 +103,18 @@ export default class EntryExecutionService {
 
   /**
    * Execute a container entry
-   * @param {Container} container Container to execute
+   * @param {string} entryId ID of the container entry to execute
    * @param {string} traceId Trace ID for execution tracking
    * @return {Promise<ScriptExecutionResult>}
    *         Execution result object conforming to ScriptExecutionResult type
    * @private
    */
-  async _executeContainer(container, traceId) {
+  async _executeContainer(entryId, traceId) {
     let result = {};
     try {
+      const container = this.entryManager.getEntry(entryId);
       const strategy = ContainerExecutionFactory.createStrategy(container.containerType, this.entryManager);
-      result = await strategy.execute(container, childEntry => this.executeEntry(childEntry, traceId));
+      result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId));
     } catch (error) {
       result.errorMessage = error.message;
     }
@@ -132,27 +134,27 @@ export default class EntryExecutionService {
 
   /**
    * Execute an entry
-   * @param {Entry} entry Entry to execute (Block or Container)
+   * @param {string} entryId ID of the entry to execute (Block or Container)
    * @param {string} traceId Trace ID for execution tracking (optional)
    * @return {Promise<*>} Execution result
    */
-  async executeEntry(entry, traceId = null) {
+  async executeEntry(entryId, traceId = null) {
     let result = {};
     try {
       // Push entry ID onto the stack when execution starts
-      this._executionStack.push(entry.id);
+      this._executionStack.push(entryId);
       // Generate execution ID
-      const executionId = this._generateExecutionId(entry.id);
+      const executionId = this._generateExecutionId(entryId);
       // Log execution start if execution log service is available
-      const inputParams = this._resolveInputParams(entry.id);
+      const inputParams = this._resolveInputParams(entryId);
       if (this.executionLogService) {
-        this.executionLogService.addLog(entry, inputParams, executionId, traceId);
+        this.executionLogService.addLog(entryId, inputParams, executionId, traceId);
       }
       // Execute an entry
-      if (this.entryManager.isBlock(entry.id)) {
-        result = await this._executeBlock(entry, inputParams);
-      } else if (this.entryManager.isContainer(entry.id)) {
-        result = await this._executeContainer(entry, executionId);
+      if (this.entryManager.isBlock(entryId)) {
+        result = await this._executeBlock(entryId, inputParams);
+      } else if (this.entryManager.isContainer(entryId)) {
+        result = await this._executeContainer(entryId, executionId);
       }
       // Log execution result if execution log service is available
       if (this.executionLogService) {

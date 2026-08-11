@@ -1,13 +1,16 @@
 import { ref, reactive } from 'vue'
 import Block from '../models/Block'
 import Container from '../models/Container'
+import { World } from '../ecs/core/World'
 
 /**
  * EntryManager class
  * Class that manages parent-child relationships between entries
  */
 export default class EntryManager {
-  constructor() {
+  constructor(world = new World()) {
+    // ECS world holding entry type components
+    this._world = world;
     // Dictionary of entry IDs and objects
     this._entriesById = new Map();
     // Dictionary of child IDs and their parent IDs
@@ -81,22 +84,22 @@ export default class EntryManager {
   /**
  * Attach an entry into a parent's children array
  * @param {string} parentId - ID of the parent entry
- * @param {Entry} entry - Entry to attach
+ * @param {string} entryId - ID of the entry to attach
  * @param {number} index - Index position to add
  * @returns {boolean} Whether the attaching was successful
  * @private
  */
-  _attachEntry(parentId, entry, index) {
+  _attachEntry(parentId, entryId, index) {
     // Get parent's children array (only containers have one)
     const parentChildren = this._childrenById.get(parentId);
     if (!parentChildren) return false;
 
     // Set parent-child relationship
-    this._parentIdById.set(entry.id, parentId);
+    this._parentIdById.set(entryId, parentId);
 
     // Add directly to parent's children array
     if (index >= 0 && index <= parentChildren.length) {
-      parentChildren.splice(index, 0, entry.id);
+      parentChildren.splice(index, 0, entryId);
       this._rebuildSequenceNumbers();
       return true;
     }
@@ -105,15 +108,13 @@ export default class EntryManager {
 
   /**
    * Detach an entry from its parent
-   * @param {Entry} entry - Entry to detach from its parent
+   * @param {string} entryId - ID of the entry to detach from its parent
    * @returns {boolean} Whether the detach operation was successful
    * @private
    */
-  _detachEntry(entry) {
-    // Validate entry
-    if (!entry || !entry.id) return false;
-
-    const entryId = entry.id;
+  _detachEntry(entryId) {
+    // Validate entry id
+    if (!entryId) return false;
 
     // Get parent entry
     const parentId = this._parentIdById.get(entryId);
@@ -153,6 +154,7 @@ export default class EntryManager {
 
       // Remove from entries map
       this._entriesById.delete(childId);
+      this._world.entryTypes.remove(childId);
     }
 
     // Drop the entry's own children entry
@@ -165,7 +167,7 @@ export default class EntryManager {
  * @returns {boolean} Whether the entry is a block
  */
   isBlock(entryId) {
-    return this.getEntry(entryId)?.type === 'block';
+    return this._world.entryTypes.get(entryId)?.type === 'block';
   }
 
   /**
@@ -174,7 +176,7 @@ export default class EntryManager {
    * @returns {boolean} Whether the entry is a container
    */
   isContainer(entryId) {
-    return this.getEntry(entryId)?.type === 'container';
+    return this._world.entryTypes.get(entryId)?.type === 'container';
   }
 
   /**
@@ -184,6 +186,35 @@ export default class EntryManager {
    */
   getEntry(entryId) {
     return this._entriesById.get(entryId) || null;
+  }
+
+  /**
+   * Get the type of an entry
+   * @param {string} entryId - ID of the entry
+   * @returns {string|null} Entry type ('block' or 'container'), or null if not found
+   */
+  getEntryType(entryId) {
+    return this._world.entryTypes.get(entryId)?.type ?? null;
+  }
+
+  /**
+   * Get the name of an entry
+   * @param {string} entryId - ID of the entry
+   * @returns {string|null} Entry name, or null if not found
+   */
+  getEntryName(entryId) {
+    return this._world.entryTypes.get(entryId)?.name ?? null;
+  }
+
+  /**
+   * Set the name of an entry
+   * @param {string} entryId - ID of the entry
+   * @param {string} name - New name for the entry
+   */
+  setEntryName(entryId, name) {
+    const entryType = this._world.entryTypes.get(entryId);
+    if (!entryType) return;
+    entryType.name = name;
   }
 
   /**
@@ -197,24 +228,11 @@ export default class EntryManager {
   }
 
   /**
-   * Get the root entry
-   * @returns {Entry|null} Root entry or null
+   * Get the root entry's ID
+   * @returns {string|null} Root entry ID or null
    */
-  getRootEntry() {
-    if (!this._rootId) return null;
-    return this._entriesById.get(this._rootId) || null;
-  }
-
-  /**
-   * Get the parent of an entry
-   * @param {string} entryId - ID of the child entry
-   * @returns {Entry|null} Parent entry or null
-   */
-  getParentEntry(entryId) {
-    const parentId = this._parentIdById.get(entryId);
-    if (!parentId) return null;
-
-    return this._entriesById.get(parentId) || null;
+  getRootEntryId() {
+    return this._rootId;
   }
 
   /**
@@ -275,12 +293,13 @@ export default class EntryManager {
    */
   addEntry(parentId, type, name, index, id = null) {
     const entry = type === 'container' ? new Container(name, id) : new Block(name, id);
+    this._world.entryTypes.add(entry.id, { name, type });
     this._registerEntry(entry);
 
     if (parentId === null) {
       this._setRoot(entry.id);
     } else {
-      this._attachEntry(parentId, entry, index);
+      this._attachEntry(parentId, entry.id, index);
     }
 
     return entry.id;
@@ -316,6 +335,7 @@ export default class EntryManager {
 
     // Remove the entry itself from the registry
     this._entriesById.delete(entryId);
+    this._world.entryTypes.remove(entryId);
 
     this._rebuildSequenceNumbers();
     return true;
@@ -357,52 +377,17 @@ export default class EntryManager {
    */
   moveEntry(entryId, newParentId, index) {
     // Check if the entry exists
-    const entry = this._entriesById.get(entryId);
-    if (!entry) return false;
+    if (!this._entriesById.has(entryId)) return false;
 
     // Detach from the current parent
-    this._detachEntry(entry);
+    this._detachEntry(entryId);
 
     // Attach to the new parent
     if (newParentId === null) {
-      this._setRoot(entry.id);
+      this._setRoot(entryId);
       return true;
     }
-    return this._attachEntry(newParentId, entry, index);
+    return this._attachEntry(newParentId, entryId, index);
   }
 
-  /**
-   * Find a container by ID
-   * @param {string} containerId - ID of the container to find
-   * @returns {Container|null} Found container or null
-   * @unused This method is currently not used but kept for future extensibility
-   */
-  findContainerById(containerId) {
-    const entry = this._entriesById.get(containerId);
-    if (this.isContainer(containerId)) {
-      return entry;
-    }
-    return null;
-  }
-
-  /**
-   * Check if an entry has a parent
-   * @param {string} entryId - ID of the entry to check
-   * @returns {boolean} Whether the entry has a parent
-   * @unused This method is currently not used but kept for future extensibility
-   */
-  hasParent(entryId) {
-    return this._parentIdById.has(entryId);
-  }
-
-  /**
-   * Check if an entry belongs to a specific parent
-   * @param {string} entryId - ID of the child entry
-   * @param {string} parentId - ID of the parent entry
-   * @returns {boolean} Whether the child belongs to the parent
-   * @unused This method is currently not used but kept for future extensibility
-   */
-  isChildOf(entryId, parentId) {
-    return this._parentIdById.get(entryId) === parentId;
-  }
 }

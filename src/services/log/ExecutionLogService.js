@@ -7,8 +7,10 @@ import { ref, readonly } from 'vue';
 export default class ExecutionLogService {
   /**
    * Constructor
+   * @param {EntryManager} entryManager Entry manager instance (optional)
    */
-  constructor() {
+  constructor(entryManager = null) {
+    this.entryManager = entryManager;
     // Hierarchical structure of execution logs
     this._executionsTree = ref({
       rootExecutions: [], // Top-level executions
@@ -120,22 +122,22 @@ export default class ExecutionLogService {
 
   /**
    * Add a execution log and build hierarchy structure
-   * @param {Entry} entry Entry instance (Block or Container)
+   * @param {string} entryId ID of the entry being executed (Block or Container)
    * @param {string} executionId Execution ID (received from EntryExecutionService)
    * @param {string} parentExecutionId Parent entry's execution ID (optional)
    * @param {Object} inputParams Input parameters of the entry at execution time (optional)
    * @returns {string} Execution ID that can be used later to update the log
    */
-  addLog(entry, inputParams, executionId, parentExecutionId = null) {
+  addLog(entryId, inputParams, executionId, parentExecutionId = null) {
     try {
       // Create execution log
       const execution = {
         executionId: executionId,
         parentExecutionId: parentExecutionId,
         timestamp: new Date(),
-        entryId: entry.id,
-        entryName: entry.name,
-        entryType: entry.type,
+        entryId: entryId,
+        entryName: this.entryManager?.getEntryName(entryId),
+        entryType: this.entryManager?.getEntryType(entryId),
         inputParams: inputParams,
         result: null,
         execTime: null,

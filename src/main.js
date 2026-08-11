@@ -8,6 +8,8 @@ import EntryParamManager from './managers/EntryParamManager'
 import EntryLayoutManager from './managers/EntryLayoutManager'
 import EntryConnectionManager from './managers/EntryConnectionManager'
 import SocketManager from './managers/SocketManager'
+import EntryTypeStore from './stores/EntryTypeStore'
+import { World } from './ecs/core/World'
 import FileService from './services/file/FileService'
 import PlatformService from './services/platform/PlatformService'
 import EntryExecutionService from './services/entry_execution/EntryExecutionService'
@@ -19,16 +21,18 @@ import ContainerChildren from './components/ContainerChildren.vue'
 const app = createApp(App)
 
 // Create Managers
-const entryManager = new EntryManager()
+const world = new World()
+const entryManager = new EntryManager(world)
 const entryParamManager = new EntryParamManager()
 const entryLayoutManager = new EntryLayoutManager()
 const entryConnectionManager = new EntryConnectionManager()
 const socketManager = new SocketManager()
+const entryTypeStore = new EntryTypeStore()
 
 // Create Services
 const platformService = new PlatformService()
 const fileService = new FileService()
-const executionLogService = new ExecutionLogService()
+const executionLogService = new ExecutionLogService(entryManager)
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
 const entryExecutionService = new EntryExecutionService(
   appConfig, entryManager, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
@@ -43,6 +47,8 @@ app.provide('entryManager', entryManager)
 app.provide('entryParamManager', entryParamManager)
 app.provide('entryLayoutManager', entryLayoutManager)
 app.provide('entryConnectionManager', entryConnectionManager)
+app.provide('entryTypeStore', entryTypeStore)
+app.provide('world', world)
 app.provide('socketManager', socketManager)
 app.provide('platformService', platformService)
 app.provide('fileService', fileService)

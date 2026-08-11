@@ -8,19 +8,19 @@
     @click.stop="onSelect"
   >
     <div class="block-content">
-      <div class="block-header" :data-entry-id="entry.id">
+      <div class="block-header" :data-entry-id="entryId">
         <div class="entry-spacer"/>
-        <div class="entry-text">{{ entry.name }}</div>
+        <div class="entry-text">{{ getEntryName(entryId) }}</div>
         <div class="entry-button entry-button-play"
              :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="block-header-tail">
           <div
-            v-if="(isSelected || isConnectingTgt) && hasParams"
+            v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="block-content-param"
             :class="{ 'selected': isSelected }"
-          >        
-            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTgt" />
+          >
+            <EntryParamsRow :entry-id="entryId" :is-connecting-tgt="isConnectingTargetValue" />
           </div>            
         </div>
       </div>
@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import { useEntryOperation } from '../composables/useEntryOperation'
@@ -42,16 +42,14 @@ export default {
     EntryParamsRow
   },
   props: {
-    entry: {
-      type: Object,
+    entryId: {
+      type: String,
       required: true
     }
   },
   emits: ['remove'],
 
   setup(props, { emit }) {
-    const entryParamManager = inject('entryParamManager')
-
     // Get composables
     const {
       isDragging,
@@ -60,7 +58,7 @@ export default {
       setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
-    const { getParentId } = useEntryOperation()
+    const { getParentId, getEntryName, hasParams } = useEntryOperation()
     const {
       isExecuting,
       getSelectedEntryId,
@@ -72,32 +70,29 @@ export default {
     // Selection handling
     const isSelected = computed(() => {
       const selectedId = getSelectedEntryId.value
-      return selectedId === props.entry.id
+      return selectedId === props.entryId
     })
 
-    const isConnectingTgt = isConnectingTarget(props.entry.id)
+    const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParams = computed(() =>
-      Object.keys(entryParamManager.getInputParamTypes(props.entry.id)).length > 0 ||
-      Object.keys(entryParamManager.getOutputParamTypes(props.entry.id)).length > 0
-    )
+    const hasParamsValue = computed(() => hasParams(props.entryId))
 
     const onSelect = () => {
       if (isSelected.value) {
         clearSelection()
       } else {
-        setSelection(props.entry)
+        setSelection(props.entryId)
       }
     }
-    
+
     // Set callback for drag start
     setOnDragStartCallback((event) => {
       // Get parent ID
-      const parentId = getParentId(props.entry.id)
+      const parentId = getParentId(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'block')
-      event.dataTransfer.setData('entryId', props.entry.id)
+      event.dataTransfer.setData('entryId', props.entryId)
       event.dataTransfer.setData('sourceId', parentId || '')
       
       event.stopPropagation()
@@ -115,26 +110,27 @@ export default {
       
       try {
         // Execute the entry using EntryExecutionService
-        await executeEntry(props.entry)
+        await executeEntry(props.entryId)
         console.log('Block execution completed')
       } catch (error) {
         console.error('Error executing block:', error)
       }
     }
-    
+
     /**
      * Process when the remove button is clicked
      */
     const onRemove = () => {
-      emit('remove', props.entry.id)
+      emit('remove', props.entryId)
     }
     
     // Return values and methods to use in <template>
     return {
       isDragging,
       isSelected,
-      isConnectingTgt,
-      hasParams,
+      isConnectingTargetValue,
+      hasParamsValue ,
+      getEntryName,
       onDragStart,
       onDragEnd,
       onSelect,

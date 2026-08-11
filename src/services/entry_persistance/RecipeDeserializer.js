@@ -44,23 +44,23 @@ export default class RecipeDeserializer {
 
     await this._clearRecipe()
 
-    const root = this.entryManager.getRootEntry()
-    if (!root) {
+    const rootId = this.entryManager.getRootEntryId()
+    if (!rootId) {
       throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
     }
 
-    const idMap = new Map([[recipe.root.id, root.id]])
-    root.name = recipe.root.name
+    const idMap = new Map([[recipe.root.id, rootId]])
+    this.entryManager.setEntryName(rootId, recipe.root.name)
 
     const savedChildren = Array.isArray(recipe.root.children) ? recipe.root.children : []
     savedChildren.forEach((childNode, index) => {
-      this._restoreEntries(childNode, root.id, index, idMap, warnings)
+      this._restoreEntries(childNode, rootId, index, idMap, warnings)
     })
 
     this._restoreConnections(recipe, idMap, warnings)
     await this._restoreComm(recipe.root, idMap)
 
-    const entryCount = this.entryManager.getAllDescendantIds(root.id).length - 1
+    const entryCount = this.entryManager.getAllDescendantIds(rootId).length - 1
     const connectionCount = this.entryConnectionManager.getConnections().length
 
     return { entryCount, connectionCount, warnings }
@@ -72,22 +72,22 @@ export default class RecipeDeserializer {
    * @private
    */
   async _clearRecipe() {
-    const root = this.entryManager.getRootEntry()
-    if (!root) return
+    const rootId = this.entryManager.getRootEntryId()
+    if (!rootId) return
 
     this.entryConnectionManager.clearConnections()
 
-    const descendantIds = this.entryManager.getAllDescendantIds(root.id)
-      .filter(id => id !== root.id)
+    const descendantIds = this.entryManager.getAllDescendantIds(rootId)
+      .filter(id => id !== rootId)
     descendantIds.forEach(id => {
       this.entryParamManager.removeParams(id)
       this.entryLayoutManager.deleteLayout(id)
     })
 
-    const childIds = this.entryManager.getChildren(root.id)
+    const childIds = this.entryManager.getChildren(rootId)
     childIds.forEach(childId => this.entryManager.removeEntry(childId))
 
-    await this.socketManager.release(root.id)
+    await this.socketManager.release(rootId)
   }
 
   /**
@@ -128,8 +128,8 @@ export default class RecipeDeserializer {
     }
 
     const paramDefs = this.entryDefinitionService.getBlockParamDef(node.name)
-    this.entryParamManager.setInputParamDef(blockId, paramDefs.input)
-    this.entryParamManager.setOutputParamDef(blockId, paramDefs.output)
+    this.entryParamManager.setInputParams(blockId, paramDefs.input)
+    this.entryParamManager.setOutputParams(blockId, paramDefs.output)
 
     const savedInputParams = node.inputParams || {}
     Object.entries(savedInputParams).forEach(([paramName, value]) => {

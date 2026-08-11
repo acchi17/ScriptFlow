@@ -5,10 +5,10 @@
          @drop="(event) => onDrop(event, 0)"
          @dragover="onDragOver"
     />
-    <template v-for="(child, index) in children" :key="child.id">
+    <template v-for="(child, index) in children" :key="child">
       <component
-        :is="isBlock(child.id) ? 'BlockItem' : 'ContainerItem'"
-        :entry="child"
+        :is="isBlock(child) ? 'BlockItem' : 'ContainerItem'"
+        :entry-id="child"
         @remove="removeChild"
       />
       <div class="drop-area"
@@ -34,8 +34,8 @@ export default {
     ContainerItem,
   },
   props: {
-    entry: {
-      type: Object,
+    entryId: {
+      type: String,
       required: true
     }
   },
@@ -48,7 +48,6 @@ export default {
     } = useDroppable()
     const {
       getChildren,
-      getEntry,
       addBlock,
       addContainer,
       removeEntry,
@@ -57,8 +56,8 @@ export default {
       isBlock
     } = useEntryOperation()
 
-    const children = computed(() => getChildren(props.entry.id).map(getEntry))
-    const dropAllowed = isDroppable(props.entry.id)
+    const children = computed(() => getChildren(props.entryId))
+    const dropAllowed = isDroppable(props.entryId)
 
     setOnDropCallback((event, index) => {
       const entryType = event.dataTransfer.getData('entryType')
@@ -68,14 +67,14 @@ export default {
 
       if (!entryId) {
         if (entryType === 'block') {
-          addBlock(props.entry.id, entryName, index)
+          addBlock(props.entryId, entryName, index)
         } else if (entryType === 'container') {
-          addContainer(props.entry.id, entryName, index)
+          addContainer(props.entryId, entryName, index)
         }
-      } else if (!sourceId || sourceId === props.entry.id) {
-        reorderEntry(props.entry.id, entryId, index)
+      } else if (!sourceId || sourceId === props.entryId) {
+        reorderEntry(props.entryId, entryId, index)
       } else {
-        moveEntry(entryId, props.entry.id, index)
+        moveEntry(entryId, props.entryId, index)
       }
     })
 

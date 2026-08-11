@@ -18,8 +18,8 @@ export default class RecipeSerializer {
    * @returns {Object} recipe object
    */
   buildRecipe(name = '') {
-    const root = this.entryManager.getRootEntry()
-    if (!root) {
+    const rootId = this.entryManager.getRootEntryId()
+    if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
     }
 
@@ -29,28 +29,32 @@ export default class RecipeSerializer {
         name,
         savedAt: new Date().toISOString()
       },
-      root: this._serialiseEntry(root),
+      root: this._serialiseEntry(rootId),
       connections: this.entryConnectionManager.toJson().connections
     }
   }
 
   /**
    * Serialise a single entry (and its descendants, if a container) to a plain node.
-   * @param {Entry} entry
+   * @param {string} entryId
    * @returns {Object}
    * @private
    */
-  _serialiseEntry(entry) {
-    const node = { id: entry.id, type: entry.type, name: entry.name }
-
-    if (this.entryManager.isBlock(entry.id)) {
-      node.inputParams = this.entryParamManager.getInputParams(entry.id)
-    } else if (this.entryManager.isContainer(entry.id)) {
-      node.children = this.entryManager.getChildren(entry.id)
-        .map(childId => this._serialiseEntry(this.entryManager.getEntry(childId)))
+  _serialiseEntry(entryId) {
+    const node = {
+      id: entryId,
+      type: this.entryManager.getEntryType(entryId),
+      name: this.entryManager.getEntryName(entryId)
     }
 
-    const comm = this.socketManager.getCommSetting(entry.id)
+    if (this.entryManager.isBlock(entryId)) {
+      node.inputParams = this.entryParamManager.getInputParams(entryId)
+    } else if (this.entryManager.isContainer(entryId)) {
+      node.children = this.entryManager.getChildren(entryId)
+        .map(childId => this._serialiseEntry(childId))
+    }
+
+    const comm = this.socketManager.getCommSetting(entryId)
     if (comm) {
       node.comm = comm
     }

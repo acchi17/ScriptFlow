@@ -12,15 +12,15 @@ export function useEntryExecution() {
 
   /**
    * Execute an entry (Block or Container)
-   * @param {Entry} entry Entry to execute
+   * @param {string} entryId Id of the entry to execute
    */
-  const executeEntry = async (entry) => {
-    if (!entry) return;
+  const executeEntry = async (entryId) => {
+    if (!entryId) return;
     cancelConnection();
-    
-    setExecuting(true, entry.id);
+
+    setExecuting(true, entryId);
     try {
-      await entryExecutionService.executeEntry(entry);
+      await entryExecutionService.executeEntry(entryId);
     } finally {
       await new Promise(resolve => setTimeout(resolve, 500));
       setExecuting(false);

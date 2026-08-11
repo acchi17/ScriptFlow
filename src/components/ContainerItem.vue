@@ -8,29 +8,29 @@
     @click.stop="onSelect"
   >
     <div class="container-content">
-      <div class="container-header" :data-entry-id="entry.id">
+      <div class="container-header" :data-entry-id="entryId">
         <div class="entry-spacer"/>
-        <div class="entry-text">{{ entry.name }}</div>
+        <div class="entry-text">{{ getEntryName(entryId) }}</div>
         <div class="entry-button entry-button-play"
              :class="{ 'entry-button--hidden': !isSelected }" @click.stop="onPlay"></div>
         <div class="entry-button entry-button-delete" @click.stop="onRemove"></div>
         <div class="container-header-tail">
           <div
-            v-if="(isSelected || isConnectingTgt) && hasParams"
+            v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="container-content-param"
             :class="{ 'selected': isSelected }"
           >
-            <EntryParamsRow :entry-id="entry.id" :is-connecting-tgt="isConnectingTgt" />
-          </div>   
+            <EntryParamsRow :entry-id="entryId" :is-connecting-tgt="isConnectingTargetValue" />
+          </div>
         </div>
       </div>
-      <ContainerChildren :entry="entry"/>
+      <ContainerChildren :entry-id="entryId"/>
     </div>
   </div>
 </template>
 
 <script>
-import { computed, inject } from 'vue'
+import { computed } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useDraggable } from '../composables/useDraggable'
 import { useEntryExecution } from '../composables/useEntryExecution'
@@ -43,16 +43,14 @@ export default {
     EntryParamsRow,
   },
   props: {
-    entry: {
-      type: Object,
+    entryId: {
+      type: String,
       required: true
     }
   },
   emits: ['remove'],
 
   setup(props, { emit }) {
-    const entryParamManager = inject('entryParamManager')
-
     // Get composable
     const {
       isDragging,
@@ -65,6 +63,8 @@ export default {
     const {
       getAllDescendantIds,
       getParentId,
+      getEntryName,
+      hasParams,
     } = useEntryOperation()
     const {
       isExecuting,
@@ -77,37 +77,34 @@ export default {
     // Selection handling
     const isSelected = computed(() => {
       const selectedId = getSelectedEntryId.value
-      return selectedId === props.entry.id
+      return selectedId === props.entryId
     })
-    
-    const isConnectingTgt = isConnectingTarget(props.entry.id)
 
-    const hasParams = computed(() =>
-      Object.keys(entryParamManager.getInputParamTypes(props.entry.id)).length > 0 ||
-      Object.keys(entryParamManager.getOutputParamTypes(props.entry.id)).length > 0
-    )
+    const isConnectingTargetValue = isConnectingTarget(props.entryId)
+
+    const hasParamsValue = computed(() => hasParams(props.entryId))
 
     const onSelect = () => {
       if (isSelected.value) {
         clearSelection()
       } else {
-        setSelection(props.entry)
+        setSelection(props.entryId)
       }
     }
-    
+
     // Set callback for drag start
     setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
-      const allIds = getAllDescendantIds(props.entry.id)
+      const allIds = getAllDescendantIds(props.entryId)
       dragDropState.setDraggedIds(allIds)
 
       // Get parent ID
-      const parentId = getParentId(props.entry.id)
-      
+      const parentId = getParentId(props.entryId)
+
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'container')
-      event.dataTransfer.setData('entryId', props.entry.id)
-      event.dataTransfer.setData('sourceId', parentId || props.entry.id)
+      event.dataTransfer.setData('entryId', props.entryId)
+      event.dataTransfer.setData('sourceId', parentId || props.entryId)
       
       event.stopPropagation()
     })
@@ -124,7 +121,7 @@ export default {
       
       try {
         // Execute the entry using EntryExecutionService
-        await executeEntry(props.entry)
+        await executeEntry(props.entryId)
         console.log('Container execution completed')
       } catch (error) {
         console.error('Error executing container:', error)
@@ -135,15 +132,16 @@ export default {
      * Process when the remove button is clicked
      */
     const onRemove = () => {
-      emit('remove', props.entry.id)
+      emit('remove', props.entryId)
     }
 
     // Return values and methods to use in <template>
     return {
       isDragging,
       isSelected,
-      isConnectingTgt,
-      hasParams,
+      isConnectingTargetValue,
+      hasParamsValue,
+      getEntryName,
       onDragStart,
       onDragEnd,
       onSelect,

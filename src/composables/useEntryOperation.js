@@ -7,6 +7,7 @@ export function useEntryOperation() {
   const entryDefinitionService = inject('entryDefinitionService')
   const entryConnectionManager = inject('entryConnectionManager')
   const entryLayoutManager = inject('entryLayoutManager')
+  const entryTypeStore = inject('entryTypeStore')
   const {
     getSelectedEntryId,
     clearSelection,
@@ -16,14 +17,16 @@ export function useEntryOperation() {
   const addBlock = (parentId, name, index) => {
     const blockId = entryManager.addEntry(parentId, 'block', name, index)
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
-    entryParamManager.setInputParamDef(blockId, defaultParams.input)
-    entryParamManager.setOutputParamDef(blockId, defaultParams.output)
-    return entryManager.getEntry(blockId)
+    entryParamManager.setInputParams(blockId, defaultParams.input)
+    entryParamManager.setOutputParams(blockId, defaultParams.output)
+    entryTypeStore.add(blockId, 'block', name)
+    return blockId
   }
 
   const addContainer = (parentId, name, index) => {
     const containerId = entryManager.addEntry(parentId, 'container', name, index)
-    return entryManager.getEntry(containerId)
+    entryTypeStore.add(containerId, 'container', name)
+    return containerId
   }
 
   const removeEntry = (entryId) => {
@@ -35,6 +38,7 @@ export function useEntryOperation() {
     [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
       entryParamManager.removeParams(eid)
+      entryTypeStore.remove(eid)
     })
     cancelConnection()
     entryManager.removeEntry(entryId)
@@ -74,8 +78,12 @@ export function useEntryOperation() {
     return entryManager.getEntry(entryId)
   }
 
-  const getRootEntry = () => {
-    return entryManager.getRootEntry()
+  const getEntryName = (entryId) => {
+    return entryManager.getEntryName(entryId)
+  }
+
+  const getRootEntryId = () => {
+    return entryManager.getRootEntryId()
   }
 
   const getChildren = (entryId) => {
@@ -92,6 +100,11 @@ export function useEntryOperation() {
 
   const setInputParam = (entryId, paramName, value) => {
     entryParamManager.setInputParam(entryId, paramName, value)
+  }
+
+  const hasParams = (entryId) => {
+    return Object.keys(entryParamManager.getInputParamTypes(entryId)).length > 0 ||
+      Object.keys(entryParamManager.getOutputParamTypes(entryId)).length > 0
   }
 
   /**
@@ -139,11 +152,13 @@ export function useEntryOperation() {
     getAllDescendantIds,
     getParentId,
     getEntry,
-    getRootEntry,
+    getEntryName,
+    getRootEntryId,
     getChildren,
     getInputParams,
     getOutputParams,
     setInputParam,
+    hasParams,
     isContainer,
     isBlock,
     trackEntryLayout,

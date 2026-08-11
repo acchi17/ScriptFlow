@@ -28,7 +28,7 @@
         <div class="entry-panel" ref="entryPanelRef">
           <div class="main-container">
             <ContainerChildren
-              :entry="mainContainer"
+              :entry-id="rootContainerId"
             />
             <div class="bottom-spacer" />
           </div>
@@ -40,7 +40,7 @@
     </div>
     <CommSettingView
       v-if="showCommSetting"
-      :entryId="mainContainer.id"
+      :entryId="rootContainerId"
       @close="onCommSettingClose"
     />
   </div>
@@ -70,14 +70,14 @@ export default {
     const { isExecuting } = useSystemState()
     const { isBusy } = useEntryPersistance()
 
-    const mainContainer = addContainer(null, 'root-container', 0)
+    const rootContainerId = addContainer(null, 'root-container', 0)
 
     const executeRecipe = () => {
-      executeEntry(mainContainer)
+      executeEntry(rootContainerId)
     }
 
     const clearRecipe = () => {
-      clearContainer(mainContainer.id)
+      clearContainer(rootContainerId)
     }
 
     const showCommSetting = ref(false)
@@ -98,7 +98,7 @@ export default {
     const entryLayoutMap = trackEntryLayout(entryPanelRef)
 
     return {
-      mainContainer,
+      rootContainerId,
       executeRecipe,
       clearRecipe,
       openComSetting,
