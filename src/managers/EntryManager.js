@@ -154,9 +154,17 @@ export default class EntryManager {
 
       // Remove from entries map and component stores
       this._entriesById.delete(childId);
-      this._world.entryTypes.remove(childId);
-      this._world.hierarchies.remove(childId);
+      this._world.despawn(childId);
     }
+  }
+
+  /**
+   * Check whether an entry id is a live entity in the ECS world
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry id is alive
+   */
+  isAlive(entryId) {
+    return this._world.isAlive(entryId);
   }
 
   /**
@@ -290,17 +298,18 @@ export default class EntryManager {
    * @returns {string} ID of the created entry
    */
   addEntry(parentId, type, name, index, id = null) {
-    const entry = type === 'container' ? new Container(name, id) : new Block(name, id);
-    this._world.entryTypes.add(entry.id, { name, type });
+    const entryId = this._world.spawn(id);
+    const entry = type === 'container' ? new Container(name, entryId) : new Block(name, entryId);
+    this._world.entryTypes.add(entryId, { name, type });
     this._registerEntry(entry);
 
     if (parentId === null) {
-      this._setRoot(entry.id);
+      this._setRoot(entryId);
     } else {
-      this._attachEntry(parentId, entry.id, index);
+      this._attachEntry(parentId, entryId, index);
     }
 
-    return entry.id;
+    return entryId;
   }
 
   /**
@@ -331,8 +340,7 @@ export default class EntryManager {
 
     // Remove the entry itself from the registry
     this._entriesById.delete(entryId);
-    this._world.entryTypes.remove(entryId);
-    this._world.hierarchies.remove(entryId);
+    this._world.despawn(entryId);
 
     this._rebuildSequenceNumbers();
     return true;

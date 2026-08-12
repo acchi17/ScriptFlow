@@ -158,7 +158,7 @@ export default class RecipeDeserializer {
       const output = { ...conn.output, entryId: idMap.get(conn.output.entryId) ?? conn.output.entryId }
       const input = { ...conn.input, entryId: idMap.get(conn.input.entryId) ?? conn.input.entryId }
 
-      if (!this.entryManager.getEntry(output.entryId) || !this.entryManager.getEntry(input.entryId)) {
+      if (!this.entryManager.isAlive(output.entryId) || !this.entryManager.isAlive(input.entryId)) {
         warnings.push(`Dropped connection: endpoint entry not found (${output.entryId} -> ${input.entryId})`)
         return
       }

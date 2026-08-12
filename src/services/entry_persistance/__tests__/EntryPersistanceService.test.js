@@ -209,8 +209,8 @@ describe('EntryPersistanceService round trip', () => {
 
     expect(report.entryCount).toBe(0)
     expect(ctx.entryManager.getChildren(ctx.entryManager.getRootEntryId())).toHaveLength(0)
-    expect(ctx.entryManager.getEntry(block1Id)).toBeNull()
-    expect(ctx.entryManager.getEntry(block2Id)).toBeNull()
+    expect(ctx.entryManager.isAlive(block1Id)).toBe(false)
+    expect(ctx.entryManager.isAlive(block2Id)).toBe(false)
     expect(ctx.entryParamManager.hasInputParam(block1Id)).toBe(false)
     expect(ctx.entryParamManager.hasInputParam(block2Id)).toBe(false)
     expect(ctx.entryLayoutManager.getLayout(block1Id)).toBeUndefined()

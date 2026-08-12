@@ -1,4 +1,4 @@
-export type EntityId = number
+export type EntityId = string
 
 /**
  * Generate UUID using crypto.randomUUID() with fallback
