@@ -33,7 +33,7 @@ export function useEntryOperation() {
 
   const removeEntry = (entryId) => {
     const selectedId = getSelectedEntryId.value
-    const descendantIds = entryManager.hierarchyHandler.getAllDescendantIds(entryId)
+    const descendantIds = entryManager.hierarchyHandler.getAllDescendants(entryId)
     if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
       clearSelection()
     }
@@ -69,11 +69,11 @@ export function useEntryOperation() {
   }
 
   const getAllDescendantIds = (entryId) => {
-    return entryManager.hierarchyHandler.getAllDescendantIds(entryId)
+    return entryManager.hierarchyHandler.getAllDescendants(entryId)
   }
 
   const getParentId = (entryId) => {
-    return entryManager.hierarchyHandler.getParentId(entryId)
+    return entryManager.hierarchyHandler.getParent(entryId)
   }
 
   const getEntryName = (entryId) => {
@@ -81,7 +81,7 @@ export function useEntryOperation() {
   }
 
   const getRootEntryId = () => {
-    return entryManager.hierarchyHandler.getRootEntryId()
+    return entryManager.hierarchyHandler.getRootEntry()
   }
 
   const getChildren = (entryId) => {

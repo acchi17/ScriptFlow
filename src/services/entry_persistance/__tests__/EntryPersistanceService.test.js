@@ -71,7 +71,7 @@ describe('EntryPersistanceService round trip', () => {
     expect(report.warnings).toEqual([])
     expect(report.connectionCount).toBe(1)
 
-    const restoredRootId = ctx.entryManager.hierarchyHandler.getRootEntryId()
+    const restoredRootId = ctx.entryManager.hierarchyHandler.getRootEntry()
     expect(ctx.entryManager.hierarchyHandler.getChildren(restoredRootId).map(id => ctx.entryManager.getEntryName(id))).toEqual(['Add', 'Sub'])
     expect(ctx.entryParamManager.getInputParams(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
 
@@ -138,7 +138,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(recipe)
 
     expect(report.warnings.some(w => w.includes('Block definition "GoneBlock" not found'))).toBe(true)
-    const restoredRootId = ctx.entryManager.hierarchyHandler.getRootEntryId()
+    const restoredRootId = ctx.entryManager.hierarchyHandler.getRootEntry()
     const restoredRootChildIds = ctx.entryManager.hierarchyHandler.getChildren(restoredRootId)
     expect(restoredRootChildIds).toHaveLength(1)
     expect(ctx.entryManager.getEntryName(restoredRootChildIds[0])).toBe('GoneBlock')
@@ -154,7 +154,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(recipe)
 
     expect(report.warnings.some(w => w.includes('Input param "Extra" no longer exists'))).toBe(true)
-    const restoredBlockId = ctx.entryManager.hierarchyHandler.getChildren(ctx.entryManager.hierarchyHandler.getRootEntryId())[0]
+    const restoredBlockId = ctx.entryManager.hierarchyHandler.getChildren(ctx.entryManager.hierarchyHandler.getRootEntry())[0]
     expect(ctx.entryParamManager.getInputParams(restoredBlockId)).toEqual({ NumberA: 0, NumberB: 0 })
   })
 
@@ -191,7 +191,7 @@ describe('EntryPersistanceService round trip', () => {
 
     await expect(ctx.service.restoreRecipe(badRecipe)).rejects.toThrow(/unsupported recipe formatVersion/)
 
-    const rootEntryId = ctx.entryManager.hierarchyHandler.getRootEntryId()
+    const rootEntryId = ctx.entryManager.hierarchyHandler.getRootEntry()
     const rootChildIds = ctx.entryManager.hierarchyHandler.getChildren(rootEntryId)
     expect(rootChildIds).toHaveLength(1)
     expect(rootChildIds[0]).toBe(blockId)
@@ -212,7 +212,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(smallRecipe)
 
     expect(report.entryCount).toBe(0)
-    expect(ctx.entryManager.hierarchyHandler.getChildren(ctx.entryManager.hierarchyHandler.getRootEntryId())).toHaveLength(0)
+    expect(ctx.entryManager.hierarchyHandler.getChildren(ctx.entryManager.hierarchyHandler.getRootEntry())).toHaveLength(0)
     expect(ctx.entryManager.isAlive(block1Id)).toBe(false)
     expect(ctx.entryManager.isAlive(block2Id)).toBe(false)
     expect(ctx.entryParamManager.hasInputParam(block1Id)).toBe(false)

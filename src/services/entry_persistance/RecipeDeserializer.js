@@ -44,7 +44,7 @@ export default class RecipeDeserializer {
 
     await this._clearRecipe()
 
-    const rootId = this.entryManager.hierarchyHandler.getRootEntryId()
+    const rootId = this.entryManager.hierarchyHandler.getRootEntry()
     if (!rootId) {
       throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
     }
@@ -60,7 +60,7 @@ export default class RecipeDeserializer {
     this._restoreConnections(recipe, idMap, warnings)
     await this._restoreComm(recipe.root, idMap)
 
-    const entryCount = this.entryManager.hierarchyHandler.getAllDescendantIds(rootId).length - 1
+    const entryCount = this.entryManager.hierarchyHandler.getAllDescendants(rootId).length - 1
     const connectionCount = this.entryConnectionManager.getConnections().length
 
     return { entryCount, connectionCount, warnings }
@@ -72,12 +72,12 @@ export default class RecipeDeserializer {
    * @private
    */
   async _clearRecipe() {
-    const rootId = this.entryManager.hierarchyHandler.getRootEntryId()
+    const rootId = this.entryManager.hierarchyHandler.getRootEntry()
     if (!rootId) return
 
     this.entryConnectionManager.clearConnections()
 
-    const descendantIds = this.entryManager.hierarchyHandler.getAllDescendantIds(rootId)
+    const descendantIds = this.entryManager.hierarchyHandler.getAllDescendants(rootId)
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
       this.entryParamManager.removeParams(id)

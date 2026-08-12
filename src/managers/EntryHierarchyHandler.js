@@ -120,7 +120,7 @@ export default class EntryHierarchyHandler {
    * Get the root entry's ID
    * @returns {string|null} Root entry ID or null
    */
-  getRootEntryId() {
+  getRootEntry() {
     return this._rootId;
   }
 
@@ -129,7 +129,7 @@ export default class EntryHierarchyHandler {
    * @param {string} entryId - ID of the child entry
    * @returns {string|null} Parent entry ID or null
    */
-  getParentId(entryId) {
+  getParent(entryId) {
     return this._world.hierarchies.get(entryId)?.parent ?? null;
   }
 
@@ -148,14 +148,14 @@ export default class EntryHierarchyHandler {
    * @param {string} entryId - Target entry ID
    * @returns {Array<string>} List of IDs for the entry and all its descendants
    */
-  getAllDescendantIds(entryId) {
+  getAllDescendants(entryId) {
     const ids = new Set([entryId]);
 
     if (!this._isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
     for (const childId of this._world.hierarchies.get(entryId)?.children ?? []) {
-      const descendantIds = this.getAllDescendantIds(childId);
+      const descendantIds = this.getAllDescendants(childId);
       descendantIds.forEach(id => ids.add(id));
     }
 

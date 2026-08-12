@@ -18,11 +18,11 @@ describe('EntryManager.addEntry', () => {
     const containerCId = addAndAttach(entryManager, containerBId, 'container', 'C', 0)
     const blockId = addAndAttach(entryManager, containerCId, 'block', 'Add', 0)
 
-    expect(entryManager.hierarchyHandler.getParentId(blockId)).toBe(containerCId)
-    expect(entryManager.hierarchyHandler.getParentId(containerCId)).toBe(containerBId)
-    expect(entryManager.hierarchyHandler.getParentId(containerBId)).toBe(containerAId)
-    expect(entryManager.hierarchyHandler.getParentId(containerAId)).toBe(rootId)
-    expect(entryManager.hierarchyHandler.getParentId(rootId)).toBe(null)
+    expect(entryManager.hierarchyHandler.getParent(blockId)).toBe(containerCId)
+    expect(entryManager.hierarchyHandler.getParent(containerCId)).toBe(containerBId)
+    expect(entryManager.hierarchyHandler.getParent(containerBId)).toBe(containerAId)
+    expect(entryManager.hierarchyHandler.getParent(containerAId)).toBe(rootId)
+    expect(entryManager.hierarchyHandler.getParent(rootId)).toBe(null)
 
     expect(entryManager.getEntryType(blockId)).toBe('block')
     expect(entryManager.getEntryName(blockId)).toBe('Add')
@@ -37,7 +37,7 @@ describe('EntryManager.addEntry', () => {
     const attached = entryManager.hierarchyHandler.moveEntry(childBlockId, blockId, 0)
 
     expect(attached).toBe(false)
-    expect(entryManager.hierarchyHandler.getParentId(childBlockId)).toBe(null)
+    expect(entryManager.hierarchyHandler.getParent(childBlockId)).toBe(null)
     expect(entryManager.hierarchyHandler.getChildren(blockId)).toEqual([])
   })
 })
@@ -127,7 +127,7 @@ describe('EntryManager.reorderEntry', () => {
     expect(reordered).toBe(true)
     expect(entryManager.hierarchyHandler.getChildren(rootId)).toEqual([blockAId, containerId])
     expect(entryManager.hierarchyHandler.getChildren(containerId)).toEqual([blockInsideId])
-    expect(entryManager.hierarchyHandler.getParentId(blockInsideId)).toBe(containerId)
+    expect(entryManager.hierarchyHandler.getParent(blockInsideId)).toBe(containerId)
   })
 
   it('returns false and leaves children unchanged when the entry is not a child of the given parent', () => {
@@ -156,7 +156,7 @@ describe('EntryManager.moveEntry', () => {
     const moved = entryManager.hierarchyHandler.moveEntry(blockXId, containerBId, 0)
 
     expect(moved).toBe(true)
-    expect(entryManager.hierarchyHandler.getParentId(blockXId)).toBe(containerBId)
+    expect(entryManager.hierarchyHandler.getParent(blockXId)).toBe(containerBId)
     expect(entryManager.hierarchyHandler.getChildren(containerAId)).toEqual([])
     expect(entryManager.hierarchyHandler.getChildren(containerBId)).toEqual([blockXId])
   })
@@ -171,11 +171,11 @@ describe('EntryManager.moveEntry', () => {
     const moved = entryManager.hierarchyHandler.moveEntry(containerAId, containerBId, 0)
 
     expect(moved).toBe(true)
-    expect(entryManager.hierarchyHandler.getParentId(containerAId)).toBe(containerBId)
+    expect(entryManager.hierarchyHandler.getParent(containerAId)).toBe(containerBId)
     expect(entryManager.hierarchyHandler.getChildren(rootId)).toEqual([containerBId])
     expect(entryManager.hierarchyHandler.getChildren(containerBId)).toEqual([containerAId])
     expect(entryManager.hierarchyHandler.getChildren(containerAId)).toEqual([blockInsideId])
-    expect(entryManager.hierarchyHandler.getParentId(blockInsideId)).toBe(containerAId)
+    expect(entryManager.hierarchyHandler.getParent(blockInsideId)).toBe(containerAId)
   })
 
   it('detaches the entry from its old parent even when attaching to the new parent fails', () => {
@@ -187,7 +187,7 @@ describe('EntryManager.moveEntry', () => {
     const moved = entryManager.hierarchyHandler.moveEntry(blockMovedId, blockTargetId, 0)
 
     expect(moved).toBe(false)
-    expect(entryManager.hierarchyHandler.getParentId(blockMovedId)).toBe(null)
+    expect(entryManager.hierarchyHandler.getParent(blockMovedId)).toBe(null)
     expect(entryManager.hierarchyHandler.getChildren(rootId)).toEqual([blockTargetId])
   })
 
