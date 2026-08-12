@@ -108,7 +108,8 @@ export default class RecipeDeserializer {
     }
 
     if (node.type === 'container') {
-      const containerId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
+      const containerId = this.entryManager.addEntry(node.type, node.name, node.id)
+      this.entryManager.moveEntry(containerId, parentId, index)
       idMap.set(node.id, containerId)
 
       const children = Array.isArray(node.children) ? node.children : []
@@ -118,7 +119,8 @@ export default class RecipeDeserializer {
       return
     }
 
-    const blockId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
+    const blockId = this.entryManager.addEntry(node.type, node.name, node.id)
+    this.entryManager.moveEntry(blockId, parentId, index)
     idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)

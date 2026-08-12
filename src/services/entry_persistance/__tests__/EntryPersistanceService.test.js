@@ -26,7 +26,8 @@ async function createContext() {
     entryLayoutManager, socketManager, entryDefinitionService
   )
 
-  const rootId = entryManager.addEntry(null, 'container', 'root-container', 0)
+  const rootId = entryManager.addEntry('container', 'root-container')
+  entryManager.moveEntry(rootId, null, 0)
 
   return {
     entryManager, entryParamManager, entryConnectionManager,
@@ -35,7 +36,8 @@ async function createContext() {
 }
 
 function addBlock(ctx, parentId, name, index) {
-  const blockId = ctx.entryManager.addEntry(parentId, 'block', name, index)
+  const blockId = ctx.entryManager.addEntry('block', name)
+  ctx.entryManager.moveEntry(blockId, parentId, index)
   const defs = ctx.entryDefinitionService.getBlockParamDef(name)
   ctx.entryParamManager.setInputParams(blockId, defs.input)
   ctx.entryParamManager.setOutputParams(blockId, defs.output)
@@ -49,7 +51,8 @@ describe('EntryPersistanceService round trip', () => {
     ctx.entryParamManager.setInputParam(addBlockId, 'NumberA', 3)
     ctx.entryParamManager.setInputParam(addBlockId, 'NumberB', 4)
 
-    const subContainerId = ctx.entryManager.addEntry(ctx.rootId, 'container', 'Sub', 1)
+    const subContainerId = ctx.entryManager.addEntry('container', 'Sub')
+    ctx.entryManager.moveEntry(subContainerId, ctx.rootId, 1)
     const mulBlockId = addBlock(ctx, subContainerId, 'Mul', 0)
     ctx.entryParamManager.setInputParam(mulBlockId, 'NumberB', 5)
 
@@ -198,7 +201,8 @@ describe('EntryPersistanceService round trip', () => {
   it('clears stale entries, params and layout before restoring, even into a smaller recipe', async () => {
     const ctx = await createContext()
     const block1Id = addBlock(ctx, ctx.rootId, 'Add', 0)
-    const containerId = ctx.entryManager.addEntry(ctx.rootId, 'container', 'ToBeGone', 1)
+    const containerId = ctx.entryManager.addEntry('container', 'ToBeGone')
+    ctx.entryManager.moveEntry(containerId, ctx.rootId, 1)
     const block2Id = addBlock(ctx, containerId, 'Mul', 0)
     ctx.entryLayoutManager.setLayout(block1Id, 10, 20)
 

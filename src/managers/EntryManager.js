@@ -254,26 +254,16 @@ export default class EntryManager {
   }
 
   /**
-   * Create an entry and add it to a parent entry
-   * If parentId is null, the entry is just registered as the root without a parent
-   * @param {string|null} parentId - ID of the parent entry, or null to register as root
+   * Create an entry, registering it in the ECS world
    * @param {string} type - Type of entry to create ('block' or 'container')
    * @param {string} name - Name of the entry
-   * @param {number} index - Index position to add (ignored if parentId is null)
    * @param {string|null} id - Unique ID of the entry (auto-generated if null)
    * @returns {string} ID of the created entry
    */
-  addEntry(parentId, type, name, index, id = null) {
+  addEntry(type, name, id = null) {
     const entryId = this._world.spawn(id);
     this._world.entryTypes.add(entryId, { name, type });
     this._world.hierarchies.add(entryId, { parent: null, children: [] });
-
-    if (parentId === null) {
-      this._setRoot(entryId);
-    } else {
-      this._attachEntry(parentId, entryId, index);
-    }
-
     return entryId;
   }
 

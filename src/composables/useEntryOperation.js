@@ -15,7 +15,8 @@ export function useEntryOperation() {
   } = useSystemState()
 
   const addBlock = (parentId, name, index) => {
-    const blockId = entryManager.addEntry(parentId, 'block', name, index)
+    const blockId = entryManager.addEntry('block', name)
+    entryManager.moveEntry(blockId, parentId, index)
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
     entryParamManager.setInputParams(blockId, defaultParams.input)
     entryParamManager.setOutputParams(blockId, defaultParams.output)
@@ -24,7 +25,8 @@ export function useEntryOperation() {
   }
 
   const addContainer = (parentId, name, index) => {
-    const containerId = entryManager.addEntry(parentId, 'container', name, index)
+    const containerId = entryManager.addEntry('container', name)
+    entryManager.moveEntry(containerId, parentId, index)
     entryTypeStore.add(containerId, 'container', name)
     return containerId
   }
