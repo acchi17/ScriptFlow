@@ -1,6 +1,4 @@
 import { ref } from 'vue'
-import Block from '../models/Block'
-import Container from '../models/Container'
 import { World } from '../ecs/core/World'
 
 /**
@@ -11,8 +9,6 @@ export default class EntryManager {
   constructor(world = new World()) {
     // ECS world holding entry type components
     this._world = world;
-    // Dictionary of entry IDs and objects
-    this._entriesById = new Map();
     // Cache of entryId → 1-based sequence number (DFS visual order)
     this._sequenceNumbers = new Map();
     // ID of the root container for sequence number computation
@@ -55,26 +51,6 @@ export default class EntryManager {
     };
     traverse(this._world.hierarchies.get(this._rootId)?.children ?? []);
     this._updateTick.value++;
-  }
-
-  /**
-   * Register an entry
-   * @param {Entry} entry - Entry to register
-   * @returns {boolean} Whether the registration was successful
-   * @private
-   */
-  _registerEntry(entry) {
-    if (!entry || !entry.id) return false;
-
-    // Overwrite if already registered
-    this._entriesById.set(entry.id, entry);
-
-    // Every entry gets a hierarchy component; only containers ever populate `children`
-    if (!this._world.hierarchies.has(entry.id)) {
-      this._world.hierarchies.add(entry.id, { parent: null, children: [] });
-    }
-
-    return true;
   }
 
   /**
@@ -152,8 +128,7 @@ export default class EntryManager {
         this._removeDescendants(childId);
       }
 
-      // Remove from entries map and component stores
-      this._entriesById.delete(childId);
+      // Remove from component stores
       this._world.despawn(childId);
     }
   }
@@ -183,15 +158,6 @@ export default class EntryManager {
    */
   isContainer(entryId) {
     return this._world.entryTypes.get(entryId)?.type === 'container';
-  }
-
-  /**
-   * Get an entry
-   * @param {string} entryId - ID of the entry to get
-   * @returns {Entry|null} Retrieved entry or null
-   */
-  getEntry(entryId) {
-    return this._entriesById.get(entryId) || null;
   }
 
   /**
@@ -299,9 +265,8 @@ export default class EntryManager {
    */
   addEntry(parentId, type, name, index, id = null) {
     const entryId = this._world.spawn(id);
-    const entry = type === 'container' ? new Container(name, entryId) : new Block(name, entryId);
     this._world.entryTypes.add(entryId, { name, type });
-    this._registerEntry(entry);
+    this._world.hierarchies.add(entryId, { parent: null, children: [] });
 
     if (parentId === null) {
       this._setRoot(entryId);
@@ -339,7 +304,6 @@ export default class EntryManager {
     }
 
     // Remove the entry itself from the registry
-    this._entriesById.delete(entryId);
     this._world.despawn(entryId);
 
     this._rebuildSequenceNumbers();
@@ -382,7 +346,7 @@ export default class EntryManager {
    */
   moveEntry(entryId, newParentId, index) {
     // Check if the entry exists
-    if (!this._entriesById.has(entryId)) return false;
+    if (!this.isAlive(entryId)) return false;
 
     // Detach from the current parent
     this._detachEntry(entryId);

@@ -74,10 +74,6 @@ export function useEntryOperation() {
     return entryManager.getParentId(entryId)
   }
 
-  const getEntry = (entryId) => {
-    return entryManager.getEntry(entryId)
-  }
-
   const getEntryName = (entryId) => {
     return entryManager.getEntryName(entryId)
   }
@@ -153,7 +149,6 @@ export function useEntryOperation() {
     clearContainer,
     getAllDescendantIds,
     getParentId,
-    getEntry,
     getEntryName,
     getRootEntryId,
     getChildren,

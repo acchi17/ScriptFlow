@@ -33,18 +33,18 @@ describe('EntryManager.addEntry', () => {
 })
 
 describe('EntryManager.removeEntry', () => {
-  it('clears a removed block from _entriesById and world.hierarchies', () => {
+  it('clears a removed block from the world', () => {
     const entryManager = new EntryManager()
     const rootId = entryManager.addEntry(null, 'container', 'root', 0)
     const blockId = entryManager.addEntry(rootId, 'block', 'Add', 0)
 
     entryManager.removeEntry(blockId)
 
-    expect(entryManager._entriesById.has(blockId)).toBe(false)
+    expect(entryManager.isAlive(blockId)).toBe(false)
     expect(entryManager._world.hierarchies.has(blockId)).toBe(false)
   })
 
-  it('recursively clears a removed container and its descendants from _entriesById and world.hierarchies', () => {
+  it('recursively clears a removed container and its descendants from the world', () => {
     const entryManager = new EntryManager()
     const rootId = entryManager.addEntry(null, 'container', 'root', 0)
     const containerId = entryManager.addEntry(rootId, 'container', 'Sub', 0)
@@ -53,7 +53,7 @@ describe('EntryManager.removeEntry', () => {
     entryManager.removeEntry(containerId)
 
     for (const id of [containerId, blockId]) {
-      expect(entryManager._entriesById.has(id)).toBe(false)
+      expect(entryManager.isAlive(id)).toBe(false)
       expect(entryManager._world.hierarchies.has(id)).toBe(false)
     }
   })
@@ -69,7 +69,7 @@ describe('EntryManager.removeEntry', () => {
     entryManager.removeEntry(containerAId)
 
     for (const id of [containerAId, containerBId, containerCId, blockId]) {
-      expect(entryManager._entriesById.has(id)).toBe(false)
+      expect(entryManager.isAlive(id)).toBe(false)
       expect(entryManager._world.hierarchies.has(id)).toBe(false)
     }
   })
