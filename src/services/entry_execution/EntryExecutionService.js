@@ -112,8 +112,8 @@ export default class EntryExecutionService {
   async _executeContainer(entryId, traceId) {
     let result = {};
     try {
-      const container = this.entryManager.getEntry(entryId);
-      const strategy = ContainerExecutionFactory.createStrategy(container.containerType, this.entryManager);
+      const entryName = this.entryManager.getEntryName(entryId);
+      const strategy = ContainerExecutionFactory.createStrategy(entryName, this.entryManager);
       result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId));
     } catch (error) {
       result.errorMessage = error.message;
