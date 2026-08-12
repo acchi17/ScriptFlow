@@ -7,10 +7,9 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeDeserializer {
-  constructor(entryManager, entryParamManager, entryConnectionManager,
+  constructor(entryManager, entryConnectionManager,
     entryLayoutManager, socketManager, entryDefinitionService) {
     this.entryManager = entryManager
-    this.entryParamManager = entryParamManager
     this.entryConnectionManager = entryConnectionManager
     this.entryLayoutManager = entryLayoutManager
     this.socketManager = socketManager
@@ -80,7 +79,7 @@ export default class RecipeDeserializer {
     const descendantIds = this.entryManager.hierarchyHandler.getAllDescendants(rootId)
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
-      this.entryParamManager.removeParams(id)
+      this.entryManager.paramHandler.removeParams(id)
       this.entryLayoutManager.deleteLayout(id)
     })
 
@@ -130,8 +129,8 @@ export default class RecipeDeserializer {
     }
 
     const paramDefs = this.entryDefinitionService.getBlockParamDef(node.name)
-    this.entryParamManager.setInputParams(blockId, paramDefs.input)
-    this.entryParamManager.setOutputParams(blockId, paramDefs.output)
+    this.entryManager.paramHandler.setInputParams(blockId, paramDefs.input)
+    this.entryManager.paramHandler.setOutputParams(blockId, paramDefs.output)
 
     const savedInputParams = node.inputParams || {}
     Object.entries(savedInputParams).forEach(([paramName, value]) => {
@@ -139,7 +138,7 @@ export default class RecipeDeserializer {
         warnings.push(`Input param "${paramName}" no longer exists on block "${node.name}" (entry ${blockId}) — value ignored`)
         return
       }
-      this.entryParamManager.setInputParam(blockId, paramName, value)
+      this.entryManager.paramHandler.setInputParam(blockId, paramName, value)
     })
   }
 
@@ -165,12 +164,12 @@ export default class RecipeDeserializer {
         return
       }
 
-      const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(output.entryId))
+      const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(output.entryId))
       if (!outputParamNames.includes(output.paramName)) {
         warnings.push(`Dropped connection: output param "${output.paramName}" no longer exists on entry ${output.entryId}`)
         return
       }
-      const inputParamNames = Object.keys(this.entryParamManager.getInputParams(input.entryId))
+      const inputParamNames = Object.keys(this.entryManager.paramHandler.getInputParams(input.entryId))
       if (!inputParamNames.includes(input.paramName)) {
         warnings.push(`Dropped connection: input param "${input.paramName}" no longer exists on entry ${input.entryId}`)
         return
@@ -183,8 +182,8 @@ export default class RecipeDeserializer {
         return
       }
 
-      const currentOutputType = this.entryParamManager.getOutputParamType(output.entryId, output.paramName)
-      const currentInputType = this.entryParamManager.getInputParamType(input.entryId, input.paramName)
+      const currentOutputType = this.entryManager.paramHandler.getOutputParamType(output.entryId, output.paramName)
+      const currentInputType = this.entryManager.paramHandler.getInputParamType(input.entryId, input.paramName)
       if (currentOutputType !== output.dataType || currentInputType !== input.dataType) {
         warnings.push(`Connection dataType differs from the current definition (${output.entryId}.${output.paramName} -> ${input.entryId}.${input.paramName}) — kept`)
       }

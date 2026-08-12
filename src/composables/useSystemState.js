@@ -20,7 +20,6 @@ const connectingSource = ref(null) // null | { entryId, paramName, paramCategory
 export function useSystemState() {
   const entryManager = inject('entryManager')
   const entryConnectionManager = inject('entryConnectionManager')
-  const entryParamManager = inject('entryParamManager')
 
   // --- drag & drop ---
   const activateDragging = () => { cancelConnection(); isDragging.value = true }
@@ -64,10 +63,10 @@ export function useSystemState() {
       const dstSeq = entryManager.hierarchyHandler.getSequenceNumber(entryId)
       if (dstSeq === null || srcSeq === null) return false
       if (connectingSource.value.paramCategory === 'input') {
-        if (!entryParamManager.hasOutputParam(entryId)) return false
+        if (!entryManager.paramHandler.hasOutputParam(entryId)) return false
         return dstSeq < srcSeq
       } else {
-        if (!entryParamManager.hasInputParam(entryId)) return false
+        if (!entryManager.paramHandler.hasInputParam(entryId)) return false
         return dstSeq > srcSeq
       }
     })

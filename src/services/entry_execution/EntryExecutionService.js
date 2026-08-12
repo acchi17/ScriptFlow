@@ -10,15 +10,13 @@ export default class EntryExecutionService {
    * Constructor
    * @param {Object} config Configuration object
    * @param {EntryManager} entryManager Entry manager instance (optional)
-   * @param {EntryParamManager} entryParamManager Entry parameter manager instance (optional)
    * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryManager = null, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
+  constructor(config, entryManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
     this.entryManager = entryManager;
-    this.entryParamManager = entryParamManager;
     this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
     this.entryDefinitionService = entryDefinitionService;
@@ -42,13 +40,13 @@ export default class EntryExecutionService {
 
   /**
    * Build effective input params by overlaying connected upstream output values onto static params.
-   * EntryParamManager is never mutated; the result is transient per execution call.
+   * EntryParamHandler is never mutated; the result is transient per execution call.
    * @param {string} entryId
    * @returns {Object} Effective input params { paramName: value }
    * @private
    */
   _resolveInputParams(entryId) {
-    const base = this.entryParamManager ? this.entryParamManager.getInputParams(entryId) : {};
+    const base = this.entryManager ? this.entryManager.paramHandler.getInputParams(entryId) : {};
     if (!this.entryConnectionManager) return base;
 
     const result = { ...base };
@@ -56,7 +54,7 @@ export default class EntryExecutionService {
       .getConnectionsByEntryId(entryId)
       .filter(conn => conn.input.entryId === entryId);
     for (const conn of connections) {
-      const value = this.entryParamManager.getOutputParam(conn.output.entryId, conn.output.paramName);
+      const value = this.entryManager.paramHandler.getOutputParam(conn.output.entryId, conn.output.paramName);
       if (value !== undefined) {
         result[conn.input.paramName] = value;
       }
@@ -83,11 +81,11 @@ export default class EntryExecutionService {
       }
       result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
-      if (this.entryParamManager) {
-        const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(entryId));
+      if (this.entryManager) {
+        const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(entryId));
         for (const key of outputParamNames) {
           if (key in result) {
-            this.entryParamManager.setOutputParam(entryId, key, result[key]);
+            this.entryManager.paramHandler.setOutputParam(entryId, key, result[key]);
           }
         }
       }

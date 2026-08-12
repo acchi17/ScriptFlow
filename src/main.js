@@ -4,7 +4,6 @@ import './assets/styles/variables.css'
 import App from './App.vue'
 import appConfig from './config/app-config'
 import EntryManager from './managers/EntryManager'
-import EntryParamManager from './managers/EntryParamManager'
 import EntryLayoutManager from './managers/EntryLayoutManager'
 import EntryConnectionManager from './managers/EntryConnectionManager'
 import SocketManager from './managers/SocketManager'
@@ -23,7 +22,6 @@ const app = createApp(App)
 // Create Managers
 const world = new World()
 const entryManager = new EntryManager(world)
-const entryParamManager = new EntryParamManager(world)
 const entryLayoutManager = new EntryLayoutManager()
 const entryConnectionManager = new EntryConnectionManager()
 const socketManager = new SocketManager()
@@ -35,16 +33,15 @@ const fileService = new FileService()
 const executionLogService = new ExecutionLogService(entryManager)
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
 const entryExecutionService = new EntryExecutionService(
-  appConfig, entryManager, entryParamManager, entryConnectionManager, executionLogService, entryDefinitionService
+  appConfig, entryManager, entryConnectionManager, executionLogService, entryDefinitionService
 )
 const entryPersistanceService = new EntryPersistanceService(
-  platformService, entryManager, entryParamManager, entryConnectionManager,
+  platformService, entryManager, entryConnectionManager,
   entryLayoutManager, socketManager, entryDefinitionService
 )
 
 // Provide
 app.provide('entryManager', entryManager)
-app.provide('entryParamManager', entryParamManager)
 app.provide('entryLayoutManager', entryLayoutManager)
 app.provide('entryConnectionManager', entryConnectionManager)
 app.provide('entryTypeStore', entryTypeStore)

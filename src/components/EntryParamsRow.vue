@@ -48,7 +48,7 @@ export default {
   },
 
   setup(props) {
-    const entryParamManager = inject('entryParamManager')
+    const entryManager = inject('entryManager')
     const { getConnectingSource } = useSystemState()
 
     const paramCategory = ref('input')
@@ -61,8 +61,8 @@ export default {
     const paramItems = computed(() => {
       const category = paramCategoryDyn.value
       const types = category === 'input'
-        ? entryParamManager.getInputParamTypes(props.entryId)
-        : entryParamManager.getOutputParamTypes(props.entryId)
+        ? entryManager.paramHandler.getInputParamTypes(props.entryId)
+        : entryManager.paramHandler.getOutputParamTypes(props.entryId)
       return Object.entries(types).map(([name, type]) => ({ name, type, category }))
     })
 

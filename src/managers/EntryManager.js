@@ -1,5 +1,6 @@
 import { World } from '../ecs/core/World'
 import EntryHierarchyHandler from './EntryHierarchyHandler'
+import EntryParamHandler from './EntryParamHandler'
 
 /**
  * EntryManager class
@@ -11,6 +12,8 @@ export default class EntryManager {
     this._world = world;
     // Handles hierarchy structure (parent/children, root, sequence numbers)
     this.hierarchyHandler = new EntryHierarchyHandler(world, (entryId) => this.isContainer(entryId));
+    // Handles parameter values and types of entries
+    this.paramHandler = new EntryParamHandler(world);
   }
 
   /**

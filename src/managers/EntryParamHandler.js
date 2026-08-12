@@ -3,11 +3,11 @@ import { convertValue } from '../utils/common.js'
 import { World } from '../ecs/core/World'
 
 /**
- * EntryParamManager class
- * Class that manages parameter values and types of entries
+ * EntryParamHandler class
+ * Handles parameter values and types of entries
  * Storage: World.inputParams / World.outputParams, each entryId -> { name: { value, dataType } }
  */
-export default class EntryParamManager {
+export default class EntryParamHandler {
   constructor(world = new World()) {
     // ECS world holding input/output param components
     this._world = world;

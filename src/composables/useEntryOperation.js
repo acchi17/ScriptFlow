@@ -3,7 +3,6 @@ import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
   const entryManager = inject('entryManager')
-  const entryParamManager = inject('entryParamManager')
   const entryDefinitionService = inject('entryDefinitionService')
   const entryConnectionManager = inject('entryConnectionManager')
   const entryLayoutManager = inject('entryLayoutManager')
@@ -18,8 +17,8 @@ export function useEntryOperation() {
     const blockId = entryManager.addEntry('block', name)
     entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
     const defaultParams = entryDefinitionService.getBlockParamDef(name)
-    entryParamManager.setInputParams(blockId, defaultParams.input)
-    entryParamManager.setOutputParams(blockId, defaultParams.output)
+    entryManager.paramHandler.setInputParams(blockId, defaultParams.input)
+    entryManager.paramHandler.setOutputParams(blockId, defaultParams.output)
     entryTypeStore.add(blockId, 'block', name)
     return blockId
   }
@@ -39,7 +38,7 @@ export function useEntryOperation() {
     }
     [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
-      entryParamManager.removeParams(eid)
+      entryManager.paramHandler.removeParams(eid)
       entryTypeStore.remove(eid)
     })
     cancelConnection()
@@ -89,23 +88,23 @@ export function useEntryOperation() {
   }
 
   const updateTick = entryManager.hierarchyHandler.updateTick
-  const outputParamsTick = entryParamManager.outputParamsTick
+  const outputParamsTick = entryManager.paramHandler.outputParamsTick
 
   const getInputParams = (entryId) => {
-    return entryParamManager.getInputParams(entryId)
+    return entryManager.paramHandler.getInputParams(entryId)
   }
 
   const getOutputParams = (entryId) => {
-    return entryParamManager.getOutputParams(entryId)
+    return entryManager.paramHandler.getOutputParams(entryId)
   }
 
   const setInputParam = (entryId, paramName, value) => {
-    entryParamManager.setInputParam(entryId, paramName, value)
+    entryManager.paramHandler.setInputParam(entryId, paramName, value)
   }
 
   const hasParams = (entryId) => {
-    return Object.keys(entryParamManager.getInputParamTypes(entryId)).length > 0 ||
-      Object.keys(entryParamManager.getOutputParamTypes(entryId)).length > 0
+    return Object.keys(entryManager.paramHandler.getInputParamTypes(entryId)).length > 0 ||
+      Object.keys(entryManager.paramHandler.getOutputParamTypes(entryId)).length > 0
   }
 
   /**
