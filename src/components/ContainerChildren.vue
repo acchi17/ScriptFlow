@@ -53,10 +53,14 @@ export default {
       removeEntry,
       reorderEntry,
       moveEntry,
-      isBlock
+      isBlock,
+      updateTick
     } = useEntryOperation()
 
-    const children = computed(() => getChildren(props.entryId))
+    const children = computed(() => {
+      updateTick.value
+      return getChildren(props.entryId)
+    })
     const dropAllowed = isDroppable(props.entryId)
 
     setOnDropCallback((event, index) => {

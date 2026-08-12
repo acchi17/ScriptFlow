@@ -90,6 +90,8 @@ export function useEntryOperation() {
     return entryManager.getChildren(entryId)
   }
 
+  const updateTick = entryManager.updateTick
+
   const getInputParams = (entryId) => {
     return entryParamManager.getInputParams(entryId)
   }
@@ -155,6 +157,7 @@ export function useEntryOperation() {
     getEntryName,
     getRootEntryId,
     getChildren,
+    updateTick,
     getInputParams,
     getOutputParams,
     setInputParam,

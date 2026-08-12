@@ -1,4 +1,4 @@
-import { ref, reactive } from 'vue'
+import { ref } from 'vue'
 import Block from '../models/Block'
 import Container from '../models/Container'
 import { World } from '../ecs/core/World'
@@ -13,10 +13,6 @@ export default class EntryManager {
     this._world = world;
     // Dictionary of entry IDs and objects
     this._entriesById = new Map();
-    // Dictionary of child IDs and their parent IDs
-    this._parentIdById = new Map();
-    // Dictionary of container IDs and their reactive arrays of child entry IDs
-    this._childrenById = new Map();
     // Cache of entryId → 1-based sequence number (DFS visual order)
     this._sequenceNumbers = new Map();
     // ID of the root container for sequence number computation
@@ -53,11 +49,11 @@ export default class EntryManager {
       for (const childId of childIds) {
         this._sequenceNumbers.set(childId, ++counter);
         if (this.isContainer(childId)) {
-          traverse(this._childrenById.get(childId));
+          traverse(this._world.hierarchies.get(childId)?.children ?? []);
         }
       }
     };
-    traverse(this._childrenById.get(this._rootId));
+    traverse(this._world.hierarchies.get(this._rootId)?.children ?? []);
     this._updateTick.value++;
   }
 
@@ -73,9 +69,9 @@ export default class EntryManager {
     // Overwrite if already registered
     this._entriesById.set(entry.id, entry);
 
-    // Containers get a reactive array to hold their child entry IDs
-    if (this.isContainer(entry.id) && !this._childrenById.has(entry.id)) {
-      this._childrenById.set(entry.id, reactive([]));
+    // Every entry gets a hierarchy component; only containers ever populate `children`
+    if (!this._world.hierarchies.has(entry.id)) {
+      this._world.hierarchies.add(entry.id, { parent: null, children: [] });
     }
 
     return true;
@@ -90,20 +86,26 @@ export default class EntryManager {
  * @private
  */
   _attachEntry(parentId, entryId, index) {
-    // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    // Only containers may receive children
+    if (!this.isContainer(parentId)) return false;
 
-    // Set parent-child relationship
-    this._parentIdById.set(entryId, parentId);
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
+
+    // Validate before mutating anything
+    if (index < 0 || index > parentHierarchy.children.length) return false;
 
     // Add directly to parent's children array
-    if (index >= 0 && index <= parentChildren.length) {
-      parentChildren.splice(index, 0, entryId);
-      this._rebuildSequenceNumbers();
-      return true;
+    parentHierarchy.children.splice(index, 0, entryId);
+
+    // Set parent-child relationship
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    if (entryHierarchy) {
+      entryHierarchy.parent = parentId;
     }
-    return false;
+
+    this._rebuildSequenceNumbers();
+    return true;
   }
 
   /**
@@ -117,20 +119,21 @@ export default class EntryManager {
     if (!entryId) return false;
 
     // Get parent entry
-    const parentId = this._parentIdById.get(entryId);
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const parentId = entryHierarchy?.parent;
     if (!parentId) return true;
 
     // Remove from parent's children array
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
-    const index = parentChildren.indexOf(entryId);
+    const index = parentHierarchy.children.indexOf(entryId);
     if (index === -1) return false;
 
-    parentChildren.splice(index, 1);
+    parentHierarchy.children.splice(index, 1);
 
     // Delete parent-child relationship
-    this._parentIdById.delete(entryId);
+    entryHierarchy.parent = null;
 
     return true;
   }
@@ -141,24 +144,19 @@ export default class EntryManager {
    * @private
    */
   _removeDescendants(entryId) {
-    // Process a copy since entries are removed from the map while iterating
-    const childIds = [...this._childrenById.get(entryId)];
+    // Process a copy since entries are removed from the store while iterating
+    const childIds = [...(this._world.hierarchies.get(entryId)?.children ?? [])];
     for (const childId of childIds) {
-      // Remove parent-child relationship
-      this._parentIdById.delete(childId);
-
       // If the child is a container, recursively process its descendants
       if (this.isContainer(childId)) {
         this._removeDescendants(childId);
       }
 
-      // Remove from entries map
+      // Remove from entries map and component stores
       this._entriesById.delete(childId);
       this._world.entryTypes.remove(childId);
+      this._world.hierarchies.remove(childId);
     }
-
-    // Drop the entry's own children entry
-    this._childrenById.delete(entryId);
   }
 
   /**
@@ -223,8 +221,8 @@ export default class EntryManager {
    * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
    */
   getChildren(entryId) {
-    const childIds = this._childrenById.get(entryId);
-    return childIds ? [...childIds] : [];
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy ? [...hierarchy.children] : [];
   }
 
   /**
@@ -241,7 +239,7 @@ export default class EntryManager {
    * @returns {string|null} Parent entry ID or null
    */
   getParentId(entryId) {
-    return this._parentIdById.get(entryId) || null;
+    return this._world.hierarchies.get(entryId)?.parent ?? null;
   }
 
   /**
@@ -255,7 +253,7 @@ export default class EntryManager {
     if (!this.isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
-    for (const childId of this._childrenById.get(entryId)) {
+    for (const childId of this._world.hierarchies.get(entryId)?.children ?? []) {
       const descendantIds = this.getAllDescendantIds(childId);
       descendantIds.forEach(id => ids.add(id));
     }
@@ -312,21 +310,19 @@ export default class EntryManager {
    */
   removeEntry(entryId) {
     // Get parent entry
-    const parentId = this._parentIdById.get(entryId);
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const parentId = entryHierarchy?.parent;
     if (!parentId) return false;
 
     // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
     // Remove from parent's children array
-    const index = parentChildren.indexOf(entryId);
+    const index = parentHierarchy.children.indexOf(entryId);
     if (index === -1) return false;
 
-    parentChildren.splice(index, 1);
-
-    // Delete parent-child relationship
-    this._parentIdById.delete(entryId);
+    parentHierarchy.children.splice(index, 1);
 
     // If the entry is a container, recursively remove all its descendants
     if (this.isContainer(entryId)) {
@@ -336,6 +332,7 @@ export default class EntryManager {
     // Remove the entry itself from the registry
     this._entriesById.delete(entryId);
     this._world.entryTypes.remove(entryId);
+    this._world.hierarchies.remove(entryId);
 
     this._rebuildSequenceNumbers();
     return true;
@@ -350,18 +347,18 @@ export default class EntryManager {
    */
   reorderEntry(parentId, entryId, index) {
     // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
     // Reorder within parent's children array
-    const currentIndex = parentChildren.indexOf(entryId);
+    const currentIndex = parentHierarchy.children.indexOf(entryId);
     if (currentIndex !== -1) {
       let targetIndex = index;
       if (index > currentIndex) {
         targetIndex = targetIndex - 1;
       }
-      const childId = parentChildren.splice(currentIndex, 1)[0];
-      parentChildren.splice(targetIndex, 0, childId);
+      const childId = parentHierarchy.children.splice(currentIndex, 1)[0];
+      parentHierarchy.children.splice(targetIndex, 0, childId);
       this._rebuildSequenceNumbers();
       return true;
     }
@@ -389,5 +386,4 @@ export default class EntryManager {
     }
     return this._attachEntry(newParentId, entryId, index);
   }
-
 }
