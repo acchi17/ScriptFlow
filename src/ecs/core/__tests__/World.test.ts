@@ -26,11 +26,15 @@ describe('World.despawn', () => {
     const id = world.spawn()
     world.entryTypes.add(id, { name: 'Add', type: 'block' })
     world.hierarchies.add(id, { parent: null, children: [] })
+    world.inputParams.add(id, { NumberA: { value: 0, dataType: 'integer' } })
+    world.outputParams.add(id, { Result: { value: 0, dataType: 'integer' } })
 
     world.despawn(id)
 
     expect(world.entryTypes.has(id)).toBe(false)
     expect(world.hierarchies.has(id)).toBe(false)
+    expect(world.inputParams.has(id)).toBe(false)
+    expect(world.outputParams.has(id)).toBe(false)
     expect(world.isAlive(id)).toBe(false)
   })
 })

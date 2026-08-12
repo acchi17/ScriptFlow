@@ -3,10 +3,13 @@ import { generateUUID } from './Entity';
 import type { EntityId } from './Entity';
 import type { EntryTypeComponent } from '../components/EntryTypeComponent';
 import type { HierarchyComponent } from '../components/HierarchyComponent';
+import type { EntryParamComponent } from '../components/EntryParamComponent';
 
 export class World {
   readonly entryTypes = new ComponentStore<EntryTypeComponent>();
   readonly hierarchies = new ComponentStore<HierarchyComponent>();
+  readonly inputParams = new ComponentStore<EntryParamComponent>();
+  readonly outputParams = new ComponentStore<EntryParamComponent>();
   private readonly _liveIds = new Set<EntityId>();
 
   spawn(id?: EntityId | null): EntityId {
@@ -19,6 +22,8 @@ export class World {
     this._liveIds.delete(id);
     this.entryTypes.remove(id);
     this.hierarchies.remove(id);
+    this.inputParams.remove(id);
+    this.outputParams.remove(id);
   }
 
   isAlive(id: EntityId): boolean {

@@ -1,17 +1,28 @@
-import { reactive } from 'vue'
+import { ref } from 'vue'
 import { convertValue } from '../utils/common.js'
+import { World } from '../ecs/core/World'
 
 /**
  * EntryParamManager class
  * Class that manages parameter values and types of entries
- * Internal storage: { paramName: { value, dataType } }
+ * Storage: World.inputParams / World.outputParams, each entryId -> { name: { value, dataType } }
  */
 export default class EntryParamManager {
-  constructor() {
-    // Dictionary of entry IDs and their input parameters: entryId -> { name: { value, dataType } }
-    this._inputParamsMap = new Map();
-    // Dictionary of entry IDs and their output parameters (reactive for UI updates)
-    this._outputParamsMap = reactive(new Map()); // entryId -> { name: { value, dataType } }
+  constructor(world = new World()) {
+    // ECS world holding input/output param components
+    this._world = world;
+    // Reactive counter incremented whenever an output parameter value/definition changes,
+    // since output params are read live by the UI while a script executes
+    this._outputParamsTick = ref(0);
+  }
+
+  /**
+   * Reactive counter that increments whenever output parameters change.
+   * Watch/read this to react to output param updates without deep-reactive storage.
+   * @returns {import('vue').Ref<number>}
+   */
+  get outputParamsTick() {
+    return this._outputParamsTick;
   }
 
   /**
@@ -21,7 +32,7 @@ export default class EntryParamManager {
    * @returns {any} Parameter value or undefined
    */
   getInputParam(entryId, paramName) {
-    const params = this._inputParamsMap.get(entryId);
+    const params = this._world.inputParams.get(entryId);
     return params?.[paramName]?.value;
   }
 
@@ -32,7 +43,7 @@ export default class EntryParamManager {
    * @returns {any} Parameter value or undefined
    */
   getOutputParam(entryId, paramName) {
-    const params = this._outputParamsMap.get(entryId);
+    const params = this._world.outputParams.get(entryId);
     return params?.[paramName]?.value;
   }
 
@@ -43,7 +54,7 @@ export default class EntryParamManager {
    * @returns {string|undefined} Type string or undefined
    */
   getInputParamType(entryId, paramName) {
-    const params = this._inputParamsMap.get(entryId);
+    const params = this._world.inputParams.get(entryId);
     return params?.[paramName]?.dataType;
   }
 
@@ -54,7 +65,7 @@ export default class EntryParamManager {
    * @returns {string|undefined} Type string or undefined
    */
   getOutputParamType(entryId, paramName) {
-    const params = this._outputParamsMap.get(entryId);
+    const params = this._world.outputParams.get(entryId);
     return params?.[paramName]?.dataType;
   }
 
@@ -64,7 +75,7 @@ export default class EntryParamManager {
    * @returns {Object} Input parameters object in the form { name: value }
    */
   getInputParams(entryId) {
-    const params = this._inputParamsMap.get(entryId) || {};
+    const params = this._world.inputParams.get(entryId) || {};
     return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.value]));
   }
 
@@ -74,7 +85,7 @@ export default class EntryParamManager {
    * @returns {Object} Output parameters object in the form { name: value }
    */
   getOutputParams(entryId) {
-    const params = this._outputParamsMap.get(entryId) || {};
+    const params = this._world.outputParams.get(entryId) || {};
     return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.value]));
   }
 
@@ -84,7 +95,7 @@ export default class EntryParamManager {
    * @returns {Object} Input parameter types in the form { name: type }
    */
   getInputParamTypes(entryId) {
-    const params = this._inputParamsMap.get(entryId) || {};
+    const params = this._world.inputParams.get(entryId) || {};
     return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
   }
 
@@ -94,7 +105,7 @@ export default class EntryParamManager {
    * @returns {Object} Output parameter types in the form { name: type }
    */
   getOutputParamTypes(entryId) {
-    const params = this._outputParamsMap.get(entryId) || {};
+    const params = this._world.outputParams.get(entryId) || {};
     return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
   }
 
@@ -104,7 +115,7 @@ export default class EntryParamManager {
    * @returns {boolean} True if the entry has at least one input parameter
    */
   hasInputParam(entryId) {
-    const params = this._inputParamsMap.get(entryId);
+    const params = this._world.inputParams.get(entryId);
     return params ? Object.keys(params).length > 0 : false;
   }
 
@@ -114,7 +125,7 @@ export default class EntryParamManager {
    * @returns {boolean} True if the entry has at least one output parameter
    */
   hasOutputParam(entryId) {
-    const params = this._outputParamsMap.get(entryId);
+    const params = this._world.outputParams.get(entryId);
     return params ? Object.keys(params).length > 0 : false;
   }
 
@@ -126,10 +137,8 @@ export default class EntryParamManager {
    */
   setInputParam(entryId, paramName, value) {
     if (!entryId || !paramName) return;
-    if (!this._inputParamsMap.has(entryId)) return;
-
-    const params = this._inputParamsMap.get(entryId);
-    if (!params[paramName]) return;
+    const params = this._world.inputParams.get(entryId);
+    if (!params?.[paramName]) return;
     params[paramName].value = convertValue(value, params[paramName].dataType);
   }
 
@@ -141,11 +150,10 @@ export default class EntryParamManager {
    */
   setOutputParam(entryId, paramName, value) {
     if (!entryId || !paramName) return;
-    if (!this._outputParamsMap.has(entryId)) return;
-
-    const params = this._outputParamsMap.get(entryId);
-    if (!params[paramName]) return;
+    const params = this._world.outputParams.get(entryId);
+    if (!params?.[paramName]) return;
     params[paramName].value = convertValue(value, params[paramName].dataType);
+    this._outputParamsTick.value++;
   }
 
   /**
@@ -155,7 +163,7 @@ export default class EntryParamManager {
    */
   setInputParams(entryId, inputParamDef = {}) {
     if (!entryId) return;
-    this._inputParamsMap.set(entryId, inputParamDef);
+    this._world.inputParams.add(entryId, inputParamDef);
   }
 
   /**
@@ -165,7 +173,8 @@ export default class EntryParamManager {
    */
   setOutputParams(entryId, outputParamDef = {}) {
     if (!entryId) return;
-    this._outputParamsMap.set(entryId, outputParamDef);
+    this._world.outputParams.add(entryId, outputParamDef);
+    this._outputParamsTick.value++;
   }
 
   /**
@@ -174,7 +183,8 @@ export default class EntryParamManager {
    */
   removeParams(entryId) {
     if (!entryId) return;
-    this._inputParamsMap.delete(entryId);
-    this._outputParamsMap.delete(entryId);
+    this._world.inputParams.remove(entryId);
+    this._world.outputParams.remove(entryId);
+    this._outputParamsTick.value++;
   }
 }

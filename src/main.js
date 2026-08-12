@@ -23,7 +23,7 @@ const app = createApp(App)
 // Create Managers
 const world = new World()
 const entryManager = new EntryManager(world)
-const entryParamManager = new EntryParamManager()
+const entryParamManager = new EntryParamManager(world)
 const entryLayoutManager = new EntryLayoutManager()
 const entryConnectionManager = new EntryConnectionManager()
 const socketManager = new SocketManager()

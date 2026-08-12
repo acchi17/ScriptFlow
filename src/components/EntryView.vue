@@ -58,7 +58,7 @@ export default {
 
   setup() {
     const { getSelectedEntryId: selectedEntryId } = useSystemState()
-    const { getEntryName, getInputParams, getOutputParams, setInputParam, isBlock } = useEntryOperation()
+    const { getEntryName, getInputParams, getOutputParams, setInputParam, isBlock, outputParamsTick } = useEntryOperation()
     const { getBlockDefinition } = useEntryDefinition()
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
@@ -83,9 +83,10 @@ export default {
     // Local copy of input param values for reactive display
     const localInputParams = ref({})
 
-    // Computed output params reads directly from the reactive EntryParamManager map,
-    // so it updates automatically when values change during execution
+    // Depends on outputParamsTick so this re-runs when output param values change during
+    // execution, since the underlying ECS store itself isn't deep-reactive
     const localOutputParams = computed(() => {
+      outputParamsTick.value
       const id = selectedEntryId.value
       return id ? getOutputParams(id) : {}
     })
