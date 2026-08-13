@@ -37,6 +37,7 @@ export default {
     const entryConnectionManager = inject('entryConnectionManager')
 
     const listItems = computed(() => {
+      entryConnectionManager.connectionsTick.value
       const connections = entryConnectionManager.getConnectionsByEndpoint(
         props.entryId, props.paramCategory, props.paramName
       )

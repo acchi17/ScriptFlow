@@ -18,4 +18,8 @@ export class ComponentStore<T> {
   has(entityId: EntityId): boolean {
     return this._store.has(entityId);
   }
+
+  entries(): IterableIterator<[EntityId, T]> {
+    return this._store.entries();
+  }
 }

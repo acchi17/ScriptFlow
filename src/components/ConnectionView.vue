@@ -36,6 +36,7 @@ export default {
     const entryLayoutManager = inject('entryLayoutManager')
 
     const connectionsWithLanes = computed(() => {
+      entryConnectionManager.connectionsTick.value
       const layoutMap = entryLayoutManager.layoutMap
       const connections = entryConnectionManager.getConnections()
 

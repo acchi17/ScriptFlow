@@ -27,7 +27,7 @@ const entryDefinitionService = new EntryDefinitionService(appConfig, platformSer
 const world = new World()
 const entryManager = new EntryManager(world, entryDefinitionService)
 const entryLayoutManager = new EntryLayoutManager()
-const entryConnectionManager = new EntryConnectionManager()
+const entryConnectionManager = new EntryConnectionManager(world)
 const socketManager = new SocketManager()
 
 // Create remaining Services

@@ -72,11 +72,11 @@ export function useSystemState() {
     })
 
   const isConnectedEndPoint = (entryId, paramName, paramCategory) =>
-    computed(() =>
-      entryConnectionManager
-        ? entryConnectionManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
-        : false
-    )
+    computed(() => {
+      if (!entryConnectionManager) return false
+      entryConnectionManager.connectionsTick.value
+      return entryConnectionManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
+    })
 
   const startConnection = (entryId, paramName, paramCategory, paramType) => {
     connectingSource.value = { entryId, paramName, paramCategory, paramType }
