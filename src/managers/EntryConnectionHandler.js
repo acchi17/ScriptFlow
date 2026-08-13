@@ -88,9 +88,65 @@ export default class EntryConnectionHandler {
     return false;
   }
 
-  // ---------------------------------------------------------------------------
-  // CRUD operations
-  // ---------------------------------------------------------------------------
+  /**
+   * Get a connection by its id.
+   * @param {string} connectionId
+   * @returns {Object|null}
+   */
+  getConnection(connectionId) {
+    const conn = this._world.connections.get(connectionId);
+    return conn ? { id: connectionId, output: conn.output, input: conn.input } : null;
+  }
+
+  /**
+   * Get all connections as an array.
+   * @returns {Array<Object>}
+   */
+  getConnections() {
+    const result = [];
+    for (const [id, conn] of this._world.connections.entries()) {
+      result.push({ id, output: conn.output, input: conn.input });
+    }
+    return result;
+  }
+
+  /**
+   * Get all connections that involve the given entry id
+   * (either as output or input).
+   * @param {string} entryId
+   * @returns {Array<Object>}
+   */
+  getConnectionsByEntryId(entryId) {
+    const result = [];
+    for (const [id, conn] of this._world.connections.entries()) {
+      if (conn.output.entryId === entryId || conn.input.entryId === entryId) {
+        result.push({ id, output: conn.output, input: conn.input });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Get all connections for a specific parameter endpoint.
+   * @param {string} entryId
+   * @param {'input'|'output'} category
+   * @param {string} paramName
+   * @returns {Array<Object>}
+   */
+  getConnectionsByEndpoint(entryId, category, paramName) {
+    const result = [];
+    for (const [id, conn] of this._world.connections.entries()) {
+      const out = conn.output;
+      const inp = conn.input;
+      if (
+        (out.entryId === entryId && out.category === category && out.paramName === paramName) ||
+        (inp.entryId === entryId && inp.category === category && inp.paramName === paramName)
+      ) {
+        result.push({ id, output: conn.output, input: conn.input });
+      }
+    }
+    return result;
+  }
 
   /**
    * Add a new connection between an output and an input endpoint.
@@ -155,66 +211,6 @@ export default class EntryConnectionHandler {
     ids.forEach(id => this._world.despawn(id));
     if (ids.length) this._connectionsTick.value++;
     return ids.length;
-  }
-
-  /**
-   * Get a connection by its id.
-   * @param {string} connectionId
-   * @returns {Object|null}
-   */
-  getConnection(connectionId) {
-    const conn = this._world.connections.get(connectionId);
-    return conn ? { id: connectionId, output: conn.output, input: conn.input } : null;
-  }
-
-  /**
-   * Get all connections as an array.
-   * @returns {Array<Object>}
-   */
-  getConnections() {
-    const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
-      result.push({ id, output: conn.output, input: conn.input });
-    }
-    return result;
-  }
-
-  /**
-   * Get all connections that involve the given entry id
-   * (either as output or input).
-   * @param {string} entryId
-   * @returns {Array<Object>}
-   */
-  getConnectionsByEntryId(entryId) {
-    const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
-      if (conn.output.entryId === entryId || conn.input.entryId === entryId) {
-        result.push({ id, output: conn.output, input: conn.input });
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Get all connections for a specific parameter endpoint.
-   * @param {string} entryId
-   * @param {'input'|'output'} category
-   * @param {string} paramName
-   * @returns {Array<Object>}
-   */
-  getConnectionsByEndpoint(entryId, category, paramName) {
-    const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
-      const out = conn.output;
-      const inp = conn.input;
-      if (
-        (out.entryId === entryId && out.category === category && out.paramName === paramName) ||
-        (inp.entryId === entryId && inp.category === category && inp.paramName === paramName)
-      ) {
-        result.push({ id, output: conn.output, input: conn.input });
-      }
-    }
-    return result;
   }
 
   /**

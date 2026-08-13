@@ -114,7 +114,7 @@ export default class EntryManager {
       }
 
       this.connectionHandler.removeConnectionsByEntryId(childId);
-      this.paramHandler.removeParams(childId);
+      this.paramHandler.removeParamDef(childId);
       this._world.despawn(childId);
     }
   }
@@ -284,8 +284,8 @@ export default class EntryManager {
     this._world.hierarchies.add(entryId, { parent: null, children: [] });
     if (type === 'block') {
       const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
-      this.paramHandler.setInputParams(entryId, defaultParams.input);
-      this.paramHandler.setOutputParams(entryId, defaultParams.output);
+      this.paramHandler.setInputParamDef(entryId, defaultParams.input);
+      this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
     }
     return entryId;
   }
@@ -316,7 +316,7 @@ export default class EntryManager {
     }
 
     this.connectionHandler.removeConnectionsByEntryId(entryId);
-    this.paramHandler.removeParams(entryId);
+    this.paramHandler.removeParamDef(entryId);
     this._world.despawn(entryId);
 
     this._rebuildSequenceNumbers();

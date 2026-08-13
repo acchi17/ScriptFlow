@@ -78,7 +78,7 @@ export default class RecipeDeserializer {
     const descendantIds = this.entryManager.getAllDescendants(rootId)
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
-      this.entryManager.paramHandler.removeParams(id)
+      this.entryManager.paramHandler.removeParamDef(id)
       this.entryLayoutManager.deleteLayout(id)
     })
 

@@ -36,8 +36,8 @@ function addBlock(ctx, parentId, name, index) {
   const blockId = ctx.entryManager.addEntry('block', name)
   ctx.entryManager.moveEntry(blockId, parentId, index)
   const defs = ctx.entryDefinitionService.getBlockParamDef(name)
-  ctx.entryManager.paramHandler.setInputParams(blockId, defs.input)
-  ctx.entryManager.paramHandler.setOutputParams(blockId, defs.output)
+  ctx.entryManager.paramHandler.setInputParamDef(blockId, defs.input)
+  ctx.entryManager.paramHandler.setOutputParamDef(blockId, defs.output)
   return blockId
 }
 

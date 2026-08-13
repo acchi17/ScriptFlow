@@ -130,6 +130,38 @@ export default class EntryParamHandler {
   }
 
   /**
+   * Set entry input parameter definitions
+   * @param {string} entryId - ID of the entry
+   * @param {Object} inputParamDef - Input parameter definitions in the form { name: { value, dataType } }
+   */
+  setInputParamDef(entryId, inputParamDef = {}) {
+    if (!entryId) return;
+    this._world.inputParams.add(entryId, inputParamDef);
+  }
+
+  /**
+   * Set entry output parameter definitions
+   * @param {string} entryId - ID of the entry
+   * @param {Object} outputParamDef - Output parameter definitions in the form { name: { value, dataType } }
+   */
+  setOutputParamDef(entryId, outputParamDef = {}) {
+    if (!entryId) return;
+    this._world.outputParams.add(entryId, outputParamDef);
+    this._outputParamsTick.value++;
+  }
+
+  /**
+   * Remove all parameter data for an entry
+   * @param {string} entryId - ID of the entry
+   */
+  removeParamDef(entryId) {
+    if (!entryId) return;
+    this._world.inputParams.remove(entryId);
+    this._world.outputParams.remove(entryId);
+    this._outputParamsTick.value++;
+  }
+
+  /**
    * Set a single input parameter
    * @param {string} entryId - ID of the entry
    * @param {string} paramName - Name of the input parameter
@@ -153,38 +185,6 @@ export default class EntryParamHandler {
     const params = this._world.outputParams.get(entryId);
     if (!params?.[paramName]) return;
     params[paramName].value = convertValue(value, params[paramName].dataType);
-    this._outputParamsTick.value++;
-  }
-
-  /**
-   * Set entry input parameter definitions
-   * @param {string} entryId - ID of the entry
-   * @param {Object} inputParamDef - Input parameter definitions in the form { name: { value, dataType } }
-   */
-  setInputParams(entryId, inputParamDef = {}) {
-    if (!entryId) return;
-    this._world.inputParams.add(entryId, inputParamDef);
-  }
-
-  /**
-   * Set entry output parameter definitions
-   * @param {string} entryId - ID of the entry
-   * @param {Object} outputParamDef - Output parameter definitions in the form { name: { value, dataType } }
-   */
-  setOutputParams(entryId, outputParamDef = {}) {
-    if (!entryId) return;
-    this._world.outputParams.add(entryId, outputParamDef);
-    this._outputParamsTick.value++;
-  }
-
-  /**
-   * Remove all parameter data for an entry
-   * @param {string} entryId - ID of the entry
-   */
-  removeParams(entryId) {
-    if (!entryId) return;
-    this._world.inputParams.remove(entryId);
-    this._world.outputParams.remove(entryId);
     this._outputParamsTick.value++;
   }
 }
