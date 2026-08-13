@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import EntryManager from '@/managers/EntryManager.js'
-import EntryLayoutManager from '@/managers/EntryLayoutManager.js'
 import SocketManager from '@/managers/SocketManager.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
 import EntryPersistanceService from '@/services/entry_persistance/EntryPersistanceService.js'
@@ -13,14 +12,13 @@ async function createContext() {
   await entryDefinitionService.loadBlockDefinitions()
 
   const entryManager = new EntryManager(undefined, entryDefinitionService)
-  const entryLayoutManager = new EntryLayoutManager()
   const socketManager = new SocketManager()
 
   const platformService = { readRecipe: async () => null, writeRecipe: async () => {} }
 
   const service = new EntryPersistanceService(
     platformService, entryManager,
-    entryLayoutManager, socketManager, entryDefinitionService
+    socketManager, entryDefinitionService
   )
 
   const rootId = entryManager.addEntry('container', 'root-container')
@@ -28,7 +26,7 @@ async function createContext() {
 
   return {
     entryManager,
-    entryLayoutManager, socketManager, entryDefinitionService, service, rootId
+    socketManager, entryDefinitionService, service, rootId
   }
 }
 
@@ -201,7 +199,7 @@ describe('EntryPersistanceService round trip', () => {
     const containerId = ctx.entryManager.addEntry('container', 'ToBeGone')
     ctx.entryManager.moveEntry(containerId, ctx.rootId, 1)
     const block2Id = addBlock(ctx, containerId, 'Mul', 0)
-    ctx.entryLayoutManager.setLayout(block1Id, 10, 20)
+    ctx.entryManager.addLayout(block1Id, 10, 20)
 
     const smallRecipe = ctx.service.buildRecipe()
     smallRecipe.root.children = []
@@ -214,6 +212,6 @@ describe('EntryPersistanceService round trip', () => {
     expect(ctx.entryManager.isAlive(block2Id)).toBe(false)
     expect(ctx.entryManager.paramHandler.hasInputParam(block1Id)).toBe(false)
     expect(ctx.entryManager.paramHandler.hasInputParam(block2Id)).toBe(false)
-    expect(ctx.entryLayoutManager.getLayout(block1Id)).toBeUndefined()
+    expect(ctx.entryManager.getLayout(block1Id)).toBeUndefined()
   })
 })

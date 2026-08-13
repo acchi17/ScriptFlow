@@ -1,9 +1,8 @@
-import { inject, watch, nextTick } from 'vue'
+import { computed, inject, watch, nextTick } from 'vue'
 import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
   const entryManager = inject('entryManager')
-  const entryLayoutManager = inject('entryLayoutManager')
   const {
     getSelectedEntryId,
     clearSelection,
@@ -74,7 +73,7 @@ export function useEntryOperation() {
     return entryManager.getChildren(entryId)
   }
 
-  const updateTick = entryManager.updateTick
+  const hierarchyTick = entryManager.hierarchyTick
   const outputParamsTick = entryManager.paramHandler.outputParamsTick
 
   const getInputParams = (entryId) => {
@@ -97,13 +96,13 @@ export function useEntryOperation() {
   /**
    * Watches the entry panel for structural changes and, on each change, remeasures the
    * Y position and height of every entry's header element, writing them into
-   * EntryLayoutManager. Used to align horizontal lines in the connection panel with
+   * EntryManager. Used to align horizontal lines in the connection panel with
    * entry headers.
    *
    * @param {Ref<HTMLElement>} entryPanelRef - Ref to the entry panel (.entry-panel)
-   * @returns {Map<string, { y: number, height: number }>} Reactive layout map keyed by
-   *   entryId, kept in sync by EntryLayoutManager. Consumers (e.g. ConnectionView) read it
-   *   to position connection lines against entry headers.
+   * @returns {ComputedRef<Array<[string, { y: number, height: number }]>>} Reactive layout
+   *   entries keyed by entryId, kept in sync by EntryManager. Consumers (e.g. ConnectionView)
+   *   read it to position connection lines against entry headers.
    */
   const trackEntryLayout = (entryPanelRef) => {
     function measureEntries() {
@@ -112,10 +111,10 @@ export function useEntryOperation() {
       const panelRect = entryPanelRef.value.getBoundingClientRect()
 
       const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
-      entryLayoutManager.clearAll()
+      entryManager.clearLayouts()
       for (const node of nodes) {
         const rect = node.getBoundingClientRect()
-        entryLayoutManager.setLayout(
+        entryManager.addLayout(
           node.dataset.entryId,
           rect.top - panelRect.top,
           rect.height
@@ -124,9 +123,12 @@ export function useEntryOperation() {
     }
 
     // Re-measure on structural changes (add/remove/reorder entries)
-    watch(() => entryManager.updateTick.value, () => nextTick(() => measureEntries()))
+    watch(() => entryManager.hierarchyTick.value, () => nextTick(() => measureEntries()))
 
-    return entryLayoutManager.layoutMap
+    return computed(() => {
+      entryManager.layoutsTick.value
+      return entryManager.getAllLayouts()
+    })
   }
 
   return {
@@ -141,7 +143,7 @@ export function useEntryOperation() {
     getEntryName,
     getRootEntryId,
     getChildren,
-    updateTick,
+    hierarchyTick,
     outputParamsTick,
     getInputParams,
     getOutputParams,

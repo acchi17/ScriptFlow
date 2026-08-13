@@ -56,7 +56,6 @@ export function useSystemState() {
   const isConnectingTarget = (entryId) =>
     computed(() => {
       if (connectingSource.value === null) return false
-      entryManager.updateTick.value
       const srcId = connectingSource.value.entryId
       const srcSeq = entryManager.getSequenceNumber(srcId)
       const dstSeq = entryManager.getSequenceNumber(entryId)

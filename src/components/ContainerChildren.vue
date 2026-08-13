@@ -54,11 +54,11 @@ export default {
       reorderEntry,
       moveEntry,
       isBlock,
-      updateTick
+      hierarchyTick
     } = useEntryOperation()
 
     const children = computed(() => {
-      updateTick.value
+      hierarchyTick.value
       return getChildren(props.entryId)
     })
     const dropAllowed = isDroppable(props.entryId)

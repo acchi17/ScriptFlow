@@ -4,7 +4,6 @@ import './assets/styles/variables.css'
 import App from './App.vue'
 import appConfig from './config/app-config'
 import EntryManager from './managers/EntryManager'
-import EntryLayoutManager from './managers/EntryLayoutManager'
 import SocketManager from './managers/SocketManager'
 import { World } from './ecs/core/World'
 import FileService from './services/file/FileService'
@@ -25,7 +24,6 @@ const entryDefinitionService = new EntryDefinitionService(appConfig, platformSer
 // Create Managers
 const world = new World()
 const entryManager = new EntryManager(world, entryDefinitionService)
-const entryLayoutManager = new EntryLayoutManager()
 const socketManager = new SocketManager()
 
 // Create remaining Services
@@ -35,12 +33,11 @@ const entryExecutionService = new EntryExecutionService(
 )
 const entryPersistanceService = new EntryPersistanceService(
   platformService, entryManager,
-  entryLayoutManager, socketManager, entryDefinitionService
+  socketManager, entryDefinitionService
 )
 
 // Provide
 app.provide('entryManager', entryManager)
-app.provide('entryLayoutManager', entryLayoutManager)
 app.provide('world', world)
 app.provide('socketManager', socketManager)
 app.provide('platformService', platformService)

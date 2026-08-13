@@ -8,9 +8,8 @@ import { FORMAT_VERSION } from './recipeFormat'
  */
 export default class RecipeDeserializer {
   constructor(entryManager,
-    entryLayoutManager, socketManager, entryDefinitionService) {
+    socketManager, entryDefinitionService) {
     this.entryManager = entryManager
-    this.entryLayoutManager = entryLayoutManager
     this.socketManager = socketManager
     this.entryDefinitionService = entryDefinitionService
   }
@@ -79,7 +78,6 @@ export default class RecipeDeserializer {
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
       this.entryManager.paramHandler.removeParamDef(id)
-      this.entryLayoutManager.deleteLayout(id)
     })
 
     const childIds = this.entryManager.getChildren(rootId)

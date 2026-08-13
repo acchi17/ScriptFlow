@@ -19,6 +19,10 @@ export class ComponentStore<T> {
     return this._store.has(entityId);
   }
 
+  clear(): void {
+    this._store.clear();
+  }
+
   entries(): IterableIterator<[EntityId, T]> {
     return this._store.entries();
   }

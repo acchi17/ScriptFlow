@@ -30,19 +30,6 @@ export default class EntryConnectionHandler {
   }
 
   /**
-   * Reactive counter that increments whenever the set of connections changes.
-   * Watch/read this to react to connection changes without deep reactivity.
-   * @returns {import('vue').Ref<number>}
-   */
-  get connectionsTick() {
-    return this._connectionsTick;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Internal helpers
-  // ---------------------------------------------------------------------------
-
-  /**
    * Validate an endpoint object.
    * @param {Object} endpoint
    * @returns {boolean}
@@ -86,6 +73,15 @@ export default class EntryConnectionHandler {
       }
     }
     return false;
+  }
+
+  /**
+   * Reactive counter that increments whenever the set of connections changes.
+   * Watch/read this to react to connection changes without deep reactivity.
+   * @returns {import('vue').Ref<number>}
+   */
+  get connectionsTick() {
+    return this._connectionsTick;
   }
 
   /**

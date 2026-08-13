@@ -5,6 +5,7 @@ import type { EntryTypeComponent } from '../components/EntryTypeComponent';
 import type { HierarchyComponent } from '../components/HierarchyComponent';
 import type { EntryParamComponent } from '../components/EntryParamComponent';
 import type { EntryConnectionComponent } from '../components/EntryConnectionComponent';
+import type { EntryLayoutComponent } from '../components/EntryLayoutComponent';
 
 export class World {
   readonly entryTypes = new ComponentStore<EntryTypeComponent>();
@@ -12,6 +13,7 @@ export class World {
   readonly inputParams = new ComponentStore<EntryParamComponent>();
   readonly outputParams = new ComponentStore<EntryParamComponent>();
   readonly connections = new ComponentStore<EntryConnectionComponent>();
+  readonly layouts = new ComponentStore<EntryLayoutComponent>();
   private readonly _liveIds = new Set<EntityId>();
 
   spawn(id?: EntityId | null): EntityId {
@@ -27,6 +29,7 @@ export class World {
     this.inputParams.remove(id);
     this.outputParams.remove(id);
     this.connections.remove(id);
+    this.layouts.remove(id);
   }
 
   isAlive(id: EntityId): boolean {
