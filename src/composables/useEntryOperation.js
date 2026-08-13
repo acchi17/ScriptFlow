@@ -3,10 +3,8 @@ import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
   const entryManager = inject('entryManager')
-  const entryDefinitionService = inject('entryDefinitionService')
   const entryConnectionManager = inject('entryConnectionManager')
   const entryLayoutManager = inject('entryLayoutManager')
-  const entryTypeStore = inject('entryTypeStore')
   const {
     getSelectedEntryId,
     clearSelection,
@@ -16,17 +14,12 @@ export function useEntryOperation() {
   const addBlock = (parentId, name, index) => {
     const blockId = entryManager.addEntry('block', name)
     entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
-    const defaultParams = entryDefinitionService.getBlockParamDef(name)
-    entryManager.paramHandler.setInputParams(blockId, defaultParams.input)
-    entryManager.paramHandler.setOutputParams(blockId, defaultParams.output)
-    entryTypeStore.add(blockId, 'block', name)
     return blockId
   }
 
   const addContainer = (parentId, name, index) => {
     const containerId = entryManager.addEntry('container', name)
     entryManager.hierarchyHandler.moveEntry(containerId, parentId, index)
-    entryTypeStore.add(containerId, 'container', name)
     return containerId
   }
 
@@ -39,7 +32,6 @@ export function useEntryOperation() {
     [entryId, ...descendantIds].forEach(eid => {
       entryConnectionManager.removeConnectionsByEntryId(eid)
       entryManager.paramHandler.removeParams(eid)
-      entryTypeStore.remove(eid)
     })
     cancelConnection()
     entryManager.removeEntry(entryId)

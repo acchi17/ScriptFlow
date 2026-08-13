@@ -8,14 +8,15 @@ import EntryPersistanceService from '@/services/entry_persistance/EntryPersistan
 import blockDefinitionsRaw from '../../../../public/settings/BlockDefinitions.json'
 
 async function createContext() {
-  const entryManager = new EntryManager()
-  const entryConnectionManager = new EntryConnectionManager()
-  const entryLayoutManager = new EntryLayoutManager()
-  const socketManager = new SocketManager()
   const entryDefinitionService = new EntryDefinitionService({}, {
     readBlockDefinitions: async () => blockDefinitionsRaw
   })
   await entryDefinitionService.loadBlockDefinitions()
+
+  const entryManager = new EntryManager(undefined, entryDefinitionService)
+  const entryConnectionManager = new EntryConnectionManager()
+  const entryLayoutManager = new EntryLayoutManager()
+  const socketManager = new SocketManager()
 
   const platformService = { readRecipe: async () => null, writeRecipe: async () => {} }
 

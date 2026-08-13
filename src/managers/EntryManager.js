@@ -7,9 +7,11 @@ import EntryParamHandler from './EntryParamHandler'
  * Class that manages parent-child relationships between entries
  */
 export default class EntryManager {
-  constructor(world = new World()) {
+  constructor(world = new World(), entryDefnitionStore = null) {
     // ECS world holding entry type components
     this._world = world;
+    // Provides block definitions (parameters, command) for entries
+    this.entryDefnitionStore = entryDefnitionStore;
     // Handles hierarchy structure (parent/children, root, sequence numbers)
     this.hierarchyHandler = new EntryHierarchyHandler(world, (entryId) => this.isContainer(entryId));
     // Handles parameter values and types of entries
@@ -81,6 +83,16 @@ export default class EntryManager {
   }
 
   /**
+   * Get the command of an entry's block definition
+   * @param {string} entryId - ID of the entry
+   * @returns {string|undefined} Command string, or undefined
+   */
+  getEntryCommand(entryId) {
+    const entryName = this.getEntryName(entryId);
+    return this.entryDefnitionStore?.getBlockDefinition(entryName)?.command;
+  }
+
+  /**
    * Set the name of an entry
    * @param {string} entryId - ID of the entry
    * @param {string} name - New name for the entry
@@ -102,6 +114,11 @@ export default class EntryManager {
     const entryId = this._world.spawn(id);
     this._world.entryTypes.add(entryId, { name, type });
     this._world.hierarchies.add(entryId, { parent: null, children: [] });
+    if (type === 'block') {
+      const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
+      this.paramHandler.setInputParams(entryId, defaultParams.input);
+      this.paramHandler.setOutputParams(entryId, defaultParams.output);
+    }
     return entryId;
   }
 

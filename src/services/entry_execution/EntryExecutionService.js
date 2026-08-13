@@ -12,14 +12,12 @@ export default class EntryExecutionService {
    * @param {EntryManager} entryManager Entry manager instance (optional)
    * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
-   * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
+  constructor(config, entryManager = null, entryConnectionManager = null, executionLogService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
     this.entryManager = entryManager;
     this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
-    this.entryDefinitionService = entryDefinitionService;
     this._executionStack = []; // Stack to track currently executing entries
     
     // Centralized management of execution IDs
@@ -74,9 +72,9 @@ export default class EntryExecutionService {
     let result = {};
     try {
       // Execute script based on the block definition's command
-      const entryName = this.entryManager.getEntryName(entryId);
-      const command = this.entryDefinitionService?.getBlockDefinition(entryName)?.command;
+      const command = this.entryManager.getEntryCommand(entryId);
       if (command === undefined) {
+        const entryName = this.entryManager.getEntryName(entryId);
         throw new Error(`No command found for block "${entryName}"`);
       }
       result = await this.scriptExecutionService.executeScript(command, inputParams);
