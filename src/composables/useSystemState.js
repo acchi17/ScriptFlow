@@ -56,10 +56,10 @@ export function useSystemState() {
   const isConnectingTarget = (entryId) =>
     computed(() => {
       if (connectingSource.value === null) return false
-      entryManager.hierarchyHandler.updateTick.value
+      entryManager.updateTick.value
       const srcId = connectingSource.value.entryId
-      const srcSeq = entryManager.hierarchyHandler.getSequenceNumber(srcId)
-      const dstSeq = entryManager.hierarchyHandler.getSequenceNumber(entryId)
+      const srcSeq = entryManager.getSequenceNumber(srcId)
+      const dstSeq = entryManager.getSequenceNumber(entryId)
       if (dstSeq === null || srcSeq === null) return false
       if (connectingSource.value.paramCategory === 'input') {
         if (!entryManager.paramHandler.hasOutputParam(entryId)) return false

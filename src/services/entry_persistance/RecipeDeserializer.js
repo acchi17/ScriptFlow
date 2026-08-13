@@ -42,7 +42,7 @@ export default class RecipeDeserializer {
 
     await this._clearRecipe()
 
-    const rootId = this.entryManager.hierarchyHandler.getRootEntry()
+    const rootId = this.entryManager.getRootEntry()
     if (!rootId) {
       throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
     }
@@ -58,7 +58,7 @@ export default class RecipeDeserializer {
     this._restoreConnections(recipe, idMap, warnings)
     await this._restoreComm(recipe.root, idMap)
 
-    const entryCount = this.entryManager.hierarchyHandler.getAllDescendants(rootId).length - 1
+    const entryCount = this.entryManager.getAllDescendants(rootId).length - 1
     const connectionCount = this.entryManager.connectionHandler.getConnections().length
 
     return { entryCount, connectionCount, warnings }
@@ -70,19 +70,19 @@ export default class RecipeDeserializer {
    * @private
    */
   async _clearRecipe() {
-    const rootId = this.entryManager.hierarchyHandler.getRootEntry()
+    const rootId = this.entryManager.getRootEntry()
     if (!rootId) return
 
     this.entryManager.connectionHandler.clearConnections()
 
-    const descendantIds = this.entryManager.hierarchyHandler.getAllDescendants(rootId)
+    const descendantIds = this.entryManager.getAllDescendants(rootId)
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
       this.entryManager.paramHandler.removeParams(id)
       this.entryLayoutManager.deleteLayout(id)
     })
 
-    const childIds = this.entryManager.hierarchyHandler.getChildren(rootId)
+    const childIds = this.entryManager.getChildren(rootId)
     childIds.forEach(childId => this.entryManager.removeEntry(childId))
 
     await this.socketManager.release(rootId)
@@ -107,7 +107,7 @@ export default class RecipeDeserializer {
 
     if (node.type === 'container') {
       const containerId = this.entryManager.addEntry(node.type, node.name, node.id)
-      this.entryManager.hierarchyHandler.moveEntry(containerId, parentId, index)
+      this.entryManager.moveEntry(containerId, parentId, index)
       idMap.set(node.id, containerId)
 
       const children = Array.isArray(node.children) ? node.children : []
@@ -118,7 +118,7 @@ export default class RecipeDeserializer {
     }
 
     const blockId = this.entryManager.addEntry(node.type, node.name, node.id)
-    this.entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
+    this.entryManager.moveEntry(blockId, parentId, index)
     idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)
@@ -170,8 +170,8 @@ export default class RecipeDeserializer {
         return
       }
 
-      const outputSeq = this.entryManager.hierarchyHandler.getSequenceNumber(output.entryId)
-      const inputSeq = this.entryManager.hierarchyHandler.getSequenceNumber(input.entryId)
+      const outputSeq = this.entryManager.getSequenceNumber(output.entryId)
+      const inputSeq = this.entryManager.getSequenceNumber(input.entryId)
       if (outputSeq === null || inputSeq === null || outputSeq >= inputSeq) {
         warnings.push(`Dropped connection: output must precede input in execution order (${output.entryId} -> ${input.entryId})`)
         return

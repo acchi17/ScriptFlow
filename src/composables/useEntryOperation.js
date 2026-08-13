@@ -12,41 +12,37 @@ export function useEntryOperation() {
 
   const addBlock = (parentId, name, index) => {
     const blockId = entryManager.addEntry('block', name)
-    entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
+    entryManager.moveEntry(blockId, parentId, index)
     return blockId
   }
 
   const addContainer = (parentId, name, index) => {
     const containerId = entryManager.addEntry('container', name)
-    entryManager.hierarchyHandler.moveEntry(containerId, parentId, index)
+    entryManager.moveEntry(containerId, parentId, index)
     return containerId
   }
 
   const removeEntry = (entryId) => {
     const selectedId = getSelectedEntryId.value
-    const descendantIds = entryManager.hierarchyHandler.getAllDescendants(entryId)
+    const descendantIds = entryManager.getAllDescendants(entryId)
     if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    [entryId, ...descendantIds].forEach(eid => {
-      entryManager.connectionHandler.removeConnectionsByEntryId(eid)
-      entryManager.paramHandler.removeParams(eid)
-    })
     cancelConnection()
     entryManager.removeEntry(entryId)
   }
 
   const reorderEntry = (parentId, entryId, index) => {
-    entryManager.hierarchyHandler.reorderEntry(parentId, entryId, index)
+    entryManager.reorderEntry(parentId, entryId, index)
   }
 
   const moveEntry = (entryId, targetParentId, index) => {
-    entryManager.hierarchyHandler.moveEntry(entryId, targetParentId, index)
+    entryManager.moveEntry(entryId, targetParentId, index)
   }
 
   const clearContainer = (entryId) => {
     if (!entryManager.isContainer(entryId)) return
-    const childIds = entryManager.hierarchyHandler.getChildren(entryId)
+    const childIds = entryManager.getChildren(entryId)
     childIds.forEach(childId => removeEntry(childId))
   }
 
@@ -59,11 +55,11 @@ export function useEntryOperation() {
   }
 
   const getAllDescendantIds = (entryId) => {
-    return entryManager.hierarchyHandler.getAllDescendants(entryId)
+    return entryManager.getAllDescendants(entryId)
   }
 
   const getParentId = (entryId) => {
-    return entryManager.hierarchyHandler.getParent(entryId)
+    return entryManager.getParent(entryId)
   }
 
   const getEntryName = (entryId) => {
@@ -71,14 +67,14 @@ export function useEntryOperation() {
   }
 
   const getRootEntryId = () => {
-    return entryManager.hierarchyHandler.getRootEntry()
+    return entryManager.getRootEntry()
   }
 
   const getChildren = (entryId) => {
-    return entryManager.hierarchyHandler.getChildren(entryId)
+    return entryManager.getChildren(entryId)
   }
 
-  const updateTick = entryManager.hierarchyHandler.updateTick
+  const updateTick = entryManager.updateTick
   const outputParamsTick = entryManager.paramHandler.outputParamsTick
 
   const getInputParams = (entryId) => {
@@ -128,7 +124,7 @@ export function useEntryOperation() {
     }
 
     // Re-measure on structural changes (add/remove/reorder entries)
-    watch(() => entryManager.hierarchyHandler.updateTick.value, () => nextTick(() => measureEntries()))
+    watch(() => entryManager.updateTick.value, () => nextTick(() => measureEntries()))
 
     return entryLayoutManager.layoutMap
   }
