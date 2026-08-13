@@ -10,13 +10,11 @@ export default class EntryExecutionService {
    * Constructor
    * @param {Object} config Configuration object
    * @param {EntryManager} entryManager Entry manager instance (optional)
-   * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    */
-  constructor(config, entryManager = null, entryConnectionManager = null, executionLogService = null) {
+  constructor(config, entryManager = null, executionLogService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
     this.entryManager = entryManager;
-    this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
     this._executionStack = []; // Stack to track currently executing entries
     
@@ -45,10 +43,10 @@ export default class EntryExecutionService {
    */
   _resolveInputParams(entryId) {
     const base = this.entryManager ? this.entryManager.paramHandler.getInputParams(entryId) : {};
-    if (!this.entryConnectionManager) return base;
+    if (!this.entryManager) return base;
 
     const result = { ...base };
-    const connections = this.entryConnectionManager
+    const connections = this.entryManager.connectionHandler
       .getConnectionsByEntryId(entryId)
       .filter(conn => conn.input.entryId === entryId);
     for (const conn of connections) {

@@ -19,7 +19,6 @@ const connectingSource = ref(null) // null | { entryId, paramName, paramCategory
 
 export function useSystemState() {
   const entryManager = inject('entryManager')
-  const entryConnectionManager = inject('entryConnectionManager')
 
   // --- drag & drop ---
   const activateDragging = () => { cancelConnection(); isDragging.value = true }
@@ -73,9 +72,9 @@ export function useSystemState() {
 
   const isConnectedEndPoint = (entryId, paramName, paramCategory) =>
     computed(() => {
-      if (!entryConnectionManager) return false
-      entryConnectionManager.connectionsTick.value
-      return entryConnectionManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
+      if (!entryManager) return false
+      entryManager.connectionHandler.connectionsTick.value
+      return entryManager.connectionHandler.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
     })
 
   const startConnection = (entryId, paramName, paramCategory, paramType) => {
@@ -93,7 +92,7 @@ export function useSystemState() {
     const [outputEndpoint, inputEndpoint] = source.paramCategory === 'output'
       ? [sourceEndpoint, targetEndpoint]
       : [targetEndpoint, sourceEndpoint]
-    entryConnectionManager.addConnection(outputEndpoint, inputEndpoint)
+    entryManager.connectionHandler.addConnection(outputEndpoint, inputEndpoint)
     cancelConnection()
   }
 

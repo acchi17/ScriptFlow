@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest'
 import EntryManager from '@/managers/EntryManager.js'
-import EntryConnectionManager from '@/managers/EntryConnectionManager.js'
 import EntryLayoutManager from '@/managers/EntryLayoutManager.js'
 import SocketManager from '@/managers/SocketManager.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
@@ -14,14 +13,13 @@ async function createContext() {
   await entryDefinitionService.loadBlockDefinitions()
 
   const entryManager = new EntryManager(undefined, entryDefinitionService)
-  const entryConnectionManager = new EntryConnectionManager()
   const entryLayoutManager = new EntryLayoutManager()
   const socketManager = new SocketManager()
 
   const platformService = { readRecipe: async () => null, writeRecipe: async () => {} }
 
   const service = new EntryPersistanceService(
-    platformService, entryManager, entryConnectionManager,
+    platformService, entryManager,
     entryLayoutManager, socketManager, entryDefinitionService
   )
 
@@ -29,7 +27,7 @@ async function createContext() {
   entryManager.hierarchyHandler.moveEntry(rootId, null, 0)
 
   return {
-    entryManager, entryConnectionManager,
+    entryManager,
     entryLayoutManager, socketManager, entryDefinitionService, service, rootId
   }
 }
@@ -55,7 +53,7 @@ describe('EntryPersistanceService round trip', () => {
     const mulBlockId = addBlock(ctx, subContainerId, 'Mul', 0)
     ctx.entryManager.paramHandler.setInputParam(mulBlockId, 'NumberB', 5)
 
-    const connId = ctx.entryConnectionManager.addConnection(
+    const connId = ctx.entryManager.connectionHandler.addConnection(
       { entryId: addBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
       { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
@@ -78,7 +76,7 @@ describe('EntryPersistanceService round trip', () => {
     const restoredMulId = ctx.entryManager.hierarchyHandler.getChildren(restoredSubId)[0]
     expect(ctx.entryManager.paramHandler.getInputParams(restoredMulId)).toEqual({ NumberA: 0, NumberB: 5 })
 
-    const connections = ctx.entryConnectionManager.getConnections()
+    const connections = ctx.entryManager.connectionHandler.getConnections()
     expect(connections).toHaveLength(1)
     expect(connections[0].output.entryId).toBe(addBlockId)
     expect(connections[0].input.entryId).toBe(mulBlockId)
@@ -89,7 +87,7 @@ describe('EntryPersistanceService round trip', () => {
     const addBlockId = addBlock(ctx, ctx.rootId, 'Add', 0)
     const mulBlockId = addBlock(ctx, ctx.rootId, 'Mul', 1)
 
-    ctx.entryConnectionManager.addConnection(
+    ctx.entryManager.connectionHandler.addConnection(
       { entryId: addBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
       { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
@@ -97,9 +95,9 @@ describe('EntryPersistanceService round trip', () => {
     const recipe = ctx.service.buildRecipe('My recipe')
 
     // Mirrors what Electron's IPC/contextBridge does internally when writeRecipe()
-    // sends this object to the main process. Vue's reactive Proxy objects fail
-    // here with "could not be cloned" if EntryConnectionManager.toJson() ever
-    // stops unwrapping connections with toRaw().
+    // sends this object to the main process. Guards against connections becoming
+    // non-cloneable again (e.g. if EntryConnectionHandler's storage ever goes back
+    // to wrapping connections in a Vue reactive Proxy).
     expect(() => structuredClone(recipe)).not.toThrow()
   })
 
@@ -163,7 +161,7 @@ describe('EntryPersistanceService round trip', () => {
     const mulBlockId = addBlock(ctx, ctx.rootId, 'Mul', 1)
 
     // Backwards: the later entry (Mul) as output feeding the earlier one (Add) as input.
-    const connId = ctx.entryConnectionManager.addConnection(
+    const connId = ctx.entryManager.connectionHandler.addConnection(
       { entryId: mulBlockId, category: 'output', dataType: 'integer', paramName: 'Result' },
       { entryId: addBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
@@ -173,7 +171,7 @@ describe('EntryPersistanceService round trip', () => {
     const report = await ctx.service.restoreRecipe(recipe)
 
     expect(report.warnings.some(w => w.includes('output must precede input in execution order'))).toBe(true)
-    expect(ctx.entryConnectionManager.getConnections()).toHaveLength(0)
+    expect(ctx.entryManager.connectionHandler.getConnections()).toHaveLength(0)
   })
 
   it('throws on an unsupported formatVersion and leaves the current recipe untouched', async () => {

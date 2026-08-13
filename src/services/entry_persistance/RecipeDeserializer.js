@@ -7,10 +7,9 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeDeserializer {
-  constructor(entryManager, entryConnectionManager,
+  constructor(entryManager,
     entryLayoutManager, socketManager, entryDefinitionService) {
     this.entryManager = entryManager
-    this.entryConnectionManager = entryConnectionManager
     this.entryLayoutManager = entryLayoutManager
     this.socketManager = socketManager
     this.entryDefinitionService = entryDefinitionService
@@ -60,7 +59,7 @@ export default class RecipeDeserializer {
     await this._restoreComm(recipe.root, idMap)
 
     const entryCount = this.entryManager.hierarchyHandler.getAllDescendants(rootId).length - 1
-    const connectionCount = this.entryConnectionManager.getConnections().length
+    const connectionCount = this.entryManager.connectionHandler.getConnections().length
 
     return { entryCount, connectionCount, warnings }
   }
@@ -74,7 +73,7 @@ export default class RecipeDeserializer {
     const rootId = this.entryManager.hierarchyHandler.getRootEntry()
     if (!rootId) return
 
-    this.entryConnectionManager.clearConnections()
+    this.entryManager.connectionHandler.clearConnections()
 
     const descendantIds = this.entryManager.hierarchyHandler.getAllDescendants(rootId)
       .filter(id => id !== rootId)
@@ -142,7 +141,7 @@ export default class RecipeDeserializer {
   /**
    * Remap saved connection endpoints through idMap, validate them semantically
    * (existence, param names, DFS order), collect warnings for anything dropped
-   * or suspicious, then hand the survivors to EntryConnectionManager.
+   * or suspicious, then hand the survivors to EntryConnectionHandler.
    * @param {Object} recipe
    * @param {Map<string,string>} idMap
    * @param {string[]} warnings
@@ -150,7 +149,6 @@ export default class RecipeDeserializer {
    */
   _restoreConnections(recipe, idMap, warnings) {
     const savedConnections = Array.isArray(recipe.connections) ? recipe.connections : []
-    const restored = []
 
     savedConnections.forEach((conn) => {
       const output = { ...conn.output, entryId: idMap.get(conn.output.entryId) ?? conn.output.entryId }
@@ -185,14 +183,12 @@ export default class RecipeDeserializer {
         warnings.push(`Connection dataType differs from the current definition (${output.entryId}.${output.paramName} -> ${input.entryId}.${input.paramName}) — kept`)
       }
 
-      restored.push({
-        id: conn.id,
-        output: { ...output, dataType: currentOutputType },
-        input: { ...input, dataType: currentInputType }
-      })
+      this.entryManager.connectionHandler.addConnection(
+        { ...output, dataType: currentOutputType },
+        { ...input, dataType: currentInputType },
+        conn.id
+      )
     })
-
-    this.entryConnectionManager.restoreFromJson({ connections: restored })
   }
 
   /**

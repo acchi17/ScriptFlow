@@ -10,14 +10,14 @@ import RecipeDeserializer from './RecipeDeserializer'
  */
 export default class EntryPersistanceService {
   constructor(platformService, entryManager,
-    entryConnectionManager, entryLayoutManager, socketManager,
+    entryLayoutManager, socketManager,
     entryDefinitionService) {
     this.platformService = platformService
     this._serializer = new RecipeSerializer(
-      entryManager, entryConnectionManager, socketManager
+      entryManager, socketManager
     )
     this._deserializer = new RecipeDeserializer(
-      entryManager, entryConnectionManager,
+      entryManager,
       entryLayoutManager, socketManager, entryDefinitionService
     )
   }

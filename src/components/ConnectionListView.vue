@@ -34,11 +34,11 @@ export default {
   },
 
   setup(props) {
-    const entryConnectionManager = inject('entryConnectionManager')
+    const entryManager = inject('entryManager')
 
     const listItems = computed(() => {
-      entryConnectionManager.connectionsTick.value
-      const connections = entryConnectionManager.getConnectionsByEndpoint(
+      entryManager.connectionHandler.connectionsTick.value
+      const connections = entryManager.connectionHandler.getConnectionsByEndpoint(
         props.entryId, props.paramCategory, props.paramName
       )
       return connections.map(conn => ({
@@ -50,7 +50,7 @@ export default {
     })
 
     const removeConnection = (connectionId) => {
-      entryConnectionManager.removeConnection(connectionId)
+      entryManager.connectionHandler.removeConnection(connectionId)
     }
 
     return { listItems, removeConnection }

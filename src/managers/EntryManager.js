@@ -1,6 +1,7 @@
 import { World } from '../ecs/core/World'
 import EntryHierarchyHandler from './EntryHierarchyHandler'
 import EntryParamHandler from './EntryParamHandler'
+import EntryConnectionHandler from './EntryConnectionHandler'
 
 /**
  * EntryManager class
@@ -16,6 +17,8 @@ export default class EntryManager {
     this.hierarchyHandler = new EntryHierarchyHandler(world, (entryId) => this.isContainer(entryId));
     // Handles parameter values and types of entries
     this.paramHandler = new EntryParamHandler(world);
+    // Handles connection states between entry output/input parameters
+    this.connectionHandler = new EntryConnectionHandler(world);
   }
 
   /**
@@ -107,11 +110,11 @@ export default class EntryManager {
    * Create an entry, registering it in the ECS world
    * @param {string} type - Type of entry to create ('block' or 'container')
    * @param {string} name - Name of the entry
-   * @param {string|null} id - Unique ID of the entry (auto-generated if null)
+   * @param {string|null} preferredId - Optional id of the entry (auto-generated if null)
    * @returns {string} ID of the created entry
    */
-  addEntry(type, name, id = null) {
-    const entryId = this._world.spawn(id);
+  addEntry(type, name, preferredId = null) {
+    const entryId = this._world.spawn(preferredId);
     this._world.entryTypes.add(entryId, { name, type });
     this._world.hierarchies.add(entryId, { parent: null, children: [] });
     if (type === 'block') {

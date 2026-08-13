@@ -32,13 +32,13 @@ export default {
   components: { ConnectionItem },
 
   setup() {
-    const entryConnectionManager = inject('entryConnectionManager')
+    const entryManager = inject('entryManager')
     const entryLayoutManager = inject('entryLayoutManager')
 
     const connectionsWithLanes = computed(() => {
-      entryConnectionManager.connectionsTick.value
+      entryManager.connectionHandler.connectionsTick.value
       const layoutMap = entryLayoutManager.layoutMap
-      const connections = entryConnectionManager.getConnections()
+      const connections = entryManager.connectionHandler.getConnections()
 
       const withCoords = []
       for (const conn of connections) {

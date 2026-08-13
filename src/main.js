@@ -5,7 +5,6 @@ import App from './App.vue'
 import appConfig from './config/app-config'
 import EntryManager from './managers/EntryManager'
 import EntryLayoutManager from './managers/EntryLayoutManager'
-import EntryConnectionManager from './managers/EntryConnectionManager'
 import SocketManager from './managers/SocketManager'
 import { World } from './ecs/core/World'
 import FileService from './services/file/FileService'
@@ -27,23 +26,21 @@ const entryDefinitionService = new EntryDefinitionService(appConfig, platformSer
 const world = new World()
 const entryManager = new EntryManager(world, entryDefinitionService)
 const entryLayoutManager = new EntryLayoutManager()
-const entryConnectionManager = new EntryConnectionManager(world)
 const socketManager = new SocketManager()
 
 // Create remaining Services
 const executionLogService = new ExecutionLogService(entryManager)
 const entryExecutionService = new EntryExecutionService(
-  appConfig, entryManager, entryConnectionManager, executionLogService
+  appConfig, entryManager, executionLogService
 )
 const entryPersistanceService = new EntryPersistanceService(
-  platformService, entryManager, entryConnectionManager,
+  platformService, entryManager,
   entryLayoutManager, socketManager, entryDefinitionService
 )
 
 // Provide
 app.provide('entryManager', entryManager)
 app.provide('entryLayoutManager', entryLayoutManager)
-app.provide('entryConnectionManager', entryConnectionManager)
 app.provide('world', world)
 app.provide('socketManager', socketManager)
 app.provide('platformService', platformService)

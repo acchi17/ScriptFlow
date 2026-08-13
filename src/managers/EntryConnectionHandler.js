@@ -1,9 +1,9 @@
-import { ref, toRaw } from 'vue'
+import { ref } from 'vue'
 import { World } from '../ecs/core/World'
 
 /**
- * EntryConnectionManager class
- * Manages connection states between entry output parameters and input parameters.
+ * EntryConnectionHandler class
+ * Handles connection states between entry output parameters and input parameters.
  *
  * Each connection represents a directed link from an output endpoint (typically an
  * output parameter of one entry) to an input endpoint (typically an input
@@ -19,7 +19,7 @@ import { World } from '../ecs/core/World'
  * single EntryConnectionComponent ({ output, input }); the entity id is the
  * connection id.
  */
-export default class EntryConnectionManager {
+export default class EntryConnectionHandler {
   constructor(world = new World()) {
     // ECS world holding connection components
     this._world = world;
@@ -96,29 +96,30 @@ export default class EntryConnectionManager {
    * Add a new connection between an output and an input endpoint.
    * @param {Object} output - Output endpoint { entryId, category, dataType, paramName }
    * @param {Object} input  - Input endpoint { entryId, category, dataType, paramName }
+   * @param {string|null} preferredId - Optional id to spawn the connection under (e.g. when restoring)
    * @returns {string|null} The new connection id, or null if validation fails
    */
-  addConnection(output, input) {
+  addConnection(output, input, preferredId = null) {
     if (!this._isValidEndpoint(output)) {
-      console.error('EntryConnectionManager: invalid output endpoint', output);
+      console.error('EntryConnectionHandler: invalid output endpoint', output);
       return null;
     }
     if (!this._isValidEndpoint(input)) {
-      console.error('EntryConnectionManager: invalid input endpoint', input);
+      console.error('EntryConnectionHandler: invalid input endpoint', input);
       return null;
     }
 
     if (this._endpointsMatch(output, input)) {
-      console.warn('EntryConnectionManager: cannot connect an entry to itself', output, input);
+      console.warn('EntryConnectionHandler: cannot connect an entry to itself', output, input);
       return null;
     }
 
     if (this._connectionExists(output, input)) {
-      console.warn('EntryConnectionManager: connection already exists', output, input);
+      console.warn('EntryConnectionHandler: connection already exists', output, input);
       return null;
     }
 
-    const id = this._world.spawn();
+    const id = this._world.spawn(preferredId);
     this._world.connections.add(id, {
       output: { ...output },
       input: { ...input }
@@ -223,78 +224,5 @@ export default class EntryConnectionManager {
     const ids = Array.from(this._world.connections.entries(), ([id]) => id);
     ids.forEach(id => this._world.despawn(id));
     if (ids.length) this._connectionsTick.value++;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Serialisation / persistence
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Export all connection states as a plain JSON-serialisable object.
-   * The returned structure can be saved to a file with JSON.stringify().
-   * @returns {{ connections: Array<Object> }}
-   */
-  toJson() {
-    // toRaw() guards against Vue reactive Proxies (e.g. if a caller ever hands us
-    // reactive endpoint objects) so the recipe payload stays cloneable across the
-    // Electron IPC boundary - see the "could not be cloned" regression test.
-    return {
-      connections: this.getConnections().map(conn => toRaw(conn))
-    };
-  }
-
-  /**
-   * Restore connection states from a parsed JSON object.
-   * Replaces all existing connections with the ones stored in the data.
-   *
-   * Expected JSON structure:
-   * {
-   *   "connections": [
-   *     {
-   *       "id": "<optional – overridden with a new uuid if omitted>",
-   *       "output": { "entryId": "...", "category": "output", "dataType": "integer", "paramName": "result" },
-   *       "input":  { "entryId": "...", "category": "input",  "dataType": "integer", "paramName": "value"  }
-   *     }
-   *   ]
-   * }
-   *
-   * @param {Object} data - Parsed JSON object (from JSON.parse or FileService.readJsonFile)
-   * @returns {number} Number of connections successfully restored
-   */
-  restoreFromJson(data) {
-    this.clearConnections();
-
-    if (!data || !Array.isArray(data.connections)) {
-      console.warn('EntryConnectionManager.restoreFromJson: no valid "connections" array found');
-      return 0;
-    }
-
-    let count = 0;
-    data.connections.forEach((item, index) => {
-      if (!this._isValidEndpoint(item.output)) {
-        console.warn(`EntryConnectionManager.restoreFromJson: skipping connection[${index}] – invalid output`);
-        return;
-      }
-      if (!this._isValidEndpoint(item.input)) {
-        console.warn(`EntryConnectionManager.restoreFromJson: skipping connection[${index}] – invalid input`);
-        return;
-      }
-
-      if (this._connectionExists(item.output, item.input)) {
-        console.warn(`EntryConnectionManager.restoreFromJson: skipping duplicate connection[${index}]`);
-        return;
-      }
-
-      const preferredId = (item.id && typeof item.id === 'string') ? item.id : null;
-      const id = this._world.spawn(preferredId);
-      this._world.connections.add(id, {
-        output: { ...item.output },
-        input: { ...item.input }
-      });
-      count++;
-    });
-
-    if (count) this._connectionsTick.value++;
-    return count;
   }
 }

@@ -3,7 +3,6 @@ import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
   const entryManager = inject('entryManager')
-  const entryConnectionManager = inject('entryConnectionManager')
   const entryLayoutManager = inject('entryLayoutManager')
   const {
     getSelectedEntryId,
@@ -30,7 +29,7 @@ export function useEntryOperation() {
       clearSelection()
     }
     [entryId, ...descendantIds].forEach(eid => {
-      entryConnectionManager.removeConnectionsByEntryId(eid)
+      entryManager.connectionHandler.removeConnectionsByEntryId(eid)
       entryManager.paramHandler.removeParams(eid)
     })
     cancelConnection()

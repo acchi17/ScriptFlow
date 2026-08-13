@@ -6,9 +6,8 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeSerializer {
-  constructor(entryManager, entryConnectionManager, socketManager) {
+  constructor(entryManager, socketManager) {
     this.entryManager = entryManager
-    this.entryConnectionManager = entryConnectionManager
     this.socketManager = socketManager
   }
 
@@ -29,7 +28,7 @@ export default class RecipeSerializer {
         savedAt: new Date().toISOString()
       },
       root: this._serialiseEntry(rootId),
-      connections: this.entryConnectionManager.toJson().connections
+      connections: this.entryManager.connectionHandler.getConnections()
     }
   }
 
