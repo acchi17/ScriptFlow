@@ -16,7 +16,6 @@ export function useEntryExecution() {
    */
   const executeEntry = async (entryId) => {
     if (!entryId) return;
-    cancelConnection();
 
     setExecuting(true, entryId);
     try {

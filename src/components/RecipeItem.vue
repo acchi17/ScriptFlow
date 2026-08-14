@@ -65,12 +65,12 @@ export default {
   },
 
   setup() {
-    const { addContainer, clearContainer, trackEntryLayout } = useEntryOperation()
+    const { addEntry, clearContainer, trackEntryLayout } = useEntryOperation()
     const { executeEntry } = useEntryExecution()
     const { isExecuting } = useSystemState()
     const { isBusy } = useEntryPersistance()
 
-    const rootContainerId = addContainer(null, 'root-container', 0)
+    const rootContainerId = addEntry('container', null, 'root-container', 0)
 
     const executeRecipe = () => {
       executeEntry(rootContainerId)

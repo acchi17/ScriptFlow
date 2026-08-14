@@ -373,6 +373,25 @@ export default class EntryManager {
   }
 
   /**
+   * Remove all entries except the root entry
+   * @returns {boolean} Whether clearing was successful
+   */
+  clearEntries() {
+    if (!this._rootId) return false;
+
+    this._removeDescendants(this._rootId);
+
+    // Root itself isn't despawned, so its children array must be cleared explicitly.
+    const rootHierarchy = this._world.hierarchies.get(this._rootId);
+    if (rootHierarchy) {
+      rootHierarchy.children.length = 0;
+    }
+
+    this._rebuildSequenceNumbers();
+    return true;
+  }
+
+  /**
    * Reorder an entry within a parent entry
    * @param {string} parentId - ID of the parent entry
    * @param {string} entryId - ID of the entry to reorder

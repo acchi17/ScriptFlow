@@ -28,6 +28,7 @@ export function useSystemState() {
 
   // --- execution lock ---
   const setExecuting = (value, entryId = null) => {
+    cancelConnection()
     isExecuting.value = value
     executingRootEntryId.value = value ? entryId : null
   }

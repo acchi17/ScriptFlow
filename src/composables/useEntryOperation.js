@@ -9,16 +9,10 @@ export function useEntryOperation() {
     cancelConnection
   } = useSystemState()
 
-  const addBlock = (parentId, name, index) => {
-    const blockId = entryManager.addEntry('block', name)
-    entryManager.moveEntry(blockId, parentId, index)
-    return blockId
-  }
-
-  const addContainer = (parentId, name, index) => {
-    const containerId = entryManager.addEntry('container', name)
-    entryManager.moveEntry(containerId, parentId, index)
-    return containerId
+  const addEntry = (type, parentId, name, index) => {
+    const entryId = entryManager.addEntry(type, name)
+    entryManager.moveEntry(entryId, parentId, index)
+    return entryId
   }
 
   const removeEntry = (entryId) => {
@@ -132,8 +126,7 @@ export function useEntryOperation() {
   }
 
   return {
-    addBlock,
-    addContainer,
+    addEntry,
     removeEntry,
     reorderEntry,
     moveEntry,

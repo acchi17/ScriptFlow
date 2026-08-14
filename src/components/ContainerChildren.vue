@@ -48,8 +48,7 @@ export default {
     } = useDroppable()
     const {
       getChildren,
-      addBlock,
-      addContainer,
+      addEntry,
       removeEntry,
       reorderEntry,
       moveEntry,
@@ -70,10 +69,8 @@ export default {
       const sourceId  = event.dataTransfer.getData('sourceId')
 
       if (!entryId) {
-        if (entryType === 'block') {
-          addBlock(props.entryId, entryName, index)
-        } else if (entryType === 'container') {
-          addContainer(props.entryId, entryName, index)
+        if (entryType === 'block' || entryType === 'container') {
+          addEntry(entryType, props.entryId, entryName, index)
         }
       } else if (!sourceId || sourceId === props.entryId) {
         reorderEntry(props.entryId, entryId, index)
