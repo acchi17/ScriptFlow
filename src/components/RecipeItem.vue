@@ -65,7 +65,7 @@ export default {
   },
 
   setup() {
-    const { addEntry, clearContainer, trackEntryLayout } = useEntryOperation()
+    const { addEntry, clearRecipe, trackEntryLayout } = useEntryOperation()
     const { executeEntry } = useEntryExecution()
     const { isExecuting } = useSystemState()
     const { isBusy } = useEntryPersistance()
@@ -74,10 +74,6 @@ export default {
 
     const executeRecipe = () => {
       executeEntry(rootContainerId)
-    }
-
-    const clearRecipe = () => {
-      clearContainer(rootContainerId)
     }
 
     const showCommSetting = ref(false)

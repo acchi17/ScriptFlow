@@ -38,7 +38,7 @@ export default {
     const entryManager = inject('entryManager')
     const showBlockSetting = ref(false)
     const blockListRefreshKey = ref(0)
-    const { resetState, cancelConnection } = useSystemState()
+    const { resetState, cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
 
     function handleBeforeUnload() {
       console.log('Application unloading, performing cleanup...')
@@ -47,7 +47,13 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyTick.value, cancelConnection)
+    watch(() => entryManager.hierarchyTick.value, () => {
+      cancelConnection()
+      const id = getSelectedEntryId.value
+      if (id && !entryManager.isAlive(id)) {
+        clearSelection()
+      }
+    })
 
     onMounted(() => {
       window.addEventListener('beforeunload', handleBeforeUnload)

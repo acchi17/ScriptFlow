@@ -1,12 +1,7 @@
 import { computed, inject, watch, nextTick } from 'vue'
-import { useSystemState } from './useSystemState'
 
 export function useEntryOperation() {
   const entryManager = inject('entryManager')
-  const {
-    getSelectedEntryId,
-    clearSelection
-  } = useSystemState()
 
   const addEntry = (type, parentId, name, index) => {
     const entryId = entryManager.addEntry(type, name)
@@ -15,11 +10,6 @@ export function useEntryOperation() {
   }
 
   const removeEntry = (entryId) => {
-    const selectedId = getSelectedEntryId.value
-    const descendantIds = entryManager.getAllDescendants(entryId)
-    if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
-      clearSelection()
-    }
     entryManager.removeEntry(entryId)
   }
 
@@ -31,10 +21,8 @@ export function useEntryOperation() {
     entryManager.moveEntry(entryId, targetParentId, index)
   }
 
-  const clearContainer = (entryId) => {
-    if (!entryManager.isContainer(entryId)) return
-    const childIds = entryManager.getChildren(entryId)
-    childIds.forEach(childId => removeEntry(childId))
+  const clearRecipe = () => {
+    entryManager.clearEntries()
   }
 
   const isContainer = (entryId) => {
@@ -128,7 +116,7 @@ export function useEntryOperation() {
     removeEntry,
     reorderEntry,
     moveEntry,
-    clearContainer,
+    clearRecipe,
     getAllDescendantIds,
     getParentId,
     getEntryName,
