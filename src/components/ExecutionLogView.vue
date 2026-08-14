@@ -55,20 +55,25 @@
 
 <script>
 import { computed, inject } from 'vue';
-import { useEntryExecution } from '../composables/useEntryExecution';
 
 export default {
   name: 'ExecutionLogView',
   setup() {
     const entryManager = inject('entryManager');
-    const { getLogs, clearLogs } = useEntryExecution();
-    const logs = getLogs();
+    const executionLogService = inject('executionLogService');
+    const logs = executionLogService.getLogs();
 
-    const entryRowClass = (entry) => ({
-      'entry-row': true,
-      'block-row': entry?.entryType === 'block',
-      'container-row': entry?.entryType === 'container'
-    });
+    function clearLogs() {
+      executionLogService.clearLogs();
+    }
+
+    function entryRowClass(entry) {
+      return {
+        'entry-row': true,
+        'block-row': entry?.entryType === 'block',
+        'container-row': entry?.entryType === 'container'
+      };
+    }
 
     function formatTimestamp(timestamp) {
       if (!timestamp) return '';

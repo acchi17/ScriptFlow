@@ -37,7 +37,6 @@
 <script>
 import { computed, inject, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
-import { useEntryDefinition } from '../composables/useEntryDefinition'
 import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
 import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
 import EntryParamComboBox from './EntryParamComboBox.vue'
@@ -58,7 +57,7 @@ export default {
   setup() {
     const { getSelectedEntryId: selectedEntryId } = useSystemState()
     const entryManager = inject('entryManager')
-    const { getBlockDefinition } = useEntryDefinition()
+    const entryDefinitionService = inject('entryDefinitionService')
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
     const entryName = computed(() => {
@@ -68,14 +67,14 @@ export default {
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
       if (!entryManager.isBlock(selectedEntryId.value)) return []
-      const blockDef = getBlockDefinition(entryName.value)
+      const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
       if (!entryManager.isBlock(selectedEntryId.value)) return []
-      const blockDef = getBlockDefinition(entryName.value)
+      const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.output : []
     })
 

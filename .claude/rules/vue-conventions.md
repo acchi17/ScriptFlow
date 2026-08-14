@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/components/**/*.vue"
+  - "src/**/*.vue"
 ---
 
 # Vue Component Conventions
@@ -58,3 +58,10 @@ emit('remove')
 ```html
 <div v-for="item in items" :key="item.id">
 ```
+
+## Function Definitions in `setup()`
+
+- Anonymous callbacks passed inline (Vue APIs like `computed`/`watch`/`watchEffect`/`onMounted`, array methods like `map`/`forEach`/`filter`, etc.)
+  → arrow function, defined inline where it's passed.
+- Named, standalone functions declared directly in `setup()` (event handlers, business logic)
+  → `function` declaration (hoisted, so definition order doesn't matter).

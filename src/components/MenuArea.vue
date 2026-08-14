@@ -1,8 +1,8 @@
 <template>
   <div class="menu-area">
     <div class="menu-left">
-      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting || isBusy" @click.stop="onLoadRecipe"></button>
-      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting || isBusy" @click.stop="onSaveRecipe"></button>
+      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting" @click.stop="onLoadRecipe"></button>
+      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting" @click.stop="onSaveRecipe"></button>
     </div>
     <div class="menu-right">
       <div class="rect-item">
@@ -37,9 +37,9 @@ export default {
       event.dataTransfer.setData('entryName', 'Container')
       event.dataTransfer.setData('sourceId', undefined)
     })
-    const { showLog, toggleLog, isExecuting } = useSystemState()
+    const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
     const entryManager = inject('entryManager')
-    const { isBusy, lastError, lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
+    const { lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
 
     const onSaveRecipe = async () => {
       await saveRecipe()
@@ -68,7 +68,6 @@ export default {
       showLog,
       toggleLog,
       isExecuting,
-      isBusy,
       onSaveRecipe,
       onLoadRecipe
     }

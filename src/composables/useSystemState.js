@@ -8,6 +8,9 @@ const isDragging = ref(false)
 const isExecuting = ref(false)
 const executingRootEntryId = ref(null)
 
+// error state
+const lastError = ref(null)
+
 // log visibility
 const showLog = ref(false)
 
@@ -32,6 +35,10 @@ export function useSystemState() {
     isExecuting.value = value
     executingRootEntryId.value = value ? entryId : null
   }
+
+  // --- error state ---
+  const setError = (message) => { lastError.value = message }
+  const clearError = () => { lastError.value = null }
 
   // --- log visibility ---
   const toggleLog = () => { showLog.value = !showLog.value }
@@ -113,6 +120,10 @@ export function useSystemState() {
     isExecuting: readonly(isExecuting),
     executingRootEntryId: readonly(executingRootEntryId),
     setExecuting,
+    // error
+    lastError: readonly(lastError),
+    setError,
+    clearError,
     // log
     showLog: readonly(showLog),
     toggleLog,

@@ -25,7 +25,7 @@
 <script>
 import SettingInputParam  from './SettingInputParam.vue';
 import SettingOutputParam from './SettingOutputParam.vue';
-import { useEntryDefinition } from '../composables/useEntryDefinition.js';
+import BlockDefinitionManager from '../services/entry_definition/BlockDefinitionManager.js';
 
 export default {
   name: 'BlockParamDetailSetting',
@@ -36,8 +36,10 @@ export default {
   },
   emits: ['update-input', 'update-output'],
   setup() {
-    const { ctrlTypeOptions, dataTypeOptions } = useEntryDefinition();
-    return { ctrlTypeOptions, dataTypeOptions };
+    return {
+      ctrlTypeOptions: BlockDefinitionManager.CTRL_TYPE_OPTIONS,
+      dataTypeOptions: BlockDefinitionManager.DATA_TYPE_OPTIONS,
+    };
   },
 }
 </script>

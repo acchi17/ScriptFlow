@@ -1,46 +1,43 @@
-import { ref, readonly, inject } from 'vue'
+import { ref, inject } from 'vue'
 import { useSystemState } from './useSystemState'
 
-const isBusy = ref(false)
-const lastError = ref(null)
 const lastReport = ref(null)
 
 /**
- * Vue-side glue for EntryPersistanceService: busy flag, last error/report,
- * and resetting transient UI state before a recipe is loaded.
+ * Vue-side glue for EntryPersistanceService: last report, and resetting
+ * transient UI state before a recipe is loaded. Busy/error state is
+ * shared with useSystemState (isExecuting/lastError).
  */
 export function useEntryPersistance() {
   const entryPersistanceService = inject('entryPersistanceService')
-  const { resetState } = useSystemState()
+  const { resetState, setExecuting, setError, clearError } = useSystemState()
 
   const saveRecipe = async (fileName, name) => {
-    isBusy.value = true
-    lastError.value = null
+    setExecuting(true)
+    clearError()
     try {
       await entryPersistanceService.saveRecipe(fileName, name)
     } catch (error) {
-      lastError.value = error.message
+      setError(error.message)
     } finally {
-      isBusy.value = false
+      setExecuting(false)
     }
   }
 
   const loadRecipe = async (fileName) => {
-    isBusy.value = true
-    lastError.value = null
+    setExecuting(true)
+    clearError()
     resetState()
     try {
       lastReport.value = await entryPersistanceService.loadRecipe(fileName)
     } catch (error) {
-      lastError.value = error.message
+      setError(error.message)
     } finally {
-      isBusy.value = false
+      setExecuting(false)
     }
   }
 
   return {
-    isBusy: readonly(isBusy),
-    lastError,
     lastReport,
     saveRecipe,
     loadRecipe
