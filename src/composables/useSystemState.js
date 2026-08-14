@@ -19,8 +19,6 @@ const connectingSource = ref(null) // null | { entryId, paramName, paramCategory
 
 export function useSystemState() {
   const entryManager = inject('entryManager')
-  const entryConnectionManager = inject('entryConnectionManager')
-  const entryParamManager = inject('entryParamManager')
 
   // --- drag & drop ---
   const activateDragging = () => { cancelConnection(); isDragging.value = true }
@@ -30,6 +28,7 @@ export function useSystemState() {
 
   // --- execution lock ---
   const setExecuting = (value, entryId = null) => {
+    cancelConnection()
     isExecuting.value = value
     executingRootEntryId.value = value ? entryId : null
   }
@@ -58,26 +57,25 @@ export function useSystemState() {
   const isConnectingTarget = (entryId) =>
     computed(() => {
       if (connectingSource.value === null) return false
-      entryManager.updateTick.value
       const srcId = connectingSource.value.entryId
       const srcSeq = entryManager.getSequenceNumber(srcId)
       const dstSeq = entryManager.getSequenceNumber(entryId)
       if (dstSeq === null || srcSeq === null) return false
       if (connectingSource.value.paramCategory === 'input') {
-        if (!entryParamManager.hasOutputParam(entryId)) return false
+        if (!entryManager.paramHandler.hasOutputParam(entryId)) return false
         return dstSeq < srcSeq
       } else {
-        if (!entryParamManager.hasInputParam(entryId)) return false
+        if (!entryManager.paramHandler.hasInputParam(entryId)) return false
         return dstSeq > srcSeq
       }
     })
 
   const isConnectedEndPoint = (entryId, paramName, paramCategory) =>
-    computed(() =>
-      entryConnectionManager
-        ? entryConnectionManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
-        : false
-    )
+    computed(() => {
+      if (!entryManager) return false
+      entryManager.connectionHandler.connectionsTick.value
+      return entryManager.connectionHandler.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
+    })
 
   const startConnection = (entryId, paramName, paramCategory, paramType) => {
     connectingSource.value = { entryId, paramName, paramCategory, paramType }
@@ -94,7 +92,7 @@ export function useSystemState() {
     const [outputEndpoint, inputEndpoint] = source.paramCategory === 'output'
       ? [sourceEndpoint, targetEndpoint]
       : [targetEndpoint, sourceEndpoint]
-    entryConnectionManager.addConnection(outputEndpoint, inputEndpoint)
+    entryManager.connectionHandler.addConnection(outputEndpoint, inputEndpoint)
     cancelConnection()
   }
 

@@ -10,18 +10,12 @@ export default class EntryExecutionService {
    * Constructor
    * @param {Object} config Configuration object
    * @param {EntryManager} entryManager Entry manager instance (optional)
-   * @param {EntryParamManager} entryParamManager Entry parameter manager instance (optional)
-   * @param {EntryConnectionManager} entryConnectionManager Entry connection manager instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
-   * @param {EntryDefinitionService} entryDefinitionService Entry definition service instance (optional)
    */
-  constructor(config, entryManager = null, entryParamManager = null, entryConnectionManager = null, executionLogService = null, entryDefinitionService = null) {
+  constructor(config, entryManager = null, executionLogService = null) {
     this.scriptExecutionService = new ScriptExecutionService(config.script);
     this.entryManager = entryManager;
-    this.entryParamManager = entryParamManager;
-    this.entryConnectionManager = entryConnectionManager;
     this.executionLogService = executionLogService;
-    this.entryDefinitionService = entryDefinitionService;
     this._executionStack = []; // Stack to track currently executing entries
     
     // Centralized management of execution IDs
@@ -42,21 +36,21 @@ export default class EntryExecutionService {
 
   /**
    * Build effective input params by overlaying connected upstream output values onto static params.
-   * EntryParamManager is never mutated; the result is transient per execution call.
+   * EntryParamHandler is never mutated; the result is transient per execution call.
    * @param {string} entryId
    * @returns {Object} Effective input params { paramName: value }
    * @private
    */
   _resolveInputParams(entryId) {
-    const base = this.entryParamManager ? this.entryParamManager.getInputParams(entryId) : {};
-    if (!this.entryConnectionManager) return base;
+    const base = this.entryManager ? this.entryManager.paramHandler.getInputParams(entryId) : {};
+    if (!this.entryManager) return base;
 
     const result = { ...base };
-    const connections = this.entryConnectionManager
+    const connections = this.entryManager.connectionHandler
       .getConnectionsByEntryId(entryId)
       .filter(conn => conn.input.entryId === entryId);
     for (const conn of connections) {
-      const value = this.entryParamManager.getOutputParam(conn.output.entryId, conn.output.paramName);
+      const value = this.entryManager.paramHandler.getOutputParam(conn.output.entryId, conn.output.paramName);
       if (value !== undefined) {
         result[conn.input.paramName] = value;
       }
@@ -76,18 +70,18 @@ export default class EntryExecutionService {
     let result = {};
     try {
       // Execute script based on the block definition's command
-      const entryName = this.entryManager.getEntryName(entryId);
-      const command = this.entryDefinitionService?.getBlockDefinition(entryName)?.command;
+      const command = this.entryManager.getEntryCommand(entryId);
       if (command === undefined) {
+        const entryName = this.entryManager.getEntryName(entryId);
         throw new Error(`No command found for block "${entryName}"`);
       }
       result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
-      if (this.entryParamManager) {
-        const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(entryId));
+      if (this.entryManager) {
+        const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(entryId));
         for (const key of outputParamNames) {
           if (key in result) {
-            this.entryParamManager.setOutputParam(entryId, key, result[key]);
+            this.entryManager.paramHandler.setOutputParam(entryId, key, result[key]);
           }
         }
       }
@@ -112,8 +106,8 @@ export default class EntryExecutionService {
   async _executeContainer(entryId, traceId) {
     let result = {};
     try {
-      const container = this.entryManager.getEntry(entryId);
-      const strategy = ContainerExecutionFactory.createStrategy(container.containerType, this.entryManager);
+      const entryName = this.entryManager.getEntryName(entryId);
+      const strategy = ContainerExecutionFactory.createStrategy(entryName, this.entryManager);
       result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId));
     } catch (error) {
       result.errorMessage = error.message;

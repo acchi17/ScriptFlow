@@ -6,10 +6,8 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeSerializer {
-  constructor(entryManager, entryParamManager, entryConnectionManager, socketManager) {
+  constructor(entryManager, socketManager) {
     this.entryManager = entryManager
-    this.entryParamManager = entryParamManager
-    this.entryConnectionManager = entryConnectionManager
     this.socketManager = socketManager
   }
 
@@ -18,7 +16,7 @@ export default class RecipeSerializer {
    * @returns {Object} recipe object
    */
   buildRecipe(name = '') {
-    const rootId = this.entryManager.getRootEntryId()
+    const rootId = this.entryManager.getRootEntry()
     if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
     }
@@ -30,7 +28,7 @@ export default class RecipeSerializer {
         savedAt: new Date().toISOString()
       },
       root: this._serialiseEntry(rootId),
-      connections: this.entryConnectionManager.toJson().connections
+      connections: this.entryManager.connectionHandler.getConnections()
     }
   }
 
@@ -48,7 +46,7 @@ export default class RecipeSerializer {
     }
 
     if (this.entryManager.isBlock(entryId)) {
-      node.inputParams = this.entryParamManager.getInputParams(entryId)
+      node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
     } else if (this.entryManager.isContainer(entryId)) {
       node.children = this.entryManager.getChildren(entryId)
         .map(childId => this._serialiseEntry(childId))

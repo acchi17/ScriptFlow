@@ -7,12 +7,9 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeDeserializer {
-  constructor(entryManager, entryParamManager, entryConnectionManager,
-    entryLayoutManager, socketManager, entryDefinitionService) {
+  constructor(entryManager,
+    socketManager, entryDefinitionService) {
     this.entryManager = entryManager
-    this.entryParamManager = entryParamManager
-    this.entryConnectionManager = entryConnectionManager
-    this.entryLayoutManager = entryLayoutManager
     this.socketManager = socketManager
     this.entryDefinitionService = entryDefinitionService
   }
@@ -44,7 +41,7 @@ export default class RecipeDeserializer {
 
     await this._clearRecipe()
 
-    const rootId = this.entryManager.getRootEntryId()
+    const rootId = this.entryManager.getRootEntry()
     if (!rootId) {
       throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
     }
@@ -60,8 +57,8 @@ export default class RecipeDeserializer {
     this._restoreConnections(recipe, idMap, warnings)
     await this._restoreComm(recipe.root, idMap)
 
-    const entryCount = this.entryManager.getAllDescendantIds(rootId).length - 1
-    const connectionCount = this.entryConnectionManager.getConnections().length
+    const entryCount = this.entryManager.getAllDescendants(rootId).length - 1
+    const connectionCount = this.entryManager.connectionHandler.getConnections().length
 
     return { entryCount, connectionCount, warnings }
   }
@@ -72,16 +69,15 @@ export default class RecipeDeserializer {
    * @private
    */
   async _clearRecipe() {
-    const rootId = this.entryManager.getRootEntryId()
+    const rootId = this.entryManager.getRootEntry()
     if (!rootId) return
 
-    this.entryConnectionManager.clearConnections()
+    this.entryManager.connectionHandler.clearConnections()
 
-    const descendantIds = this.entryManager.getAllDescendantIds(rootId)
+    const descendantIds = this.entryManager.getAllDescendants(rootId)
       .filter(id => id !== rootId)
     descendantIds.forEach(id => {
-      this.entryParamManager.removeParams(id)
-      this.entryLayoutManager.deleteLayout(id)
+      this.entryManager.paramHandler.removeParamDef(id)
     })
 
     const childIds = this.entryManager.getChildren(rootId)
@@ -108,7 +104,8 @@ export default class RecipeDeserializer {
     }
 
     if (node.type === 'container') {
-      const containerId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
+      const containerId = this.entryManager.addEntry(node.type, node.name, node.id)
+      this.entryManager.moveEntry(containerId, parentId, index)
       idMap.set(node.id, containerId)
 
       const children = Array.isArray(node.children) ? node.children : []
@@ -118,7 +115,8 @@ export default class RecipeDeserializer {
       return
     }
 
-    const blockId = this.entryManager.addEntry(parentId, node.type, node.name, index, node.id)
+    const blockId = this.entryManager.addEntry(node.type, node.name, node.id)
+    this.entryManager.moveEntry(blockId, parentId, index)
     idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)
@@ -128,23 +126,20 @@ export default class RecipeDeserializer {
     }
 
     const paramDefs = this.entryDefinitionService.getBlockParamDef(node.name)
-    this.entryParamManager.setInputParams(blockId, paramDefs.input)
-    this.entryParamManager.setOutputParams(blockId, paramDefs.output)
-
     const savedInputParams = node.inputParams || {}
     Object.entries(savedInputParams).forEach(([paramName, value]) => {
       if (!(paramName in paramDefs.input)) {
         warnings.push(`Input param "${paramName}" no longer exists on block "${node.name}" (entry ${blockId}) — value ignored`)
         return
       }
-      this.entryParamManager.setInputParam(blockId, paramName, value)
+      this.entryManager.paramHandler.setInputParam(blockId, paramName, value)
     })
   }
 
   /**
    * Remap saved connection endpoints through idMap, validate them semantically
    * (existence, param names, DFS order), collect warnings for anything dropped
-   * or suspicious, then hand the survivors to EntryConnectionManager.
+   * or suspicious, then hand the survivors to EntryConnectionHandler.
    * @param {Object} recipe
    * @param {Map<string,string>} idMap
    * @param {string[]} warnings
@@ -152,23 +147,22 @@ export default class RecipeDeserializer {
    */
   _restoreConnections(recipe, idMap, warnings) {
     const savedConnections = Array.isArray(recipe.connections) ? recipe.connections : []
-    const restored = []
 
     savedConnections.forEach((conn) => {
       const output = { ...conn.output, entryId: idMap.get(conn.output.entryId) ?? conn.output.entryId }
       const input = { ...conn.input, entryId: idMap.get(conn.input.entryId) ?? conn.input.entryId }
 
-      if (!this.entryManager.getEntry(output.entryId) || !this.entryManager.getEntry(input.entryId)) {
+      if (!this.entryManager.isAlive(output.entryId) || !this.entryManager.isAlive(input.entryId)) {
         warnings.push(`Dropped connection: endpoint entry not found (${output.entryId} -> ${input.entryId})`)
         return
       }
 
-      const outputParamNames = Object.keys(this.entryParamManager.getOutputParams(output.entryId))
+      const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(output.entryId))
       if (!outputParamNames.includes(output.paramName)) {
         warnings.push(`Dropped connection: output param "${output.paramName}" no longer exists on entry ${output.entryId}`)
         return
       }
-      const inputParamNames = Object.keys(this.entryParamManager.getInputParams(input.entryId))
+      const inputParamNames = Object.keys(this.entryManager.paramHandler.getInputParams(input.entryId))
       if (!inputParamNames.includes(input.paramName)) {
         warnings.push(`Dropped connection: input param "${input.paramName}" no longer exists on entry ${input.entryId}`)
         return
@@ -181,20 +175,18 @@ export default class RecipeDeserializer {
         return
       }
 
-      const currentOutputType = this.entryParamManager.getOutputParamType(output.entryId, output.paramName)
-      const currentInputType = this.entryParamManager.getInputParamType(input.entryId, input.paramName)
+      const currentOutputType = this.entryManager.paramHandler.getOutputParamType(output.entryId, output.paramName)
+      const currentInputType = this.entryManager.paramHandler.getInputParamType(input.entryId, input.paramName)
       if (currentOutputType !== output.dataType || currentInputType !== input.dataType) {
         warnings.push(`Connection dataType differs from the current definition (${output.entryId}.${output.paramName} -> ${input.entryId}.${input.paramName}) — kept`)
       }
 
-      restored.push({
-        id: conn.id,
-        output: { ...output, dataType: currentOutputType },
-        input: { ...input, dataType: currentInputType }
-      })
+      this.entryManager.connectionHandler.addConnection(
+        { ...output, dataType: currentOutputType },
+        { ...input, dataType: currentInputType },
+        conn.id
+      )
     })
-
-    this.entryConnectionManager.restoreFromJson({ connections: restored })
   }
 
   /**

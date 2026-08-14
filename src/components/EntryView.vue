@@ -1,6 +1,6 @@
 <template>
   <div class="entry-view" @click.stop>
-    <div v-if="selectedEntry">
+    <div v-if="selectedEntryId">
       <div class="entry-header">{{ entryName }}</div>
       <div class="section-divider" />
       <div v-if="inputParamDefs.length > 0 || outputParamDefs.length > 0" class="param-grid">
@@ -9,7 +9,7 @@
           <template v-for="paramDef in inputParamDefs" :key="paramDef.name">
             <component
               :is="resolveComponent(paramDef)"
-              :entry-id="selectedEntry.id"
+              :entry-id="selectedEntryId"
               param-category="input"
               :param-def="paramDef"
               :value="localInputParams[paramDef.name]"
@@ -21,7 +21,7 @@
           <div class="entry-param-header">Output</div>
           <template v-for="paramDef in outputParamDefs" :key="paramDef.name">
             <EntryParamTextBox
-              :entry-id="selectedEntry.id"
+              :entry-id="selectedEntryId"
               param-category="output"
               :param-def="paramDef"
               :value="toEmptyIfNull(localOutputParams[paramDef.name])"
@@ -57,32 +57,25 @@ export default {
   components: { EntryParamSpinEdit, EntryParamCheckEdit, EntryParamComboBox, EntryParamTextBox },
 
   setup() {
-    const { getSelectedEntryId } = useSystemState()
-    const { getEntry, getEntryName, getInputParams, getOutputParams, setInputParam, isBlock } = useEntryOperation()
+    const { getSelectedEntryId: selectedEntryId } = useSystemState()
+    const { getEntryName, getInputParams, getOutputParams, setInputParam, isBlock, outputParamsTick } = useEntryOperation()
     const { getBlockDefinition } = useEntryDefinition()
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
-    const selectedIdRef = getSelectedEntryId
-
-    const selectedEntry = computed(() => {
-      if (!selectedIdRef.value) return null
-      return getEntry(selectedIdRef.value)
-    })
-
     const entryName = computed(() => {
-      return selectedEntry.value ? getEntryName(selectedEntry.value.id) : null
+      return getEntryName(selectedEntryId.value)
     })
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
-      if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
+      if (!isBlock(selectedEntryId.value)) return []
       const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
-      if (!selectedEntry.value || !isBlock(selectedEntry.value.id)) return []
+      if (!isBlock(selectedEntryId.value)) return []
       const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.output : []
     })
@@ -90,27 +83,28 @@ export default {
     // Local copy of input param values for reactive display
     const localInputParams = ref({})
 
-    // Computed output params reads directly from the reactive EntryParamManager map,
-    // so it updates automatically when values change during execution
+    // Depends on outputParamsTick so this re-runs when output param values change during
+    // execution, since the underlying ECS store itself isn't deep-reactive
     const localOutputParams = computed(() => {
-      const id = selectedIdRef.value
+      outputParamsTick.value
+      const id = selectedEntryId.value
       return id ? getOutputParams(id) : {}
     })
 
     // Reload local input params when selected entry changes
-    watch(selectedIdRef, (id) => {
+    watch(selectedEntryId, (id) => {
       localInputParams.value = id ? { ...getInputParams(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
-      const id = selectedIdRef.value
+      const id = selectedEntryId.value
       if (!id) return
       localInputParams.value[paramName] = value
       setInputParam(id, paramName, value)
     }
 
     return {
-      selectedEntry,
+      selectedEntryId,
       entryName,
       inputParamDefs,
       outputParamDefs,

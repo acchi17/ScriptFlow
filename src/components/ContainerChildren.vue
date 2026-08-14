@@ -48,15 +48,18 @@ export default {
     } = useDroppable()
     const {
       getChildren,
-      addBlock,
-      addContainer,
+      addEntry,
       removeEntry,
       reorderEntry,
       moveEntry,
-      isBlock
+      isBlock,
+      hierarchyTick
     } = useEntryOperation()
 
-    const children = computed(() => getChildren(props.entryId))
+    const children = computed(() => {
+      hierarchyTick.value
+      return getChildren(props.entryId)
+    })
     const dropAllowed = isDroppable(props.entryId)
 
     setOnDropCallback((event, index) => {
@@ -66,10 +69,8 @@ export default {
       const sourceId  = event.dataTransfer.getData('sourceId')
 
       if (!entryId) {
-        if (entryType === 'block') {
-          addBlock(props.entryId, entryName, index)
-        } else if (entryType === 'container') {
-          addContainer(props.entryId, entryName, index)
+        if (entryType === 'block' || entryType === 'container') {
+          addEntry(entryType, props.entryId, entryName, index)
         }
       } else if (!sourceId || sourceId === props.entryId) {
         reorderEntry(props.entryId, entryId, index)

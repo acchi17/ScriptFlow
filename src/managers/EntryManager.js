@@ -1,109 +1,76 @@
-import { ref, reactive } from 'vue'
-import Block from '../models/Block'
-import Container from '../models/Container'
+import { ref } from 'vue'
 import { World } from '../ecs/core/World'
+import EntryParamHandler from './EntryParamHandler'
+import EntryConnectionHandler from './EntryConnectionHandler'
 
 /**
  * EntryManager class
  * Class that manages parent-child relationships between entries
  */
 export default class EntryManager {
-  constructor(world = new World()) {
+  constructor(world = new World(), entryDefnitionStore = null) {
     // ECS world holding entry type components
     this._world = world;
-    // Dictionary of entry IDs and objects
-    this._entriesById = new Map();
-    // Dictionary of child IDs and their parent IDs
-    this._parentIdById = new Map();
-    // Dictionary of container IDs and their reactive arrays of child entry IDs
-    this._childrenById = new Map();
+    // Provides block definitions (parameters, command) for entries
+    this.entryDefnitionStore = entryDefnitionStore;
+    // Handles parameter values and types of entries
+    this.paramHandler = new EntryParamHandler(world);
+    // Handles connection states between entry output/input parameters
+    this.connectionHandler = new EntryConnectionHandler(world);
     // Cache of entryId → 1-based sequence number (DFS visual order)
     this._sequenceNumbers = new Map();
     // ID of the root container for sequence number computation
     this._rootId = null;
     // Reactive counter incremented on every structural change (add/remove/reorder/move)
-    this._updateTick = ref(0);
+    this._hierarchyTick = ref(0);
+    // Reactive counter incremented on every layout change (set/clear).
+    // ComponentStore wraps a plain Map, so Vue can't auto-track reads through it -
+    // consumers must read this tick inside a computed() before calling a getter below.
+    this._layoutsTick = ref(0);
   }
 
   /**
    * Set the root container for sequence number computation.
    * Must be called once after the root container is registered.
    * @param {string} rootId
+   * @private
    */
   _setRoot(rootId) {
     if (this._rootId == null) {
       console.log('Root entry set');
       this._rootId = rootId;
-      this._rebuildSequenceNumbers();
     }
   }
 
   /**
-   * Rebuild the sequence number map using DFS from the root.
+   * Attach an entry into a parent's children array
+   * @param {string} parentId - ID of the parent entry
+   * @param {string} entryId - ID of the entry to attach
+   * @param {number} index - Index position to add
+   * @returns {boolean} Whether the attaching was successful
    * @private
    */
-  _rebuildSequenceNumbers() {
-    this._sequenceNumbers.clear();
-    if (!this._rootId) return;
-
-    if (!this.isContainer(this._rootId)) return;
-
-    let counter = 0;
-    const traverse = (childIds) => {
-      for (const childId of childIds) {
-        this._sequenceNumbers.set(childId, ++counter);
-        if (this.isContainer(childId)) {
-          traverse(this._childrenById.get(childId));
-        }
-      }
-    };
-    traverse(this._childrenById.get(this._rootId));
-    this._updateTick.value++;
-  }
-
-  /**
-   * Register an entry
-   * @param {Entry} entry - Entry to register
-   * @returns {boolean} Whether the registration was successful
-   * @private
-   */
-  _registerEntry(entry) {
-    if (!entry || !entry.id) return false;
-
-    // Overwrite if already registered
-    this._entriesById.set(entry.id, entry);
-
-    // Containers get a reactive array to hold their child entry IDs
-    if (this.isContainer(entry.id) && !this._childrenById.has(entry.id)) {
-      this._childrenById.set(entry.id, reactive([]));
-    }
-
-    return true;
-  }
-
-  /**
- * Attach an entry into a parent's children array
- * @param {string} parentId - ID of the parent entry
- * @param {string} entryId - ID of the entry to attach
- * @param {number} index - Index position to add
- * @returns {boolean} Whether the attaching was successful
- * @private
- */
   _attachEntry(parentId, entryId, index) {
-    // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    // Only containers may receive children
+    if (!this.isContainer(parentId)) return false;
 
-    // Set parent-child relationship
-    this._parentIdById.set(entryId, parentId);
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
+
+    // Validate before mutating anything
+    if (index < 0 || index > parentHierarchy.children.length) return false;
 
     // Add directly to parent's children array
-    if (index >= 0 && index <= parentChildren.length) {
-      parentChildren.splice(index, 0, entryId);
-      this._rebuildSequenceNumbers();
-      return true;
+    parentHierarchy.children.splice(index, 0, entryId);
+
+    // Set parent-child relationship
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    if (entryHierarchy) {
+      entryHierarchy.parent = parentId;
     }
-    return false;
+
+    this._rebuildSequenceNumbers();
+    return true;
   }
 
   /**
@@ -117,20 +84,21 @@ export default class EntryManager {
     if (!entryId) return false;
 
     // Get parent entry
-    const parentId = this._parentIdById.get(entryId);
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const parentId = entryHierarchy?.parent;
     if (!parentId) return true;
 
     // Remove from parent's children array
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
-    const index = parentChildren.indexOf(entryId);
+    const index = parentHierarchy.children.indexOf(entryId);
     if (index === -1) return false;
 
-    parentChildren.splice(index, 1);
+    parentHierarchy.children.splice(index, 1);
 
     // Delete parent-child relationship
-    this._parentIdById.delete(entryId);
+    entryHierarchy.parent = null;
 
     return true;
   }
@@ -141,31 +109,56 @@ export default class EntryManager {
    * @private
    */
   _removeDescendants(entryId) {
-    // Process a copy since entries are removed from the map while iterating
-    const childIds = [...this._childrenById.get(entryId)];
+    // Process a copy since entries are removed from the store while iterating
+    const childIds = [...(this._world.hierarchies.get(entryId)?.children ?? [])];
     for (const childId of childIds) {
-      // Remove parent-child relationship
-      this._parentIdById.delete(childId);
-
       // If the child is a container, recursively process its descendants
       if (this.isContainer(childId)) {
         this._removeDescendants(childId);
       }
 
-      // Remove from entries map
-      this._entriesById.delete(childId);
-      this._world.entryTypes.remove(childId);
+      this.connectionHandler.removeConnectionsByEntryId(childId);
+      this.paramHandler.removeParamDef(childId);
+      this._world.despawn(childId);
     }
-
-    // Drop the entry's own children entry
-    this._childrenById.delete(entryId);
   }
 
   /**
- * Check whether an entry is a block
- * @param {string} entryId - ID of the entry to check
- * @returns {boolean} Whether the entry is a block
- */
+   * Rebuild the sequence number map using DFS from the root.
+   */
+  _rebuildSequenceNumbers() {
+    this._sequenceNumbers.clear();
+    if (!this._rootId) return;
+
+    if (!this.isContainer(this._rootId)) return;
+
+    let counter = 0;
+    const traverse = (childIds) => {
+      for (const childId of childIds) {
+        this._sequenceNumbers.set(childId, ++counter);
+        if (this.isContainer(childId)) {
+          traverse(this._world.hierarchies.get(childId)?.children ?? []);
+        }
+      }
+    };
+    traverse(this._world.hierarchies.get(this._rootId)?.children ?? []);
+    this._hierarchyTick.value++;
+  }
+
+  /**
+   * Check whether an entry id is a live entity in the ECS world
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry id is alive
+   */
+  isAlive(entryId) {
+    return this._world.isAlive(entryId);
+  }
+
+  /**
+   * Check whether an entry is a block
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a block
+   */
   isBlock(entryId) {
     return this._world.entryTypes.get(entryId)?.type === 'block';
   }
@@ -177,15 +170,6 @@ export default class EntryManager {
    */
   isContainer(entryId) {
     return this._world.entryTypes.get(entryId)?.type === 'container';
-  }
-
-  /**
-   * Get an entry
-   * @param {string} entryId - ID of the entry to get
-   * @returns {Entry|null} Retrieved entry or null
-   */
-  getEntry(entryId) {
-    return this._entriesById.get(entryId) || null;
   }
 
   /**
@@ -207,6 +191,16 @@ export default class EntryManager {
   }
 
   /**
+   * Get the command of an entry's block definition
+   * @param {string} entryId - ID of the entry
+   * @returns {string|undefined} Command string, or undefined
+   */
+  getEntryCommand(entryId) {
+    const entryName = this.getEntryName(entryId);
+    return this.entryDefnitionStore?.getBlockDefinition(entryName)?.command;
+  }
+
+  /**
    * Set the name of an entry
    * @param {string} entryId - ID of the entry
    * @param {string} name - New name for the entry
@@ -218,20 +212,10 @@ export default class EntryManager {
   }
 
   /**
-   * Get the children of a container
-   * @param {string} entryId - ID of the container
-   * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
-   */
-  getChildren(entryId) {
-    const childIds = this._childrenById.get(entryId);
-    return childIds ? [...childIds] : [];
-  }
-
-  /**
    * Get the root entry's ID
    * @returns {string|null} Root entry ID or null
    */
-  getRootEntryId() {
+  getRootEntry() {
     return this._rootId;
   }
 
@@ -240,8 +224,18 @@ export default class EntryManager {
    * @param {string} entryId - ID of the child entry
    * @returns {string|null} Parent entry ID or null
    */
-  getParentId(entryId) {
-    return this._parentIdById.get(entryId) || null;
+  getParent(entryId) {
+    return this._world.hierarchies.get(entryId)?.parent ?? null;
+  }
+
+  /**
+   * Get the children of a container
+   * @param {string} entryId - ID of the container
+   * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
+   */
+  getChildren(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy ? [...hierarchy.children] : [];
   }
 
   /**
@@ -249,14 +243,14 @@ export default class EntryManager {
    * @param {string} entryId - Target entry ID
    * @returns {Array<string>} List of IDs for the entry and all its descendants
    */
-  getAllDescendantIds(entryId) {
+  getAllDescendants(entryId) {
     const ids = new Set([entryId]);
 
     if (!this.isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
-    for (const childId of this._childrenById.get(entryId)) {
-      const descendantIds = this.getAllDescendantIds(childId);
+    for (const childId of this._world.hierarchies.get(entryId)?.children ?? []) {
+      const descendantIds = this.getAllDescendants(childId);
       descendantIds.forEach(id => ids.add(id));
     }
 
@@ -277,32 +271,72 @@ export default class EntryManager {
    * Watch this to react to tree mutations without traversing the tree.
    * @returns {import('vue').Ref<number>}
    */
-  get updateTick() {
-    return this._updateTick;
+  get hierarchyTick() {
+    return this._hierarchyTick;
   }
 
   /**
-   * Create an entry and add it to a parent entry
-   * If parentId is null, the entry is just registered as the root without a parent
-   * @param {string|null} parentId - ID of the parent entry, or null to register as root
+   * Reactive counter that increments whenever a layout is set or cleared.
+   * Watch/read this to react to layout changes without deep reactivity.
+   * @returns {import('vue').Ref<number>}
+   */
+  get layoutsTick() {
+    return this._layoutsTick;
+  }
+
+  /**
+   * Record the measured Y position and height of an entry's header element.
+   * @param {string} entryId
+   * @param {number} y
+   * @param {number} height
+   */
+  addLayout(entryId, y, height) {
+    this._world.layouts.add(entryId, { y, height });
+    this._layoutsTick.value++;
+  }
+
+  /**
+   * Get the measured layout of an entry.
+   * @param {string} entryId
+   * @returns {{ y: number, height: number } | undefined}
+   */
+  getLayout(entryId) {
+    return this._world.layouts.get(entryId);
+  }
+
+  /**
+   * Get all recorded layouts.
+   * @returns {Array<[string, { y: number, height: number }]>}
+   */
+  getAllLayouts() {
+    return Array.from(this._world.layouts.entries());
+  }
+
+  /**
+   * Clear all recorded layouts.
+   */
+  clearLayouts() {
+    this._world.layouts.clear();
+    this._layoutsTick.value++;
+  }
+
+  /**
+   * Create an entry, registering it in the ECS world
    * @param {string} type - Type of entry to create ('block' or 'container')
    * @param {string} name - Name of the entry
-   * @param {number} index - Index position to add (ignored if parentId is null)
-   * @param {string|null} id - Unique ID of the entry (auto-generated if null)
+   * @param {string|null} preferredId - Optional id of the entry (auto-generated if null)
    * @returns {string} ID of the created entry
    */
-  addEntry(parentId, type, name, index, id = null) {
-    const entry = type === 'container' ? new Container(name, id) : new Block(name, id);
-    this._world.entryTypes.add(entry.id, { name, type });
-    this._registerEntry(entry);
-
-    if (parentId === null) {
-      this._setRoot(entry.id);
-    } else {
-      this._attachEntry(parentId, entry.id, index);
+  addEntry(type, name, preferredId = null) {
+    const entryId = this._world.spawn(preferredId);
+    this._world.entryTypes.add(entryId, { name, type });
+    this._world.hierarchies.add(entryId, { parent: null, children: [] });
+    if (type === 'block') {
+      const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
+      this.paramHandler.setInputParamDef(entryId, defaultParams.input);
+      this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
     }
-
-    return entry.id;
+    return entryId;
   }
 
   /**
@@ -312,30 +346,46 @@ export default class EntryManager {
    */
   removeEntry(entryId) {
     // Get parent entry
-    const parentId = this._parentIdById.get(entryId);
+    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const parentId = entryHierarchy?.parent;
     if (!parentId) return false;
 
     // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
     // Remove from parent's children array
-    const index = parentChildren.indexOf(entryId);
+    const index = parentHierarchy.children.indexOf(entryId);
     if (index === -1) return false;
-
-    parentChildren.splice(index, 1);
-
-    // Delete parent-child relationship
-    this._parentIdById.delete(entryId);
+    parentHierarchy.children.splice(index, 1);
 
     // If the entry is a container, recursively remove all its descendants
     if (this.isContainer(entryId)) {
       this._removeDescendants(entryId);
     }
 
-    // Remove the entry itself from the registry
-    this._entriesById.delete(entryId);
-    this._world.entryTypes.remove(entryId);
+    this.connectionHandler.removeConnectionsByEntryId(entryId);
+    this.paramHandler.removeParamDef(entryId);
+    this._world.despawn(entryId);
+
+    this._rebuildSequenceNumbers();
+    return true;
+  }
+
+  /**
+   * Remove all entries except the root entry
+   * @returns {boolean} Whether clearing was successful
+   */
+  clearEntries() {
+    if (!this._rootId) return false;
+
+    this._removeDescendants(this._rootId);
+
+    // Root itself isn't despawned, so its children array must be cleared explicitly.
+    const rootHierarchy = this._world.hierarchies.get(this._rootId);
+    if (rootHierarchy) {
+      rootHierarchy.children.length = 0;
+    }
 
     this._rebuildSequenceNumbers();
     return true;
@@ -350,18 +400,18 @@ export default class EntryManager {
    */
   reorderEntry(parentId, entryId, index) {
     // Get parent's children array (only containers have one)
-    const parentChildren = this._childrenById.get(parentId);
-    if (!parentChildren) return false;
+    const parentHierarchy = this._world.hierarchies.get(parentId);
+    if (!parentHierarchy) return false;
 
     // Reorder within parent's children array
-    const currentIndex = parentChildren.indexOf(entryId);
+    const currentIndex = parentHierarchy.children.indexOf(entryId);
     if (currentIndex !== -1) {
       let targetIndex = index;
       if (index > currentIndex) {
         targetIndex = targetIndex - 1;
       }
-      const childId = parentChildren.splice(currentIndex, 1)[0];
-      parentChildren.splice(targetIndex, 0, childId);
+      const childId = parentHierarchy.children.splice(currentIndex, 1)[0];
+      parentHierarchy.children.splice(targetIndex, 0, childId);
       this._rebuildSequenceNumbers();
       return true;
     }
@@ -377,7 +427,7 @@ export default class EntryManager {
    */
   moveEntry(entryId, newParentId, index) {
     // Check if the entry exists
-    if (!this._entriesById.has(entryId)) return false;
+    if (!this._world.isAlive(entryId)) return false;
 
     // Detach from the current parent
     this._detachEntry(entryId);
@@ -389,5 +439,4 @@ export default class EntryManager {
     }
     return this._attachEntry(newParentId, entryId, index);
   }
-
 }
