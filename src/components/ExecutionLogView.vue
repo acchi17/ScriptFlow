@@ -149,6 +149,7 @@ export default {
 <style scoped>
 /* Main container for the execution log view */
 .execution-log-view {
+  height: 100%;
   width: 600px;
   display: flex;
   flex-direction: column;
