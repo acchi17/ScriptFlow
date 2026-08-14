@@ -5,8 +5,7 @@ export function useEntryOperation() {
   const entryManager = inject('entryManager')
   const {
     getSelectedEntryId,
-    clearSelection,
-    cancelConnection
+    clearSelection
   } = useSystemState()
 
   const addEntry = (type, parentId, name, index) => {
@@ -21,7 +20,6 @@ export function useEntryOperation() {
     if (selectedId && (selectedId === entryId || descendantIds.includes(selectedId))) {
       clearSelection()
     }
-    cancelConnection()
     entryManager.removeEntry(entryId)
   }
 

@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { onMounted, onBeforeUnmount, inject, ref } from 'vue'
+import { onMounted, onBeforeUnmount, inject, ref, watch } from 'vue'
 import { useSystemState } from './composables/useSystemState'
 import MenuArea from './components/MenuArea.vue'
 import MainArea from './components/MainArea.vue'
@@ -35,9 +35,10 @@ export default {
   },
   setup() {
     const entryExecutionService = inject('entryExecutionService')
+    const entryManager = inject('entryManager')
     const showBlockSetting = ref(false)
     const blockListRefreshKey = ref(0)
-    const { resetState } = useSystemState()
+    const { resetState, cancelConnection } = useSystemState()
 
     function handleBeforeUnload() {
       console.log('Application unloading, performing cleanup...')
@@ -45,6 +46,8 @@ export default {
         entryExecutionService.terminate()
       }
     }
+
+    watch(() => entryManager.hierarchyTick.value, cancelConnection)
 
     onMounted(() => {
       window.addEventListener('beforeunload', handleBeforeUnload)

@@ -8,7 +8,7 @@ import { useSystemState } from './useSystemState'
 export function useEntryExecution() {
   const entryExecutionService = inject('entryExecutionService');
   const executionLogService = inject('executionLogService');
-  const { setExecuting, cancelConnection } = useSystemState()
+  const { setExecuting } = useSystemState()
 
   /**
    * Execute an entry (Block or Container)
