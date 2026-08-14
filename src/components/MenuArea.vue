@@ -23,9 +23,9 @@
 </template>
 
 <script>
+import { inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useSystemState } from '../composables/useSystemState'
-import { useEntryOperation } from '../composables/useEntryOperation'
 import { useEntryPersistance } from '../composables/useEntryPersistance'
 
 export default {
@@ -38,7 +38,7 @@ export default {
       event.dataTransfer.setData('sourceId', undefined)
     })
     const { showLog, toggleLog, isExecuting } = useSystemState()
-    const { getRootEntryId, getChildren } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const { isBusy, lastError, lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
 
     const onSaveRecipe = async () => {
@@ -49,8 +49,8 @@ export default {
     }
 
     const onLoadRecipe = async () => {
-      const rootEntryId = getRootEntryId()
-      if (rootEntryId && getChildren(rootEntryId).length > 0) {
+      const rootEntryId = entryManager.getRoot()
+      if (rootEntryId && entryManager.getChildren(rootEntryId).length > 0) {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }

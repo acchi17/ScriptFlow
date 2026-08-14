@@ -110,6 +110,15 @@ export default class EntryParamHandler {
   }
 
   /**
+   * Check if an entry has one or more input or output parameters
+   * @param {string} entryId - ID of the entry
+   * @returns {boolean} True if the entry has at least one input or output parameter
+   */
+  hasParam(entryId) {
+    return this.hasInputParam(entryId) || this.hasOutputParam(entryId);
+  }
+
+  /**
    * Check if an entry has one or more input parameters
    * @param {string} entryId - ID of the entry
    * @returns {boolean} True if the entry has at least one input parameter

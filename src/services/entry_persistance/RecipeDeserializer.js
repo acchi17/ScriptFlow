@@ -41,7 +41,7 @@ export default class RecipeDeserializer {
 
     await this._clearRecipe()
 
-    const rootId = this.entryManager.getRootEntry()
+    const rootId = this.entryManager.getRoot()
     if (!rootId) {
       throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
     }
@@ -69,7 +69,7 @@ export default class RecipeDeserializer {
    * @private
    */
   async _clearRecipe() {
-    const rootId = this.entryManager.getRootEntry()
+    const rootId = this.entryManager.getRoot()
     if (!rootId) return
 
     this.entryManager.connectionHandler.clearConnections()

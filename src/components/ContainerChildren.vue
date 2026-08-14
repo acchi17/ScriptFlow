@@ -21,9 +21,8 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useDroppable } from '../composables/useDroppable'
-import { useEntryOperation } from '../composables/useEntryOperation'
 import BlockItem from './BlockItem.vue'
 import ContainerItem from './ContainerItem.vue'
 
@@ -46,19 +45,11 @@ export default {
       onDragOver,
       setOnDropCallback
     } = useDroppable()
-    const {
-      getChildren,
-      addEntry,
-      removeEntry,
-      reorderEntry,
-      moveEntry,
-      isBlock,
-      hierarchyTick
-    } = useEntryOperation()
+    const entryManager = inject('entryManager')
 
     const children = computed(() => {
-      hierarchyTick.value
-      return getChildren(props.entryId)
+      entryManager.hierarchyTick.value
+      return entryManager.getChildren(props.entryId)
     })
     const dropAllowed = isDroppable(props.entryId)
 
@@ -70,18 +61,21 @@ export default {
 
       if (!entryId) {
         if (entryType === 'block' || entryType === 'container') {
-          addEntry(entryType, props.entryId, entryName, index)
+          const newEntryId = entryManager.addEntry(entryType, entryName)
+          entryManager.moveEntry(newEntryId, props.entryId, index)
         }
       } else if (!sourceId || sourceId === props.entryId) {
-        reorderEntry(props.entryId, entryId, index)
+        entryManager.reorderEntry(props.entryId, entryId, index)
       } else {
-        moveEntry(entryId, props.entryId, index)
+        entryManager.moveEntry(entryId, props.entryId, index)
       }
     })
 
     const removeChild = (id) => {
-      removeEntry(id)
+      entryManager.removeEntry(id)
     }
+
+    const isBlock = (entryId) => entryManager.isBlock(entryId)
 
     return { children, dropAllowed, onDrop, onDragOver, removeChild, isBlock }
   }

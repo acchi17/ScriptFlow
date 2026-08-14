@@ -30,8 +30,7 @@
 </template>
 
 <script>
-import { computed } from 'vue'
-import { useEntryOperation } from '../composables/useEntryOperation'
+import { computed, inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import { useSystemState } from '../composables/useSystemState'
@@ -59,13 +58,7 @@ export default {
       setOnDragStartCallback
     } = useDraggable()
     const { executeEntry } = useEntryExecution()
-
-    const {
-      getAllDescendantIds,
-      getParentId,
-      getEntryName,
-      hasParams,
-    } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const {
       isExecuting,
       getSelectedEntryId,
@@ -82,7 +75,8 @@ export default {
 
     const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParamsValue = computed(() => hasParams(props.entryId))
+    const hasParamsValue = computed(() => entryManager.paramHandler.hasParam(props.entryId))
+    const getEntryName = (entryId) => entryManager.getEntryName(entryId)
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -95,11 +89,11 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
-      const allIds = getAllDescendantIds(props.entryId)
+      const allIds = entryManager.getAllDescendants(props.entryId)
       dragDropState.setDraggedIds(allIds)
 
       // Get parent ID
-      const parentId = getParentId(props.entryId)
+      const parentId = entryManager.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'container')

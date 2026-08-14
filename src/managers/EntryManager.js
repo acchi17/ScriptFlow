@@ -215,7 +215,7 @@ export default class EntryManager {
    * Get the root entry's ID
    * @returns {string|null} Root entry ID or null
    */
-  getRootEntry() {
+  getRoot() {
     return this._rootId;
   }
 

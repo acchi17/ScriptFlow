@@ -115,7 +115,7 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyTick.value, () => nextTick(() => measureEntries()))
+    watch(() => entryManager.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
 
     const entryLayoutMap = computed(() => {
       entryManager.layoutsTick.value

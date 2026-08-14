@@ -16,7 +16,7 @@ export default class RecipeSerializer {
    * @returns {Object} recipe object
    */
   buildRecipe(name = '') {
-    const rootId = this.entryManager.getRootEntry()
+    const rootId = this.entryManager.getRoot()
     if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
     }

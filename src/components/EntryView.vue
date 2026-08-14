@@ -35,9 +35,8 @@
 </template>
 
 <script>
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
-import { useEntryOperation } from '../composables/useEntryOperation'
 import { useEntryDefinition } from '../composables/useEntryDefinition'
 import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
 import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
@@ -58,24 +57,24 @@ export default {
 
   setup() {
     const { getSelectedEntryId: selectedEntryId } = useSystemState()
-    const { getEntryName, getInputParams, getOutputParams, setInputParam, isBlock, outputParamsTick } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const { getBlockDefinition } = useEntryDefinition()
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
     const entryName = computed(() => {
-      return getEntryName(selectedEntryId.value)
+      return entryManager.getEntryName(selectedEntryId.value)
     })
 
     // Input parameter definitions from block definition (empty for containers)
     const inputParamDefs = computed(() => {
-      if (!isBlock(selectedEntryId.value)) return []
+      if (!entryManager.isBlock(selectedEntryId.value)) return []
       const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.input : []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
-      if (!isBlock(selectedEntryId.value)) return []
+      if (!entryManager.isBlock(selectedEntryId.value)) return []
       const blockDef = getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.output : []
     })
@@ -86,21 +85,21 @@ export default {
     // Depends on outputParamsTick so this re-runs when output param values change during
     // execution, since the underlying ECS store itself isn't deep-reactive
     const localOutputParams = computed(() => {
-      outputParamsTick.value
+      entryManager.paramHandler.outputParamsTick.value
       const id = selectedEntryId.value
-      return id ? getOutputParams(id) : {}
+      return id ? entryManager.paramHandler.getOutputParams(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedEntryId, (id) => {
-      localInputParams.value = id ? { ...getInputParams(id) } : {}
+      localInputParams.value = id ? { ...entryManager.paramHandler.getInputParams(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
       const id = selectedEntryId.value
       if (!id) return
       localInputParams.value[paramName] = value
-      setInputParam(id, paramName, value)
+      entryManager.paramHandler.setInputParam(id, paramName, value)
     }
 
     return {
