@@ -47,8 +47,7 @@
 </template>
 
 <script>
-import { ref } from 'vue'
-import { useEntryOperation } from '../composables/useEntryOperation'
+import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useEntryExecution } from '../composables/useEntryExecution'
 import { useEntryPersistance } from '../composables/useEntryPersistance'
 import { useSystemState } from '../composables/useSystemState'
@@ -65,12 +64,17 @@ export default {
   },
 
   setup() {
-    const { addEntry, clearRecipe, trackEntryLayout } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const { executeEntry } = useEntryExecution()
     const { isExecuting } = useSystemState()
     const { isBusy } = useEntryPersistance()
 
-    const rootContainerId = addEntry('container', null, 'root-container', 0)
+    const rootContainerId = entryManager.addEntry('container', 'root-container')
+    entryManager.moveEntry(rootContainerId, null, 0)
+
+    const clearRecipe = () => {
+      entryManager.clearEntries()
+    }
 
     const executeRecipe = () => {
       executeEntry(rootContainerId)
@@ -91,7 +95,32 @@ export default {
     }
 
     const entryPanelRef = ref(null)
-    const entryLayoutMap = trackEntryLayout(entryPanelRef)
+
+    // Re-measures the Y position and height of every entry's header element on
+    // structural changes, so the connection panel can align lines with entry headers.
+    function measureEntries() {
+      if (!entryPanelRef.value) return
+
+      const panelRect = entryPanelRef.value.getBoundingClientRect()
+
+      const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
+      entryManager.clearLayouts()
+      for (const node of nodes) {
+        const rect = node.getBoundingClientRect()
+        entryManager.addLayout(
+          node.dataset.entryId,
+          rect.top - panelRect.top,
+          rect.height
+        )
+      }
+    }
+
+    watch(() => entryManager.hierarchyTick.value, () => nextTick(() => measureEntries()))
+
+    const entryLayoutMap = computed(() => {
+      entryManager.layoutsTick.value
+      return entryManager.getAllLayouts()
+    })
 
     return {
       rootContainerId,
