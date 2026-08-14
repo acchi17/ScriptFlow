@@ -32,7 +32,7 @@
 <script>
 import { computed, inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
-import { useEntryExecution } from '../composables/useEntryExecution'
+import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import EntryParamsRow from './EntryParamsRow.vue'
 
@@ -57,7 +57,7 @@ export default {
       onDragEnd,
       setOnDragStartCallback
     } = useDraggable()
-    const { executeEntry } = useEntryExecution()
+    const { executeEntry } = useEntryOperation()
     const entryManager = inject('entryManager')
     const {
       isExecuting,

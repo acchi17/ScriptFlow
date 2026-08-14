@@ -48,7 +48,7 @@
 
 <script>
 import { ref, computed, inject, watch, nextTick } from 'vue'
-import { useEntryExecution } from '../composables/useEntryExecution'
+import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
@@ -64,7 +64,7 @@ export default {
 
   setup() {
     const entryManager = inject('entryManager')
-    const { executeEntry } = useEntryExecution()
+    const { executeEntry } = useEntryOperation()
     const { isExecuting } = useSystemState()
 
     const rootContainerId = entryManager.addEntry('container', 'root-container')

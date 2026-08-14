@@ -26,7 +26,7 @@
 import { inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useSystemState } from '../composables/useSystemState'
-import { useEntryPersistance } from '../composables/useEntryPersistance'
+import { useEntryOperation } from '../composables/useEntryOperation'
 
 export default {
   name: 'MenuArea',
@@ -39,7 +39,7 @@ export default {
     })
     const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
     const entryManager = inject('entryManager')
-    const { lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
+    const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
 
     const onSaveRecipe = async () => {
       await saveRecipe()
