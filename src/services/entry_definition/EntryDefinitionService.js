@@ -1,9 +1,27 @@
 import { convertValue } from '../../utils/common.js'
 
 /**
+ * Built-in container kind definitions (not user-authored, not loaded from JSON).
+ * Shape mirrors a block definition's `parameters` so the same paramDef-derivation
+ * logic (see getContainerParamDef) can be reused.
+ */
+const CONTAINER_DEFINITIONS = [
+  {
+    name: 'if-container',
+    parameters: {
+      input: [
+        { name: 'Execute', dataType: 'boolean', ctrlType: 'check_box', initial: true,
+          comment: 'Children execute only when this resolves to true' }
+      ],
+      output: []
+    }
+  }
+]
+
+/**
  * EntryDefinitionService
- * Owns the authoritative blockDefinitions (array of categories with embedded block defs).
- * I/O is delegated to PlatformService.
+ * Owns the authoritative blockDefinitions (array of categories with embedded block defs)
+ * and the built-in container definitions. I/O for block definitions is delegated to PlatformService.
  */
 export default class EntryDefinitionService {
   constructor(config, platformService) {
@@ -107,6 +125,34 @@ export default class EntryDefinitionService {
       };
     });
     blockDef.parameters.output.forEach(param => {
+      output[param.name] = {
+        value: param.initial !== undefined ? convertValue(param.initial, param.dataType) : null,
+        dataType: param.dataType
+      };
+    });
+    return { input, output };
+  }
+
+  getContainerDefinitions() {
+    return CONTAINER_DEFINITIONS;
+  }
+
+  getContainerDefinition(containerName) {
+    return CONTAINER_DEFINITIONS.find(c => c.name === containerName);
+  }
+
+  getContainerParamDef(containerName) {
+    const containerDef = this.getContainerDefinition(containerName);
+    if (!containerDef) return { input: {}, output: {} };
+    const input = {};
+    const output = {};
+    containerDef.parameters.input.forEach(param => {
+      input[param.name] = {
+        value: param.initial !== undefined ? convertValue(param.initial, param.dataType) : null,
+        dataType: param.dataType
+      };
+    });
+    containerDef.parameters.output.forEach(param => {
       output[param.name] = {
         value: param.initial !== undefined ? convertValue(param.initial, param.dataType) : null,
         dataType: param.dataType

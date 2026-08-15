@@ -42,6 +42,32 @@ describe('EntryManager.addEntry', () => {
   })
 })
 
+describe('EntryManager.addEntry container param defs', () => {
+  it('sets the built-in Execute input param when the name matches a known container kind', () => {
+    const entryDefnitionStore = {
+      getContainerParamDef: (name) => name === 'if-container'
+        ? { input: { Execute: { value: true, dataType: 'boolean' } }, output: {} }
+        : { input: {}, output: {} }
+    }
+    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+
+    const ifContainerId = entryManager.addEntry('container', 'if-container')
+
+    expect(entryManager.paramHandler.getInputParams(ifContainerId)).toEqual({ Execute: true })
+  })
+
+  it('leaves a plain (unrecognized-name) container with no input params', () => {
+    const entryDefnitionStore = {
+      getContainerParamDef: () => ({ input: {}, output: {} })
+    }
+    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+
+    const containerId = entryManager.addEntry('container', 'Container')
+
+    expect(entryManager.paramHandler.getInputParams(containerId)).toEqual({})
+  })
+})
+
 describe('EntryManager.removeEntry', () => {
   it('clears a removed block from the world', () => {
     const entryManager = new EntryManager()

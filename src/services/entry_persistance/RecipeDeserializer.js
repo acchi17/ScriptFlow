@@ -108,6 +108,16 @@ export default class RecipeDeserializer {
       this.entryManager.moveEntry(containerId, parentId, index)
       idMap.set(node.id, containerId)
 
+      const currentInputParams = this.entryManager.paramHandler.getInputParams(containerId)
+      const savedInputParams = node.inputParams || {}
+      Object.entries(savedInputParams).forEach(([paramName, value]) => {
+        if (!(paramName in currentInputParams)) {
+          warnings.push(`Input param "${paramName}" no longer exists on container "${node.name}" (entry ${containerId}) — value ignored`)
+          return
+        }
+        this.entryManager.paramHandler.setInputParam(containerId, paramName, value)
+      })
+
       const children = Array.isArray(node.children) ? node.children : []
       children.forEach((childNode, childIndex) => {
         this._restoreEntries(childNode, containerId, childIndex, idMap, warnings)

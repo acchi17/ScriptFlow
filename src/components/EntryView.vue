@@ -64,11 +64,18 @@ export default {
       return entryManager.getEntryName(selectedEntryId.value)
     })
 
-    // Input parameter definitions from block definition (empty for containers)
+    // Input parameter definitions from the block or container definition
     const inputParamDefs = computed(() => {
-      if (!entryManager.isBlock(selectedEntryId.value)) return []
-      const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
-      return blockDef ? blockDef.parameters.input : []
+      const id = selectedEntryId.value
+      if (entryManager.isBlock(id)) {
+        const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
+        return blockDef ? blockDef.parameters.input : []
+      }
+      if (entryManager.isContainer(id)) {
+        const containerDef = entryDefinitionService.getContainerDefinition(entryName.value)
+        return containerDef ? containerDef.parameters.input : []
+      }
+      return []
     })
 
     // Output parameter definitions from block definition (empty for containers)

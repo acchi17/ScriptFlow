@@ -49,6 +49,10 @@
   --container-border: 1px solid #AAAAAA;
   --container-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 
+  /* If-container-related styles */
+  --if-container-bg-color: #ffd8b0;
+  --if-container-border-color: #f0a860;
+
   /* Entry rectangle styles */
   --entry-header-height: 50px;
   --entry-border: 1px solid #AAAAAA;

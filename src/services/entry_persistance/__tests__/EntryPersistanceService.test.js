@@ -193,6 +193,23 @@ describe('EntryPersistanceService round trip', () => {
     expect(ctx.entryManager.paramHandler.getInputParams(blockId)).toEqual({ NumberA: 7, NumberB: 0 })
   })
 
+  it('round-trips an if-container\'s Execute param, keeping its children skipped', async () => {
+    const ctx = await createContext()
+    const ifContainerId = ctx.entryManager.addEntry('container', 'if-container')
+    ctx.entryManager.moveEntry(ifContainerId, ctx.rootId, 0)
+    ctx.entryManager.paramHandler.setInputParam(ifContainerId, 'Execute', false)
+    addBlock(ctx, ifContainerId, 'Add', 0)
+
+    const recipe = ctx.service.buildRecipe()
+    const report = await ctx.service.restoreRecipe(recipe)
+
+    expect(report.warnings).toEqual([])
+    const restoredRootId = ctx.entryManager.getRoot()
+    const restoredIfContainerId = ctx.entryManager.getChildren(restoredRootId)[0]
+    expect(ctx.entryManager.getEntryName(restoredIfContainerId)).toBe('if-container')
+    expect(ctx.entryManager.paramHandler.getInputParams(restoredIfContainerId)).toEqual({ Execute: false })
+  })
+
   it('clears stale entries, params and layout before restoring, even into a smaller recipe', async () => {
     const ctx = await createContext()
     const block1Id = addBlock(ctx, ctx.rootId, 'Add', 0)

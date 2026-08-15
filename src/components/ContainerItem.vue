@@ -1,7 +1,7 @@
 <template>
   <div
     class="container-item"
-    :class="{ 'dragging': isDragging, 'selected': isSelected }"
+    :class="[containerTypeClass, { 'dragging': isDragging, 'selected': isSelected }]"
     draggable="true"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
@@ -18,7 +18,7 @@
           <div
             v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="container-content-param"
-            :class="{ 'selected': isSelected }"
+            :class="[containerTypeClass, { 'selected': isSelected }]"
           >
             <EntryParamsRow :entry-id="entryId" :is-connecting-tgt="isConnectingTargetValue" />
           </div>
@@ -77,6 +77,7 @@ export default {
 
     const hasParamsValue = computed(() => entryManager.paramHandler.hasParam(props.entryId))
     const getEntryName = (entryId) => entryManager.getEntryName(entryId)
+    const containerTypeClass = computed(() => `type-${getEntryName(props.entryId).toLowerCase()}`)
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -135,6 +136,7 @@ export default {
       isSelected,
       isConnectingTargetValue,
       hasParamsValue,
+      containerTypeClass,
       getEntryName,
       onDragStart,
       onDragEnd,
@@ -163,6 +165,10 @@ export default {
 .container-item.selected {
   border: var(--entry-select-border);
   box-shadow: var(--entry-select-box-shadow);
+}
+
+.container-item.type-if-container {
+  background-color: var(--if-container-bg-color);
 }
 
 .container-content {
@@ -206,6 +212,10 @@ export default {
 .container-content-param.selected {
   border: var(--entry-select-border);
   box-shadow: var(--entry-select-box-shadow);
+}
+
+.container-content-param.type-if-container {
+  background-color: var(--if-container-bg-color);
 }
 
 .entry-spacer {

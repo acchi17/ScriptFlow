@@ -98,17 +98,18 @@ export default class EntryExecutionService {
   /**
    * Execute a container entry
    * @param {string} entryId ID of the container entry to execute
+   * @param {Object} inputParams Resolved input parameters for the container (optional)
    * @param {string} traceId Trace ID for execution tracking
    * @return {Promise<ScriptExecutionResult>}
    *         Execution result object conforming to ScriptExecutionResult type
    * @private
    */
-  async _executeContainer(entryId, traceId) {
+  async _executeContainer(entryId, inputParams = {}, traceId) {
     let result = {};
     try {
       const entryName = this.entryManager.getEntryName(entryId);
       const strategy = ContainerExecutionFactory.createStrategy(entryName, this.entryManager);
-      result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId));
+      result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId), inputParams);
     } catch (error) {
       result.errorMessage = error.message;
     }
@@ -148,7 +149,7 @@ export default class EntryExecutionService {
       if (this.entryManager.isBlock(entryId)) {
         result = await this._executeBlock(entryId, inputParams);
       } else if (this.entryManager.isContainer(entryId)) {
-        result = await this._executeContainer(entryId, executionId);
+        result = await this._executeContainer(entryId, inputParams, executionId);
       }
       // Log execution result if execution log service is available
       if (this.executionLogService) {

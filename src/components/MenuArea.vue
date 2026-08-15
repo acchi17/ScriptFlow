@@ -9,6 +9,16 @@
         <div
           class="rect-icon lime"
           draggable="true"
+          data-entry-name="Container"
+          @dragstart="onDragStartContainer"
+          @dragend="onDragEndContainer"
+        ></div>
+      </div>
+      <div class="rect-item">
+        <div
+          class="rect-icon pale-orange"
+          draggable="true"
+          data-entry-name="if-container"
           @dragstart="onDragStartContainer"
           @dragend="onDragEndContainer"
         ></div>
@@ -34,7 +44,7 @@ export default {
     const { onDragStart: onDragStartContainer, onDragEnd: onDragEndContainer, setOnDragStartCallback } = useDraggable()
     setOnDragStartCallback((event) => {
       event.dataTransfer.setData('entryType', 'container')
-      event.dataTransfer.setData('entryName', 'Container')
+      event.dataTransfer.setData('entryName', event.currentTarget.dataset.entryName)
       event.dataTransfer.setData('sourceId', undefined)
     })
     const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
@@ -139,6 +149,10 @@ export default {
 .rect-icon.lime {
   background-color: #8eec9a;
   border: 1px solid #7bc97b;
+}
+.rect-icon.pale-orange {
+  background-color: var(--if-container-bg-color);
+  border: 1px solid var(--if-container-border-color);
 }
 .log-toggle-btn {
   width: 20px;

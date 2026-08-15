@@ -335,6 +335,10 @@ export default class EntryManager {
       const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
       this.paramHandler.setInputParamDef(entryId, defaultParams.input);
       this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
+    } else if (type === 'container') {
+      const defaultParams = this.entryDefnitionStore?.getContainerParamDef(name) ?? { input: {}, output: {} };
+      this.paramHandler.setInputParamDef(entryId, defaultParams.input);
+      this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
     }
     return entryId;
   }
