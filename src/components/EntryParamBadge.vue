@@ -110,7 +110,7 @@ export default {
 
     const paramTypeClass = computed(() => {
       if (!props.paramType) return null
-      return `type-${props.paramType}`
+      return `param-type-${props.paramType}`
     })
 
     const paramTypeLabel = computed(() => PARAM_TYPE_LABELS[props.paramType] ?? '')
@@ -138,33 +138,9 @@ export default {
   font-size: var(--param-badge-normal-font-size);
   font-weight: 500;
   color: var(--param-badge-font-color);
+  background-color: var(--param-badge-bg, transparent);
   border: var(--param-badge-border);
   border-radius: var(--param-badge-border-radius);
-}
-
-.entry-param-badge.type-integer {
-  background-color: var(--param-badge-bg-color-integer);
-  border: var(--param-badge-border-integer);
-}
-
-.entry-param-badge.type-real {
-  background-color: var(--param-badge-bg-color-real);
-  border: var(--param-badge-border-real); 
-}
-
-.entry-param-badge.type-boolean {
-  background-color: var(--param-badge-bg-color-boolean);
-  border: var(--param-badge-border-boolean);
-}
-
-.entry-param-badge.type-string {
-  background-color: var(--param-badge-bg-color-string);
-  border: var(--param-badge-border-string);
-}
-
-.entry-param-badge.type-image {
-  background-color: var(--param-badge-bg-color-image);
-  border: var(--param-badge-border-image);
 }
 
 .param-type {
