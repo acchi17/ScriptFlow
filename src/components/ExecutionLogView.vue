@@ -296,7 +296,7 @@ export default {
 
 /* Container-specific row styling */
 .container-row {
-  background-color: var(--container-bg-color);
+  background-color: #8eec9a;
 }
 
 .container-row:hover {
@@ -309,7 +309,7 @@ export default {
 
 /* Container group footer row */
 .container-group-footer {
-  background-color: var(--container-bg-color);
+  background-color: #8eec9a;
   border-bottom: 1px solid var(--container-hover-bg-color);
 }
 

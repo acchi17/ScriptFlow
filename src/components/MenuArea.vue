@@ -151,7 +151,7 @@ export default {
   border: 1px solid #7bc97b;
 }
 .rect-icon.pale-orange {
-  background-color: var(--if-container-bg-color);
+  background-color: #ffd8b0;
   border: 1px solid var(--if-container-border-color);
 }
 .log-toggle-btn {

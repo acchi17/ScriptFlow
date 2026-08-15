@@ -155,7 +155,7 @@ export default {
   border: var(--container-border);
   border-radius: var(--entry-border-radius);
   box-shadow: var(--container-box-shadow);
-  background-color: var(--container-bg-color);
+  background-color: var(--container-item-bg);
 }
 
 .container-item.dragging {
@@ -165,10 +165,6 @@ export default {
 .container-item.selected {
   border: var(--entry-select-border);
   box-shadow: var(--entry-select-box-shadow);
-}
-
-.container-item.type-if-container {
-  background-color: var(--if-container-bg-color);
 }
 
 .container-content {
@@ -206,16 +202,12 @@ export default {
   border: var(--entry-border);
   border-radius: var(--entry-border-radius);
   box-shadow: var(--entry-box-shadow);
-  background-color: var(--container-bg-color);
+  background-color: var(--container-item-bg);
 }
 
 .container-content-param.selected {
   border: var(--entry-select-border);
   box-shadow: var(--entry-select-box-shadow);
-}
-
-.container-content-param.type-if-container {
-  background-color: var(--if-container-bg-color);
 }
 
 .entry-spacer {

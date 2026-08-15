@@ -44,13 +44,11 @@
   --block-hover-bg-color: #e8e8e8;
 
   /* Container-related styles */
-  --container-bg-color: #8eec9a;
   --container-hover-bg-color: #7ee089;
   --container-border: 1px solid #AAAAAA;
   --container-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 
   /* If-container-related styles */
-  --if-container-bg-color: #ffd8b0;
   --if-container-border-color: #f0a860;
 
   /* Entry rectangle styles */
@@ -129,3 +127,7 @@
 .param-type-real    { --param-badge-bg: #93c5fd; --param-badge-border: 3px solid #60a5fa; }
 .param-type-string  { --param-badge-bg: #fcd34d; --param-badge-border: 3px solid #fbbf24; }
 .param-type-image   { --param-badge-bg: #a5b4fc; --param-badge-border: 3px solid #8b5cf6; }
+
+/* Container type -> background color mapping (consumed by ContainerItem) */
+.type-container    { --container-item-bg: #8eec9a; }
+.type-if-container { --container-item-bg: #ffd8b0; }
