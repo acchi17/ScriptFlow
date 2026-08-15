@@ -37,7 +37,7 @@ export default {
     const entryManager = inject('entryManager')
 
     function paramTypeClass(dataType) {
-      return dataType ? `param-type-${dataType}` : null
+      return dataType ? `type-${dataType}` : null
     }
 
     const listItems = computed(() => {

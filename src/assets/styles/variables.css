@@ -121,13 +121,13 @@
   --block-setting-border-radius: 3px;
 }
 
-/* Parameter type -> badge color mapping (consumed by EntryParamBadge, ConnectionItem, ConnectionListView) */
-.param-type-boolean { --param-badge-bg: #fca5a5; --param-badge-border: 3px solid #f87171; }
-.param-type-integer { --param-badge-bg: #6ee7b7; --param-badge-border: 3px solid #34d399; }
-.param-type-real    { --param-badge-bg: #93c5fd; --param-badge-border: 3px solid #60a5fa; }
-.param-type-string  { --param-badge-bg: #fcd34d; --param-badge-border: 3px solid #fbbf24; }
-.param-type-image   { --param-badge-bg: #a5b4fc; --param-badge-border: 3px solid #8b5cf6; }
+/* Data type -> css mapping */
+.type-boolean { --param-badge-bg: #fca5a5; --param-badge-border: 3px solid #f87171; }
+.type-integer { --param-badge-bg: #6ee7b7; --param-badge-border: 3px solid #34d399; }
+.type-real    { --param-badge-bg: #93c5fd; --param-badge-border: 3px solid #60a5fa; }
+.type-string  { --param-badge-bg: #fcd34d; --param-badge-border: 3px solid #fbbf24; }
+.type-image   { --param-badge-bg: #a5b4fc; --param-badge-border: 3px solid #8b5cf6; }
 
-/* Container type -> background color mapping (consumed by ContainerItem) */
+/* Container type -> css mapping */
 .type-container    { --container-item-bg: #8eec9a; }
 .type-if-container { --container-item-bg: #ffd8b0; }

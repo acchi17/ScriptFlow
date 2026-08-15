@@ -110,7 +110,7 @@ export default {
 
     const paramTypeClass = computed(() => {
       if (!props.paramType) return null
-      return `param-type-${props.paramType}`
+      return `type-${props.paramType}`
     })
 
     const paramTypeLabel = computed(() => PARAM_TYPE_LABELS[props.paramType] ?? '')

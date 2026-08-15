@@ -99,7 +99,7 @@ export default {
   setup(props) {
     const laneX = computed(() => (props.laneIndex + 0.5) * LANE_WIDTH)
     const lineTypeClass = computed(() =>
-      props.outputParamType ? `param-type-${props.outputParamType}` : null
+      props.outputParamType ? `type-${props.outputParamType}` : null
     )
 
     return { laneX, lineTypeClass, LANE_WIDTH, BADGE_HEIGHT }
