@@ -7,7 +7,7 @@
     <div class="menu-right">
       <div class="rect-item">
         <div
-          class="rect-icon lime"
+          class="rect-icon plain-container"
           draggable="true"
           data-entry-name="Container"
           @dragstart="onDragStartContainer"
@@ -16,7 +16,7 @@
       </div>
       <div class="rect-item">
         <div
-          class="rect-icon pale-orange"
+          class="rect-icon if-container"
           draggable="true"
           data-entry-name="if-container"
           @dragstart="onDragStartContainer"
@@ -146,13 +146,13 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   cursor: grab;
 }
-.rect-icon.lime {
+.rect-icon.plain-container {
   background-color: #8eec9a;
   border: 1px solid #7bc97b;
 }
-.rect-icon.pale-orange {
+.rect-icon.if-container {
   background-color: #ffd8b0;
-  border: 1px solid var(--if-container-border-color);
+  border: 1px solid #f0a860;
 }
 .log-toggle-btn {
   width: 20px;

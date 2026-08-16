@@ -48,9 +48,6 @@
   --container-border: 1px solid #AAAAAA;
   --container-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 
-  /* If-container-related styles */
-  --if-container-border-color: #f0a860;
-
   /* Entry rectangle styles */
   --entry-header-height: 50px;
   --entry-border: 1px solid #AAAAAA;
@@ -129,5 +126,5 @@
 .type-image   { --param-badge-bg: #a5b4fc; --param-badge-border: 3px solid #8b5cf6; }
 
 /* Container type -> css mapping */
-.type-container    { --container-item-bg: #8eec9a; }
-.type-if-container { --container-item-bg: #ffd8b0; }
+.type-container    { --container-item-bg: #8eec9a; --container-item-border: 1px solid #7bc97b; }
+.type-if-container { --container-item-bg: #ffd8b0; --container-item-border: 1px solid #f0a860; }
