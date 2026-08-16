@@ -36,13 +36,13 @@ export default {
 
     const connectionsWithLanes = computed(() => {
       entryManager.connectionHandler.connectionsTick.value
-      entryManager.layoutsTick.value
+      entryManager.layoutHandler.layoutsTick.value
       const connections = entryManager.connectionHandler.getConnections()
 
       const withCoords = []
       for (const conn of connections) {
-        const outLayout = entryManager.getLayout(conn.output.entryId)
-        const inLayout = entryManager.getLayout(conn.input.entryId)
+        const outLayout = entryManager.layoutHandler.getLayout(conn.output.entryId)
+        const inLayout = entryManager.layoutHandler.getLayout(conn.input.entryId)
         if (!outLayout || !inLayout) continue
 
         const y1 = outLayout.y + outLayout.height / 2

@@ -68,7 +68,7 @@ export default {
     const { isExecuting } = useSystemState()
 
     const rootContainerId = entryManager.addEntry('container', 'root-container')
-    entryManager.moveEntry(rootContainerId, null, 0)
+    entryManager.hierarchyHandler.moveEntry(rootContainerId, null, 0)
 
     const clearRecipe = () => {
       entryManager.clearEntries()
@@ -102,10 +102,10 @@ export default {
       const panelRect = entryPanelRef.value.getBoundingClientRect()
 
       const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
-      entryManager.clearLayouts()
+      entryManager.layoutHandler.clearLayouts()
       for (const node of nodes) {
         const rect = node.getBoundingClientRect()
-        entryManager.addLayout(
+        entryManager.layoutHandler.addLayout(
           node.dataset.entryId,
           rect.top - panelRect.top,
           rect.height
@@ -113,11 +113,11 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
+    watch(() => entryManager.hierarchyHandler.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
 
     const entryLayoutMap = computed(() => {
-      entryManager.layoutsTick.value
-      return entryManager.getAllLayouts()
+      entryManager.layoutHandler.layoutsTick.value
+      return entryManager.layoutHandler.getAllLayouts()
     })
 
     return {

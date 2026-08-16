@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import IfContainerExecutionStrategy from '../IfContainerExecutionStrategy.js'
 
 function buildEntryManager(children) {
-  return { getChildren: () => children }
+  return { hierarchyHandler: { getChildren: () => children } }
 }
 
 describe('IfContainerExecutionStrategy.execute', () => {
@@ -36,7 +36,7 @@ describe('IfContainerExecutionStrategy.execute', () => {
     const result = await strategy.execute('container', runChild, { Execute: false })
 
     expect(runChild).not.toHaveBeenCalled()
-    expect(result).toEqual({ success: true, skipped: true })
+    expect(result).toEqual({ success: true })
   })
 
   it('reports failure when any child fails while running', async () => {

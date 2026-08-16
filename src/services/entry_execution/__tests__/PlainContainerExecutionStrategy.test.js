@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import PlainContainerExecutionStrategy from '../PlainContainerExecutionStrategy.js'
 
 function buildEntryManager(children) {
-  return { getChildren: () => children }
+  return { hierarchyHandler: { getChildren: () => children } }
 }
 
 describe('PlainContainerExecutionStrategy.execute', () => {

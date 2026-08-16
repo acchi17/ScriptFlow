@@ -20,7 +20,7 @@ export default class IContainerExecutionStrategy {
    */
   async runChildrenSequentially(entryId, runChild) {
     const childResults = [];
-    for (const childId of this.entryManager.getChildren(entryId)) {
+    for (const childId of this.entryManager.hierarchyHandler.getChildren(entryId)) {
       const childResult = await runChild(childId);
       childResults.push(childResult);
     }

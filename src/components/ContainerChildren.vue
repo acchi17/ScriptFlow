@@ -48,8 +48,8 @@ export default {
     const entryManager = inject('entryManager')
 
     const children = computed(() => {
-      entryManager.hierarchyTick.value
-      return entryManager.getChildren(props.entryId)
+      entryManager.hierarchyHandler.hierarchyTick.value
+      return entryManager.hierarchyHandler.getChildren(props.entryId)
     })
     const dropAllowed = isDroppable(props.entryId)
 
@@ -62,12 +62,12 @@ export default {
       if (!entryId) {
         if (entryType === 'block' || entryType === 'container') {
           const newEntryId = entryManager.addEntry(entryType, entryName)
-          entryManager.moveEntry(newEntryId, props.entryId, index)
+          entryManager.hierarchyHandler.moveEntry(newEntryId, props.entryId, index)
         }
       } else if (!sourceId || sourceId === props.entryId) {
-        entryManager.reorderEntry(props.entryId, entryId, index)
+        entryManager.hierarchyHandler.reorderEntry(props.entryId, entryId, index)
       } else {
-        entryManager.moveEntry(entryId, props.entryId, index)
+        entryManager.hierarchyHandler.moveEntry(entryId, props.entryId, index)
       }
     })
 

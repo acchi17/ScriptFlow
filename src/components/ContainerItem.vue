@@ -90,11 +90,11 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
-      const allIds = entryManager.getAllDescendants(props.entryId)
+      const allIds = entryManager.hierarchyHandler.getAllDescendants(props.entryId)
       dragDropState.setDraggedIds(allIds)
 
       // Get parent ID
-      const parentId = entryManager.getParent(props.entryId)
+      const parentId = entryManager.hierarchyHandler.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'container')

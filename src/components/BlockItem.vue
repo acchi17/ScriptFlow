@@ -88,7 +88,7 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event) => {
       // Get parent ID
-      const parentId = entryManager.getParent(props.entryId)
+      const parentId = entryManager.hierarchyHandler.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'block')

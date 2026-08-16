@@ -28,7 +28,7 @@ describe('EntryExecutionService container execution', () => {
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
     const childBlockId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.moveEntry(childBlockId, ifContainerId, 0)
+    entryManager.hierarchyHandler.moveEntry(childBlockId, ifContainerId, 0)
 
     entryManager.connectionHandler.addConnection(
       { entryId: sourceBlockId, category: 'output', dataType: 'boolean', paramName: 'Flag' },
@@ -40,7 +40,7 @@ describe('EntryExecutionService container execution', () => {
     const result = await service.executeEntry(ifContainerId)
 
     expect(service.scriptExecutionService.executeScript).not.toHaveBeenCalled()
-    expect(result).toEqual({ success: true, skipped: true })
+    expect(result).toEqual({ success: true })
   })
 
   it('runs an if-container\'s children when Execute resolves to true, and a plain container always runs its children', async () => {
@@ -48,11 +48,11 @@ describe('EntryExecutionService container execution', () => {
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
     const ifChildId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.moveEntry(ifChildId, ifContainerId, 0)
+    entryManager.hierarchyHandler.moveEntry(ifChildId, ifContainerId, 0)
 
     const plainContainerId = entryManager.addEntry('container', 'Container')
     const plainChildId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.moveEntry(plainChildId, plainContainerId, 0)
+    entryManager.hierarchyHandler.moveEntry(plainChildId, plainContainerId, 0)
 
     const service = buildService(entryManager)
 

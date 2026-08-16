@@ -16,7 +16,7 @@ export default class RecipeSerializer {
    * @returns {Object} recipe object
    */
   buildRecipe(name = '') {
-    const rootId = this.entryManager.getRoot()
+    const rootId = this.entryManager.hierarchyHandler.getRoot()
     if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
     }
@@ -49,7 +49,7 @@ export default class RecipeSerializer {
       node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
     } else if (this.entryManager.isContainer(entryId)) {
       node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
-      node.children = this.entryManager.getChildren(entryId)
+      node.children = this.entryManager.hierarchyHandler.getChildren(entryId)
         .map(childId => this._serialiseEntry(childId))
     }
 
