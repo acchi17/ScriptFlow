@@ -122,7 +122,7 @@ export default class EntryManager {
   addEntry(type, name, preferredId = null) {
     const entryId = this._world.spawn(preferredId);
     this._world.entryTypes.add(entryId, { name, type });
-    this.hierarchyHandler.initEntry(entryId);
+    this.hierarchyHandler.initialize(entryId);
     if (type === 'block') {
       const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
       this.paramHandler.setInputParamDef(entryId, defaultParams.input);
@@ -161,6 +161,36 @@ export default class EntryManager {
   }
 
   /**
+   * Move an entry to a different parent
+   * @param {string} entryId - ID of the child entry to move
+   * @param {string|null} newParentId - ID of the new parent entry (null to set as parentless)
+   * @param {number} index - Target index position
+   * @returns {boolean} Whether the moving was successful
+   */
+  moveEntry(entryId, newParentId, index) {
+    if (!this.isAlive(entryId)) return false;
+
+    this.hierarchyHandler.detachFromParent(entryId);
+
+    if (newParentId === null) {
+      this.hierarchyHandler.setRoot(entryId);
+      return true;
+    }
+    return this.hierarchyHandler.attachToParent(newParentId, entryId, index);
+  }
+
+  /**
+   * Reorder an entry within its parent entry
+   * @param {string} parentId - ID of the parent entry
+   * @param {string} entryId - ID of the entry to reorder
+   * @param {number} index - Target index position
+   * @returns {boolean} Whether the reordering was successful
+   */
+  reorderInParent(parentId, entryId, index) {
+    return this.hierarchyHandler.reorderInParent(parentId, entryId, index);
+  }
+
+  /**
    * Remove all entries except the root entry
    * @returns {boolean} Whether clearing was successful
    */
@@ -171,7 +201,7 @@ export default class EntryManager {
     this._removeDescendants(rootId);
 
     // Root itself isn't despawned, so its children array must be cleared explicitly.
-    this.hierarchyHandler.clearChildrenOf(rootId);
+    this.hierarchyHandler.clearChildren(rootId);
 
     return true;
   }

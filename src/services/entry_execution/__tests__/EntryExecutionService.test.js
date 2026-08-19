@@ -28,7 +28,7 @@ describe('EntryExecutionService container execution', () => {
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
     const childBlockId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.hierarchyHandler.moveEntry(childBlockId, ifContainerId, 0)
+    entryManager.moveEntry(childBlockId, ifContainerId, 0)
 
     entryManager.connectionHandler.addConnection(
       { entryId: sourceBlockId, category: 'output', dataType: 'boolean', paramName: 'Flag' },
@@ -48,11 +48,11 @@ describe('EntryExecutionService container execution', () => {
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
     const ifChildId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.hierarchyHandler.moveEntry(ifChildId, ifContainerId, 0)
+    entryManager.moveEntry(ifChildId, ifContainerId, 0)
 
     const plainContainerId = entryManager.addEntry('container', 'Container')
     const plainChildId = entryManager.addEntry('block', 'ChildBlock')
-    entryManager.hierarchyHandler.moveEntry(plainChildId, plainContainerId, 0)
+    entryManager.moveEntry(plainChildId, plainContainerId, 0)
 
     const service = buildService(entryManager)
 

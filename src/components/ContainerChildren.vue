@@ -62,12 +62,12 @@ export default {
       if (!entryId) {
         if (entryType === 'block' || entryType === 'container') {
           const newEntryId = entryManager.addEntry(entryType, entryName)
-          entryManager.hierarchyHandler.moveEntry(newEntryId, props.entryId, index)
+          entryManager.moveEntry(newEntryId, props.entryId, index)
         }
       } else if (!sourceId || sourceId === props.entryId) {
-        entryManager.hierarchyHandler.reorderEntry(props.entryId, entryId, index)
+        entryManager.reorderInParent(props.entryId, entryId, index)
       } else {
-        entryManager.hierarchyHandler.moveEntry(entryId, props.entryId, index)
+        entryManager.moveEntry(entryId, props.entryId, index)
       }
     })
 

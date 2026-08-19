@@ -68,7 +68,7 @@ export default {
     const { isExecuting } = useSystemState()
 
     const rootContainerId = entryManager.addEntry('container', 'root-container')
-    entryManager.hierarchyHandler.moveEntry(rootContainerId, null, 0)
+    entryManager.moveEntry(rootContainerId, null, 0)
 
     const clearRecipe = () => {
       entryManager.clearEntries()

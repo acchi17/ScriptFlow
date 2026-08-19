@@ -93,12 +93,12 @@ export default {
     const localOutputParams = computed(() => {
       entryManager.paramHandler.outputParamsTick.value
       const id = selectedEntryId.value
-      return id ? entryManager.paramHandler.getOutputParams(id) : {}
+      return id ? entryManager.paramHandler.getOutputParamValues(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedEntryId, (id) => {
-      localInputParams.value = id ? { ...entryManager.paramHandler.getInputParams(id) } : {}
+      localInputParams.value = id ? { ...entryManager.paramHandler.getInputParamValues(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {

@@ -22,7 +22,7 @@ async function createContext() {
   )
 
   const rootId = entryManager.addEntry('container', 'root-container')
-  entryManager.hierarchyHandler.moveEntry(rootId, null, 0)
+  entryManager.moveEntry(rootId, null, 0)
 
   return {
     entryManager,
@@ -32,7 +32,7 @@ async function createContext() {
 
 function addBlock(ctx, parentId, name, index) {
   const blockId = ctx.entryManager.addEntry('block', name)
-  ctx.entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
+  ctx.entryManager.moveEntry(blockId, parentId, index)
   const defs = ctx.entryDefinitionService.getBlockParamDef(name)
   ctx.entryManager.paramHandler.setInputParamDef(blockId, defs.input)
   ctx.entryManager.paramHandler.setOutputParamDef(blockId, defs.output)
@@ -47,7 +47,7 @@ describe('EntryPersistanceService round trip', () => {
     ctx.entryManager.paramHandler.setInputParam(addBlockId, 'NumberB', 4)
 
     const subContainerId = ctx.entryManager.addEntry('container', 'Sub')
-    ctx.entryManager.hierarchyHandler.moveEntry(subContainerId, ctx.rootId, 1)
+    ctx.entryManager.moveEntry(subContainerId, ctx.rootId, 1)
     const mulBlockId = addBlock(ctx, subContainerId, 'Mul', 0)
     ctx.entryManager.paramHandler.setInputParam(mulBlockId, 'NumberB', 5)
 
@@ -68,11 +68,11 @@ describe('EntryPersistanceService round trip', () => {
 
     const restoredRootId = ctx.entryManager.hierarchyHandler.getRoot()
     expect(ctx.entryManager.hierarchyHandler.getChildren(restoredRootId).map(id => ctx.entryManager.getEntryName(id))).toEqual(['Add', 'Sub'])
-    expect(ctx.entryManager.paramHandler.getInputParams(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
+    expect(ctx.entryManager.paramHandler.getInputParamValues(addBlockId)).toEqual({ NumberA: 3, NumberB: 4 })
 
     const restoredSubId = ctx.entryManager.hierarchyHandler.getChildren(restoredRootId)[1]
     const restoredMulId = ctx.entryManager.hierarchyHandler.getChildren(restoredSubId)[0]
-    expect(ctx.entryManager.paramHandler.getInputParams(restoredMulId)).toEqual({ NumberA: 0, NumberB: 5 })
+    expect(ctx.entryManager.paramHandler.getInputParamValues(restoredMulId)).toEqual({ NumberA: 0, NumberB: 5 })
 
     const connections = ctx.entryManager.connectionHandler.getConnections()
     expect(connections).toHaveLength(1)
@@ -137,7 +137,7 @@ describe('EntryPersistanceService round trip', () => {
     const restoredRootChildIds = ctx.entryManager.hierarchyHandler.getChildren(restoredRootId)
     expect(restoredRootChildIds).toHaveLength(1)
     expect(ctx.entryManager.getEntryName(restoredRootChildIds[0])).toBe('GoneBlock')
-    expect(ctx.entryManager.paramHandler.getInputParams(restoredRootChildIds[0])).toEqual({})
+    expect(ctx.entryManager.paramHandler.getInputParamValues(restoredRootChildIds[0])).toEqual({})
   })
 
   it('drops an input param that no longer exists on the block definition, with a warning', async () => {
@@ -150,7 +150,7 @@ describe('EntryPersistanceService round trip', () => {
 
     expect(report.warnings.some(w => w.includes('Input param "Extra" no longer exists'))).toBe(true)
     const restoredBlockId = ctx.entryManager.hierarchyHandler.getChildren(ctx.entryManager.hierarchyHandler.getRoot())[0]
-    expect(ctx.entryManager.paramHandler.getInputParams(restoredBlockId)).toEqual({ NumberA: 0, NumberB: 0 })
+    expect(ctx.entryManager.paramHandler.getInputParamValues(restoredBlockId)).toEqual({ NumberA: 0, NumberB: 0 })
   })
 
   it('drops a connection whose output does not precede its input in DFS order, with a warning', async () => {
@@ -190,13 +190,13 @@ describe('EntryPersistanceService round trip', () => {
     const rootChildIds = ctx.entryManager.hierarchyHandler.getChildren(rootEntryId)
     expect(rootChildIds).toHaveLength(1)
     expect(rootChildIds[0]).toBe(blockId)
-    expect(ctx.entryManager.paramHandler.getInputParams(blockId)).toEqual({ NumberA: 7, NumberB: 0 })
+    expect(ctx.entryManager.paramHandler.getInputParamValues(blockId)).toEqual({ NumberA: 7, NumberB: 0 })
   })
 
   it('round-trips an if-container\'s Execute param, keeping its children skipped', async () => {
     const ctx = await createContext()
     const ifContainerId = ctx.entryManager.addEntry('container', 'if-container')
-    ctx.entryManager.hierarchyHandler.moveEntry(ifContainerId, ctx.rootId, 0)
+    ctx.entryManager.moveEntry(ifContainerId, ctx.rootId, 0)
     ctx.entryManager.paramHandler.setInputParam(ifContainerId, 'Execute', false)
     addBlock(ctx, ifContainerId, 'Add', 0)
 
@@ -207,14 +207,14 @@ describe('EntryPersistanceService round trip', () => {
     const restoredRootId = ctx.entryManager.hierarchyHandler.getRoot()
     const restoredIfContainerId = ctx.entryManager.hierarchyHandler.getChildren(restoredRootId)[0]
     expect(ctx.entryManager.getEntryName(restoredIfContainerId)).toBe('if-container')
-    expect(ctx.entryManager.paramHandler.getInputParams(restoredIfContainerId)).toEqual({ Execute: false })
+    expect(ctx.entryManager.paramHandler.getInputParamValues(restoredIfContainerId)).toEqual({ Execute: false })
   })
 
   it('clears stale entries, params and layout before restoring, even into a smaller recipe', async () => {
     const ctx = await createContext()
     const block1Id = addBlock(ctx, ctx.rootId, 'Add', 0)
     const containerId = ctx.entryManager.addEntry('container', 'ToBeGone')
-    ctx.entryManager.hierarchyHandler.moveEntry(containerId, ctx.rootId, 1)
+    ctx.entryManager.moveEntry(containerId, ctx.rootId, 1)
     const block2Id = addBlock(ctx, containerId, 'Mul', 0)
     ctx.entryManager.layoutHandler.addLayout(block1Id, 10, 20)
 

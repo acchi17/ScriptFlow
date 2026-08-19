@@ -46,9 +46,9 @@ export default class RecipeSerializer {
     }
 
     if (this.entryManager.isBlock(entryId)) {
-      node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
+      node.inputParams = this.entryManager.paramHandler.getInputParamValues(entryId)
     } else if (this.entryManager.isContainer(entryId)) {
-      node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
+      node.inputParams = this.entryManager.paramHandler.getInputParamValues(entryId)
       node.children = this.entryManager.hierarchyHandler.getChildren(entryId)
         .map(childId => this._serialiseEntry(childId))
     }

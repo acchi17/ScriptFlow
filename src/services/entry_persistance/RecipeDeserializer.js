@@ -105,10 +105,10 @@ export default class RecipeDeserializer {
 
     if (node.type === 'container') {
       const containerId = this.entryManager.addEntry(node.type, node.name, node.id)
-      this.entryManager.hierarchyHandler.moveEntry(containerId, parentId, index)
+      this.entryManager.moveEntry(containerId, parentId, index)
       idMap.set(node.id, containerId)
 
-      const currentInputParams = this.entryManager.paramHandler.getInputParams(containerId)
+      const currentInputParams = this.entryManager.paramHandler.getInputParamValues(containerId)
       const savedInputParams = node.inputParams || {}
       Object.entries(savedInputParams).forEach(([paramName, value]) => {
         if (!(paramName in currentInputParams)) {
@@ -126,7 +126,7 @@ export default class RecipeDeserializer {
     }
 
     const blockId = this.entryManager.addEntry(node.type, node.name, node.id)
-    this.entryManager.hierarchyHandler.moveEntry(blockId, parentId, index)
+    this.entryManager.moveEntry(blockId, parentId, index)
     idMap.set(node.id, blockId)
 
     const blockDef = this.entryDefinitionService.getBlockDefinition(node.name)
@@ -167,12 +167,12 @@ export default class RecipeDeserializer {
         return
       }
 
-      const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(output.entryId))
+      const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParamValues(output.entryId))
       if (!outputParamNames.includes(output.paramName)) {
         warnings.push(`Dropped connection: output param "${output.paramName}" no longer exists on entry ${output.entryId}`)
         return
       }
-      const inputParamNames = Object.keys(this.entryManager.paramHandler.getInputParams(input.entryId))
+      const inputParamNames = Object.keys(this.entryManager.paramHandler.getInputParamValues(input.entryId))
       if (!inputParamNames.includes(input.paramName)) {
         warnings.push(`Dropped connection: input param "${input.paramName}" no longer exists on entry ${input.entryId}`)
         return
@@ -185,8 +185,8 @@ export default class RecipeDeserializer {
         return
       }
 
-      const currentOutputType = this.entryManager.paramHandler.getOutputParamType(output.entryId, output.paramName)
-      const currentInputType = this.entryManager.paramHandler.getInputParamType(input.entryId, input.paramName)
+      const currentOutputType = this.entryManager.paramHandler.getOutputParam(output.entryId, output.paramName)?.dataType
+      const currentInputType = this.entryManager.paramHandler.getInputParam(input.entryId, input.paramName)?.dataType
       if (currentOutputType !== output.dataType || currentInputType !== input.dataType) {
         warnings.push(`Connection dataType differs from the current definition (${output.entryId}.${output.paramName} -> ${input.entryId}.${input.paramName}) — kept`)
       }
