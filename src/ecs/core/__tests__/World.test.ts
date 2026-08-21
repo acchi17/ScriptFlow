@@ -24,14 +24,14 @@ describe('World.despawn', () => {
   it('removes the entity from every component store and marks it not alive', () => {
     const world = new World()
     const id = world.spawn()
-    world.entryTypes.add(id, { name: 'Add', type: 'block' })
+    world.entryInfos.add(id, { name: 'Add', label: '', comment: '' })
     world.hierarchies.add(id, { parent: null, children: [] })
     world.inputParams.add(id, { NumberA: { value: 0, dataType: 'integer' } })
     world.outputParams.add(id, { Result: { value: 0, dataType: 'integer' } })
 
     world.despawn(id)
 
-    expect(world.entryTypes.has(id)).toBe(false)
+    expect(world.entryInfos.has(id)).toBe(false)
     expect(world.hierarchies.has(id)).toBe(false)
     expect(world.inputParams.has(id)).toBe(false)
     expect(world.outputParams.has(id)).toBe(false)
@@ -43,5 +43,20 @@ describe('World.isAlive', () => {
   it('is false for an id that was never spawned', () => {
     const world = new World()
     expect(world.isAlive('never-spawned')).toBe(false)
+  })
+})
+
+describe('World.getStore', () => {
+  it('returns the same instance as the named property', () => {
+    const world = new World()
+    expect(world.getStore('layouts')).toBe(world.layouts)
+  })
+
+  it('returned store behaves identically to the named property', () => {
+    const world = new World()
+    const id = world.spawn()
+    world.getStore('layouts').add(id, { y: 0, height: 10 })
+
+    expect(world.layouts.get(id)).toEqual({ y: 0, height: 10 })
   })
 })

@@ -1,20 +1,26 @@
 import { ComponentStore } from './ComponentStrore';
 import { generateUUID } from './Entity';
 import type { EntityId } from './Entity';
-import type { EntryTypeComponent } from '../components/EntryTypeComponent';
+import type { EntryInfoComponent } from '../components/EntryInfoComponent';
 import type { HierarchyComponent } from '../components/HierarchyComponent';
 import type { EntryParamComponent } from '../components/EntryParamComponent';
 import type { EntryConnectionComponent } from '../components/EntryConnectionComponent';
 import type { EntryLayoutComponent } from '../components/EntryLayoutComponent';
 
+type StoreName = 'entryInfos' | 'hierarchies' | 'inputParams' | 'outputParams' | 'connections' | 'layouts';
+
 export class World {
-  readonly entryTypes = new ComponentStore<EntryTypeComponent>();
+  readonly entryInfos = new ComponentStore<EntryInfoComponent>();
   readonly hierarchies = new ComponentStore<HierarchyComponent>();
   readonly inputParams = new ComponentStore<EntryParamComponent>();
   readonly outputParams = new ComponentStore<EntryParamComponent>();
   readonly connections = new ComponentStore<EntryConnectionComponent>();
   readonly layouts = new ComponentStore<EntryLayoutComponent>();
   private readonly _liveIds = new Set<EntityId>();
+
+  getStore<K extends StoreName>(key: K): World[K] {
+    return this[key];
+  }
 
   spawn(id?: EntityId | null): EntityId {
     const entityId = id || generateUUID();
@@ -24,7 +30,7 @@ export class World {
 
   despawn(id: EntityId): void {
     this._liveIds.delete(id);
-    this.entryTypes.remove(id);
+    this.entryInfos.remove(id);
     this.hierarchies.remove(id);
     this.inputParams.remove(id);
     this.outputParams.remove(id);

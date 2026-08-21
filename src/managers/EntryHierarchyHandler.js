@@ -1,6 +1,5 @@
 import { ref } from 'vue'
 import { World } from '../ecs/core/World'
-import { isContainerType } from '../ecs/queries/EntryTypeQueries'
 
 /**
  * EntryHierarchyHandler class
@@ -43,7 +42,27 @@ export default class EntryHierarchyHandler {
    */
   getChildren(entryId) {
     const hierarchy = this._world.hierarchies.get(entryId);
-    return hierarchy ? [...hierarchy.children] : [];
+    return hierarchy?.children ? [...hierarchy.children] : [];
+  }
+
+  /**
+   * Check whether an entry is a container (i.e. its hierarchy component has a children array)
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a container
+   */
+  isContainer(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy !== undefined && hierarchy.children !== null;
+  }
+
+  /**
+   * Check whether an entry is a block (i.e. its hierarchy component has no children array)
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a block
+   */
+  isBlock(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy !== undefined && hierarchy.children === null;
   }
 
   /**
@@ -54,7 +73,7 @@ export default class EntryHierarchyHandler {
   getAllDescendants(entryId) {
     const ids = new Set([entryId]);
 
-    if (!isContainerType(this._world, entryId)) return Array.from(ids);
+    if (!this.isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
     for (const childId of this._world.hierarchies.get(entryId)?.children ?? []) {
@@ -86,9 +105,10 @@ export default class EntryHierarchyHandler {
   /**
    * Initialize the hierarchy component for a freshly spawned entry.
    * @param {string} entryId - ID of the entry to initialize
+   * @param {boolean} [noChildren=false] - If true, initialize children as null instead of an empty array
    */
-  initialize(entryId) {
-    this._world.hierarchies.add(entryId, { parent: null, children: [] });
+  initialize(entryId, noChildren = false) {
+    this._world.hierarchies.add(entryId, { parent: null, children: noChildren ? null : [] });
   }
 
   /**
@@ -112,7 +132,7 @@ export default class EntryHierarchyHandler {
    */
   attachToParent(parentId, entryId, index) {
     // Only containers may receive children
-    if (!isContainerType(this._world, parentId)) return false;
+    if (!this.isContainer(parentId)) return false;
 
     const parentHierarchy = this._world.hierarchies.get(parentId);
     if (!parentHierarchy) return false;
@@ -208,13 +228,13 @@ export default class EntryHierarchyHandler {
     this._sequenceNumbers.clear();
     if (!this._rootId) return;
 
-    if (!isContainerType(this._world, this._rootId)) return;
+    if (!this.isContainer(this._rootId)) return;
 
     let counter = 0;
     const traverse = (childIds) => {
       for (const childId of childIds) {
         this._sequenceNumbers.set(childId, ++counter);
-        if (isContainerType(this._world, childId)) {
+        if (this.isContainer(childId)) {
           traverse(this._world.hierarchies.get(childId)?.children ?? []);
         }
       }

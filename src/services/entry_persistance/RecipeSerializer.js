@@ -42,7 +42,9 @@ export default class RecipeSerializer {
     const node = {
       id: entryId,
       type: this.entryManager.getEntryType(entryId),
-      name: this.entryManager.getEntryName(entryId)
+      name: this.entryManager.getEntryName(entryId),
+      label: this.entryManager.getEntryLabel(entryId),
+      comment: this.entryManager.getEntryComment(entryId)
     }
 
     if (this.entryManager.isBlock(entryId)) {
