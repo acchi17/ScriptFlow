@@ -42,17 +42,17 @@ export default class EntryExecutionService {
    * @private
    */
   _resolveInputParams(entryId) {
-    const base = this.entryManager ? this.entryManager.paramHandler.getInputParams(entryId) : {};
+    const base = this.entryManager ? this.entryManager.getInputParamValues(entryId) : {};
     if (!this.entryManager) return base;
 
     const result = { ...base };
-    const connections = this.entryManager.connectionHandler
+    const connections = this.entryManager
       .getConnectionsByEntryId(entryId)
       .filter(conn => conn.input.entryId === entryId);
     for (const conn of connections) {
-      const value = this.entryManager.paramHandler.getOutputParam(conn.output.entryId, conn.output.paramName);
-      if (value !== undefined) {
-        result[conn.input.paramName] = value;
+      const outputParam = this.entryManager.getOutputParam(conn.output.entryId, conn.output.paramName);
+      if (outputParam !== undefined) {
+        result[conn.input.paramName] = outputParam.value;
       }
     }
     return result;
@@ -78,10 +78,10 @@ export default class EntryExecutionService {
       result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
       if (this.entryManager) {
-        const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParams(entryId));
+        const outputParamNames = Object.keys(this.entryManager.getOutputParamValues(entryId));
         for (const key of outputParamNames) {
           if (key in result) {
-            this.entryManager.paramHandler.setOutputParam(entryId, key, result[key]);
+            this.entryManager.setOutputParam(entryId, key, result[key]);
           }
         }
       }
@@ -98,17 +98,18 @@ export default class EntryExecutionService {
   /**
    * Execute a container entry
    * @param {string} entryId ID of the container entry to execute
+   * @param {Object} inputParams Resolved input parameters for the container (optional)
    * @param {string} traceId Trace ID for execution tracking
    * @return {Promise<ScriptExecutionResult>}
    *         Execution result object conforming to ScriptExecutionResult type
    * @private
    */
-  async _executeContainer(entryId, traceId) {
+  async _executeContainer(entryId, inputParams = {}, traceId) {
     let result = {};
     try {
       const entryName = this.entryManager.getEntryName(entryId);
       const strategy = ContainerExecutionFactory.createStrategy(entryName, this.entryManager);
-      result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId));
+      result = await strategy.execute(entryId, childId => this.executeEntry(childId, traceId), inputParams);
     } catch (error) {
       result.errorMessage = error.message;
     }
@@ -148,7 +149,7 @@ export default class EntryExecutionService {
       if (this.entryManager.isBlock(entryId)) {
         result = await this._executeBlock(entryId, inputParams);
       } else if (this.entryManager.isContainer(entryId)) {
-        result = await this._executeContainer(entryId, executionId);
+        result = await this._executeContainer(entryId, inputParams, executionId);
       }
       // Log execution result if execution log service is available
       if (this.executionLogService) {

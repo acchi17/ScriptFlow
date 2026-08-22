@@ -16,7 +16,7 @@ export default class RecipeSerializer {
    * @returns {Object} recipe object
    */
   buildRecipe(name = '') {
-    const rootId = this.entryManager.getRootEntry()
+    const rootId = this.entryManager.getRoot()
     if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
     }
@@ -28,7 +28,7 @@ export default class RecipeSerializer {
         savedAt: new Date().toISOString()
       },
       root: this._serialiseEntry(rootId),
-      connections: this.entryManager.connectionHandler.getConnections()
+      connections: this.entryManager.getConnections()
     }
   }
 
@@ -39,15 +39,20 @@ export default class RecipeSerializer {
    * @private
    */
   _serialiseEntry(entryId) {
+    const isBlock = this.entryManager.isBlock(entryId)
+    const isContainer = this.entryManager.isContainer(entryId)
     const node = {
       id: entryId,
-      type: this.entryManager.getEntryType(entryId),
-      name: this.entryManager.getEntryName(entryId)
+      type: isBlock ? 'block' : (isContainer ? 'container' : null),
+      name: this.entryManager.getEntryName(entryId),
+      label: this.entryManager.getEntryLabel(entryId),
+      comment: this.entryManager.getEntryComment(entryId)
     }
 
-    if (this.entryManager.isBlock(entryId)) {
-      node.inputParams = this.entryManager.paramHandler.getInputParams(entryId)
-    } else if (this.entryManager.isContainer(entryId)) {
+    if (isBlock) {
+      node.inputParams = this.entryManager.getInputParamValues(entryId)
+    } else if (isContainer) {
+      node.inputParams = this.entryManager.getInputParamValues(entryId)
       node.children = this.entryManager.getChildren(entryId)
         .map(childId => this._serialiseEntry(childId))
     }

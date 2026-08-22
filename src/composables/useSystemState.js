@@ -8,6 +8,9 @@ const isDragging = ref(false)
 const isExecuting = ref(false)
 const executingRootEntryId = ref(null)
 
+// error state
+const lastError = ref(null)
+
 // log visibility
 const showLog = ref(false)
 
@@ -32,6 +35,10 @@ export function useSystemState() {
     isExecuting.value = value
     executingRootEntryId.value = value ? entryId : null
   }
+
+  // --- error state ---
+  const setError = (message) => { lastError.value = message }
+  const clearError = () => { lastError.value = null }
 
   // --- log visibility ---
   const toggleLog = () => { showLog.value = !showLog.value }
@@ -58,14 +65,14 @@ export function useSystemState() {
     computed(() => {
       if (connectingSource.value === null) return false
       const srcId = connectingSource.value.entryId
-      const srcSeq = entryManager.getSequenceNumber(srcId)
-      const dstSeq = entryManager.getSequenceNumber(entryId)
+      const srcSeq = entryManager.hierarchyHandler.getSequenceNumber(srcId)
+      const dstSeq = entryManager.hierarchyHandler.getSequenceNumber(entryId)
       if (dstSeq === null || srcSeq === null) return false
       if (connectingSource.value.paramCategory === 'input') {
-        if (!entryManager.paramHandler.hasOutputParam(entryId)) return false
+        if (!entryManager.hasOutputParam(entryId)) return false
         return dstSeq < srcSeq
       } else {
-        if (!entryManager.paramHandler.hasInputParam(entryId)) return false
+        if (!entryManager.hasInputParam(entryId)) return false
         return dstSeq > srcSeq
       }
     })
@@ -73,8 +80,8 @@ export function useSystemState() {
   const isConnectedEndPoint = (entryId, paramName, paramCategory) =>
     computed(() => {
       if (!entryManager) return false
-      entryManager.connectionHandler.connectionsTick.value
-      return entryManager.connectionHandler.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
+      entryManager.connectionsTick.value
+      return entryManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
     })
 
   const startConnection = (entryId, paramName, paramCategory, paramType) => {
@@ -92,7 +99,7 @@ export function useSystemState() {
     const [outputEndpoint, inputEndpoint] = source.paramCategory === 'output'
       ? [sourceEndpoint, targetEndpoint]
       : [targetEndpoint, sourceEndpoint]
-    entryManager.connectionHandler.addConnection(outputEndpoint, inputEndpoint)
+    entryManager.addConnection(outputEndpoint, inputEndpoint)
     cancelConnection()
   }
 
@@ -113,6 +120,10 @@ export function useSystemState() {
     isExecuting: readonly(isExecuting),
     executingRootEntryId: readonly(executingRootEntryId),
     setExecuting,
+    // error
+    lastError: readonly(lastError),
+    setError,
+    clearError,
     // log
     showLog: readonly(showLog),
     toggleLog,

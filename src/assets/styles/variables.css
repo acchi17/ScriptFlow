@@ -44,7 +44,6 @@
   --block-hover-bg-color: #e8e8e8;
 
   /* Container-related styles */
-  --container-bg-color: #8eec9a;
   --container-hover-bg-color: #7ee089;
   --container-border: 1px solid #AAAAAA;
   --container-box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -100,24 +99,8 @@
   --param-badge-font-color: #333;
   --param-badge-normal-font-size: 12px;
   --param-badge-compact-font-size: 10px;
-  --param-badge-border: 1px solid #aaa;
   --param-badge-border-radius: 6px;
   --param-badge-linked-color: #ffcb77;
-
-  --param-badge-bg-color-boolean: #fca5a5;
-  --param-badge-border-boolean: 3px solid #f87171;
-
-  --param-badge-bg-color-integer: #6ee7b7;
-  --param-badge-border-integer: 3px solid #34d399;
-
-  --param-badge-bg-color-real: #93c5fd;
-  --param-badge-border-real: 3px solid #60a5fa;
-
-  --param-badge-bg-color-string: #fcd34d;
-  --param-badge-border-string: 3px solid #fbbf24;
-
-  --param-badge-bg-color-image: #a5b4fc;
-  --param-badge-border-image: 3px solid #8b5cf6;
 
   /* Connection view styles */
   --connection-lane-width: 96px;
@@ -134,3 +117,14 @@
   --block-setting-label-input-gap: 8px;
   --block-setting-border-radius: 3px;
 }
+
+/* Data type -> css mapping */
+.type-boolean { --param-badge-bg: #fca5a5; --param-badge-border: 3px solid #f87171; }
+.type-integer { --param-badge-bg: #6ee7b7; --param-badge-border: 3px solid #34d399; }
+.type-real    { --param-badge-bg: #93c5fd; --param-badge-border: 3px solid #60a5fa; }
+.type-string  { --param-badge-bg: #fcd34d; --param-badge-border: 3px solid #fbbf24; }
+.type-image   { --param-badge-bg: #a5b4fc; --param-badge-border: 3px solid #8b5cf6; }
+
+/* Container type -> css mapping */
+.type-container    { --container-item-bg: #8eec9a; --container-item-border: 1px solid #7bc97b; }
+.type-if-container { --container-item-bg: #ffd8b0; --container-item-border: 1px solid #f0a860; }

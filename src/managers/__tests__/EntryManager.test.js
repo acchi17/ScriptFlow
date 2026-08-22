@@ -24,7 +24,7 @@ describe('EntryManager.addEntry', () => {
     expect(entryManager.getParent(containerAId)).toBe(rootId)
     expect(entryManager.getParent(rootId)).toBe(null)
 
-    expect(entryManager.getEntryType(blockId)).toBe('block')
+    expect(entryManager.isBlock(blockId)).toBe(true)
     expect(entryManager.getEntryName(blockId)).toBe('Add')
   })
 
@@ -39,6 +39,32 @@ describe('EntryManager.addEntry', () => {
     expect(attached).toBe(false)
     expect(entryManager.getParent(childBlockId)).toBe(null)
     expect(entryManager.getChildren(blockId)).toEqual([])
+  })
+})
+
+describe('EntryManager.addEntry container param defs', () => {
+  it('sets the built-in Execute input param when the name matches a known container kind', () => {
+    const entryDefnitionStore = {
+      getContainerParamDef: (name) => name === 'if-container'
+        ? { input: { Execute: { value: true, dataType: 'boolean' } }, output: {} }
+        : { input: {}, output: {} }
+    }
+    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+
+    const ifContainerId = entryManager.addEntry('container', 'if-container')
+
+    expect(entryManager.getInputParamValues(ifContainerId)).toEqual({ Execute: true })
+  })
+
+  it('leaves a plain (unrecognized-name) container with no input params', () => {
+    const entryDefnitionStore = {
+      getContainerParamDef: () => ({ input: {}, output: {} })
+    }
+    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+
+    const containerId = entryManager.addEntry('container', 'Container')
+
+    expect(entryManager.getInputParamValues(containerId)).toEqual({})
   })
 })
 
@@ -85,7 +111,7 @@ describe('EntryManager.removeEntry', () => {
   })
 })
 
-describe('EntryManager.reorderEntry', () => {
+describe('EntryManager.reorderInParent', () => {
   it('moves an entry forward within its parent to the intended position', () => {
     const entryManager = new EntryManager()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
@@ -93,13 +119,13 @@ describe('EntryManager.reorderEntry', () => {
     const blockBId = addAndAttach(entryManager, rootId, 'block', 'B', 1)
     const blockCId = addAndAttach(entryManager, rootId, 'block', 'C', 2)
 
-    const reordered = entryManager.reorderEntry(rootId, blockAId, 2)
+    const reordered = entryManager.reorderInParent(rootId, blockAId, 2)
 
     expect(reordered).toBe(true)
     expect(entryManager.getChildren(rootId)).toEqual([blockBId, blockAId, blockCId])
-    expect(entryManager.getSequenceNumber(blockBId)).toBe(1)
-    expect(entryManager.getSequenceNumber(blockAId)).toBe(2)
-    expect(entryManager.getSequenceNumber(blockCId)).toBe(3)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockBId)).toBe(1)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockAId)).toBe(2)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockCId)).toBe(3)
   })
 
   it('moves an entry backward within its parent to the intended position', () => {
@@ -109,7 +135,7 @@ describe('EntryManager.reorderEntry', () => {
     const blockBId = addAndAttach(entryManager, rootId, 'block', 'B', 1)
     const blockCId = addAndAttach(entryManager, rootId, 'block', 'C', 2)
 
-    const reordered = entryManager.reorderEntry(rootId, blockCId, 0)
+    const reordered = entryManager.reorderInParent(rootId, blockCId, 0)
 
     expect(reordered).toBe(true)
     expect(entryManager.getChildren(rootId)).toEqual([blockCId, blockAId, blockBId])
@@ -122,7 +148,7 @@ describe('EntryManager.reorderEntry', () => {
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 1)
     const blockInsideId = addAndAttach(entryManager, containerId, 'block', 'Inside', 0)
 
-    const reordered = entryManager.reorderEntry(rootId, containerId, 2)
+    const reordered = entryManager.reorderInParent(rootId, containerId, 2)
 
     expect(reordered).toBe(true)
     expect(entryManager.getChildren(rootId)).toEqual([blockAId, containerId])
@@ -137,7 +163,7 @@ describe('EntryManager.reorderEntry', () => {
     const containerId = addAndAttach(entryManager, rootId, 'container', 'Sub', 1)
     const blockBId = addAndAttach(entryManager, containerId, 'block', 'B', 0)
 
-    const reordered = entryManager.reorderEntry(rootId, blockBId, 0)
+    const reordered = entryManager.reorderInParent(rootId, blockBId, 0)
 
     expect(reordered).toBe(false)
     expect(entryManager.getChildren(rootId)).toEqual([blockAId, containerId])

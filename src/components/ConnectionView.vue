@@ -35,9 +35,9 @@ export default {
     const entryManager = inject('entryManager')
 
     const connectionsWithLanes = computed(() => {
-      entryManager.connectionHandler.connectionsTick.value
+      entryManager.connectionsTick.value
       entryManager.layoutsTick.value
-      const connections = entryManager.connectionHandler.getConnections()
+      const connections = entryManager.getConnections()
 
       const withCoords = []
       for (const conn of connections) {

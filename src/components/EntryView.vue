@@ -35,10 +35,8 @@
 </template>
 
 <script>
-import { computed, ref, watch } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useSystemState } from '../composables/useSystemState'
-import { useEntryOperation } from '../composables/useEntryOperation'
-import { useEntryDefinition } from '../composables/useEntryDefinition'
 import EntryParamSpinEdit from './EntryParamSpinEdit.vue'
 import EntryParamCheckEdit from './EntryParamCheckEdit.vue'
 import EntryParamComboBox from './EntryParamComboBox.vue'
@@ -58,25 +56,32 @@ export default {
 
   setup() {
     const { getSelectedEntryId: selectedEntryId } = useSystemState()
-    const { getEntryName, getInputParams, getOutputParams, setInputParam, isBlock, outputParamsTick } = useEntryOperation()
-    const { getBlockDefinition } = useEntryDefinition()
+    const entryManager = inject('entryManager')
+    const entryDefinitionService = inject('entryDefinitionService')
     const resolveComponent = (paramDef) => CTRL_TYPE_COMPONENTS[paramDef.ctrlType]
 
     const entryName = computed(() => {
-      return getEntryName(selectedEntryId.value)
+      return entryManager.getEntryName(selectedEntryId.value)
     })
 
-    // Input parameter definitions from block definition (empty for containers)
+    // Input parameter definitions from the block or container definition
     const inputParamDefs = computed(() => {
-      if (!isBlock(selectedEntryId.value)) return []
-      const blockDef = getBlockDefinition(entryName.value)
-      return blockDef ? blockDef.parameters.input : []
+      const id = selectedEntryId.value
+      if (entryManager.isBlock(id)) {
+        const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
+        return blockDef ? blockDef.parameters.input : []
+      }
+      if (entryManager.isContainer(id)) {
+        const containerDef = entryDefinitionService.getContainerDefinition(entryName.value)
+        return containerDef ? containerDef.parameters.input : []
+      }
+      return []
     })
 
     // Output parameter definitions from block definition (empty for containers)
     const outputParamDefs = computed(() => {
-      if (!isBlock(selectedEntryId.value)) return []
-      const blockDef = getBlockDefinition(entryName.value)
+      if (!entryManager.isBlock(selectedEntryId.value)) return []
+      const blockDef = entryDefinitionService.getBlockDefinition(entryName.value)
       return blockDef ? blockDef.parameters.output : []
     })
 
@@ -86,21 +91,21 @@ export default {
     // Depends on outputParamsTick so this re-runs when output param values change during
     // execution, since the underlying ECS store itself isn't deep-reactive
     const localOutputParams = computed(() => {
-      outputParamsTick.value
+      entryManager.outputParamsTick.value
       const id = selectedEntryId.value
-      return id ? getOutputParams(id) : {}
+      return id ? entryManager.getOutputParamValues(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedEntryId, (id) => {
-      localInputParams.value = id ? { ...getInputParams(id) } : {}
+      localInputParams.value = id ? { ...entryManager.getInputParamValues(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
       const id = selectedEntryId.value
       if (!id) return
       localInputParams.value[paramName] = value
-      setInputParam(id, paramName, value)
+      entryManager.setInputParam(id, paramName, value)
     }
 
     return {

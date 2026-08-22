@@ -61,8 +61,8 @@ export default {
     const paramItems = computed(() => {
       const category = paramCategoryDyn.value
       const types = category === 'input'
-        ? entryManager.paramHandler.getInputParamTypes(props.entryId)
-        : entryManager.paramHandler.getOutputParamTypes(props.entryId)
+        ? entryManager.getInputParamTypes(props.entryId)
+        : entryManager.getOutputParamTypes(props.entryId)
       return Object.entries(types).map(([name, type]) => ({ name, type, category }))
     })
 

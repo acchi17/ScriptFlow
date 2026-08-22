@@ -55,20 +55,25 @@
 
 <script>
 import { computed, inject } from 'vue';
-import { useEntryExecution } from '../composables/useEntryExecution';
 
 export default {
   name: 'ExecutionLogView',
   setup() {
     const entryManager = inject('entryManager');
-    const { getLogs, clearLogs } = useEntryExecution();
-    const logs = getLogs();
+    const executionLogService = inject('executionLogService');
+    const logs = executionLogService.getLogs();
 
-    const entryRowClass = (entry) => ({
-      'entry-row': true,
-      'block-row': entry?.entryType === 'block',
-      'container-row': entry?.entryType === 'container'
-    });
+    function clearLogs() {
+      executionLogService.clearLogs();
+    }
+
+    function entryRowClass(entry) {
+      return {
+        'entry-row': true,
+        'block-row': entry?.isContainer === false,
+        'container-row': entry?.isContainer === true
+      };
+    }
 
     function formatTimestamp(timestamp) {
       if (!timestamp) return '';
@@ -104,7 +109,7 @@ export default {
       const children = executionsTree.executionsByParent[parentId] || [];
       children.forEach(childExecution => {
         result.push({ type: 'entry', key: `entry_${childExecution.executionId}`, data: childExecution });
-        if (childExecution.entryType === 'container') {
+        if (childExecution.isContainer) {
           addChildExecutions(childExecution.executionId, executionsTree, result);
           result.push({ type: 'container-end', key: `end_${childExecution.executionId}`, containerName: childExecution.entryName });
         }
@@ -116,14 +121,14 @@ export default {
       const result = [];
       try {
         const executionsTree = logs.value;
-        const rootEntryId = entryManager.getRootEntry();
+        const rootEntryId = entryManager.getRoot();
         for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
           const execution = executionsTree.rootExecutions[i];
           const isRootContainer = execution.entryId === rootEntryId;
           if (!isRootContainer) {
             result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
           }
-          if (execution.entryType === 'container') {
+          if (execution.isContainer) {
             addChildExecutions(execution.executionId, executionsTree, result);
             if (!isRootContainer) {
               result.push({ type: 'container-end', key: `end_${execution.executionId}`, containerName: execution.entryName });
@@ -144,6 +149,7 @@ export default {
 <style scoped>
 /* Main container for the execution log view */
 .execution-log-view {
+  height: 100%;
   width: 600px;
   display: flex;
   flex-direction: column;
@@ -290,7 +296,7 @@ export default {
 
 /* Container-specific row styling */
 .container-row {
-  background-color: var(--container-bg-color);
+  background-color: #8eec9a;
 }
 
 .container-row:hover {
@@ -303,7 +309,7 @@ export default {
 
 /* Container group footer row */
 .container-group-footer {
-  background-color: var(--container-bg-color);
+  background-color: #8eec9a;
   border-bottom: 1px solid var(--container-hover-bg-color);
 }
 

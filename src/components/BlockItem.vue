@@ -29,9 +29,8 @@
 </template>
 
 <script>
-import { computed } from 'vue'
+import { computed, inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
-import { useEntryExecution } from '../composables/useEntryExecution'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import EntryParamsRow from './EntryParamsRow.vue'
@@ -57,8 +56,8 @@ export default {
       onDragEnd,
       setOnDragStartCallback
     } = useDraggable()
-    const { executeEntry } = useEntryExecution()
-    const { getParentId, getEntryName, hasParams } = useEntryOperation()
+    const { executeEntry } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const {
       isExecuting,
       getSelectedEntryId,
@@ -75,7 +74,8 @@ export default {
 
     const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParamsValue = computed(() => hasParams(props.entryId))
+    const hasParamsValue = computed(() => entryManager.hasParam(props.entryId))
+    const getEntryName = (entryId) => entryManager.getEntryName(entryId)
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -88,7 +88,7 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event) => {
       // Get parent ID
-      const parentId = getParentId(props.entryId)
+      const parentId = entryManager.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'block')

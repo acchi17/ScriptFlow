@@ -110,28 +110,8 @@ export default {
 <style scoped>
 .connection-line {
   fill: none;
-  stroke: #5a9fd4;
+  stroke: var(--param-badge-bg, #5a9fd4);
   stroke-width: 2;
-}
-
-.connection-line.type-boolean {
-  stroke: var(--param-badge-bg-color-boolean);
-}
-
-.connection-line.type-integer {
-  stroke: var(--param-badge-bg-color-integer);
-}
-
-.connection-line.type-real {
-  stroke: var(--param-badge-bg-color-real);
-}
-
-.connection-line.type-string {
-  stroke: var(--param-badge-bg-color-string);
-}
-
-.connection-line.type-image {
-  stroke: var(--param-badge-bg-color-image);
 }
 
 .badge-container {

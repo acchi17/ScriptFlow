@@ -7,7 +7,7 @@
     >
       <button class="remove-btn" @click.stop="removeConnection(item.connectionId)"></button>
       <span class="item-prefix" :class="`dir-${item.direction}`"></span>
-      <span class="item-param-name" :class="item.dataType && `type-${item.dataType}`">{{ item.paramName }}</span>
+      <span class="item-param-name" :class="paramTypeClass(item.dataType)">{{ item.paramName }}</span>
     </div>
   </div>
 </template>
@@ -36,9 +36,13 @@ export default {
   setup(props) {
     const entryManager = inject('entryManager')
 
+    function paramTypeClass(dataType) {
+      return dataType ? `type-${dataType}` : null
+    }
+
     const listItems = computed(() => {
-      entryManager.connectionHandler.connectionsTick.value
-      const connections = entryManager.connectionHandler.getConnectionsByEndpoint(
+      entryManager.connectionsTick.value
+      const connections = entryManager.getConnectionsByEndpoint(
         props.entryId, props.paramCategory, props.paramName
       )
       return connections.map(conn => ({
@@ -50,10 +54,10 @@ export default {
     })
 
     const removeConnection = (connectionId) => {
-      entryManager.connectionHandler.removeConnection(connectionId)
+      entryManager.removeConnection(connectionId)
     }
 
-    return { listItems, removeConnection }
+    return { listItems, removeConnection, paramTypeClass }
   }
 }
 </script>
@@ -115,27 +119,8 @@ export default {
 
 .item-param-name {
   padding: 2px 6px;
+  background-color: var(--param-badge-bg, transparent);
   border: var(--param-badge-border);
   border-radius: var(--param-badge-border-radius);
-}
-
-.item-param-name.type-integer {
-  background-color: var(--param-badge-bg-color-integer);
-}
-
-.item-param-name.type-real {
-  background-color: var(--param-badge-bg-color-real);
-}
-
-.item-param-name.type-boolean {
-  background-color: var(--param-badge-bg-color-boolean);
-}
-
-.item-param-name.type-string {
-  background-color: var(--param-badge-bg-color-string);
-}
-
-.item-param-name.type-image {
-  background-color: var(--param-badge-bg-color-image);
 }
 </style>

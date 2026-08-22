@@ -1,14 +1,24 @@
 <template>
   <div class="menu-area">
     <div class="menu-left">
-      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting || isBusy" @click.stop="onLoadRecipe"></button>
-      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting || isBusy" @click.stop="onSaveRecipe"></button>
+      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting" @click.stop="onLoadRecipe"></button>
+      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting" @click.stop="onSaveRecipe"></button>
     </div>
     <div class="menu-right">
       <div class="rect-item">
         <div
-          class="rect-icon lime"
+          class="rect-icon plain-container"
           draggable="true"
+          data-entry-name="Container"
+          @dragstart="onDragStartContainer"
+          @dragend="onDragEndContainer"
+        ></div>
+      </div>
+      <div class="rect-item">
+        <div
+          class="rect-icon if-container"
+          draggable="true"
+          data-entry-name="if-container"
           @dragstart="onDragStartContainer"
           @dragend="onDragEndContainer"
         ></div>
@@ -23,10 +33,10 @@
 </template>
 
 <script>
+import { inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useSystemState } from '../composables/useSystemState'
 import { useEntryOperation } from '../composables/useEntryOperation'
-import { useEntryPersistance } from '../composables/useEntryPersistance'
 
 export default {
   name: 'MenuArea',
@@ -34,12 +44,12 @@ export default {
     const { onDragStart: onDragStartContainer, onDragEnd: onDragEndContainer, setOnDragStartCallback } = useDraggable()
     setOnDragStartCallback((event) => {
       event.dataTransfer.setData('entryType', 'container')
-      event.dataTransfer.setData('entryName', 'Container')
+      event.dataTransfer.setData('entryName', event.currentTarget.dataset.entryName)
       event.dataTransfer.setData('sourceId', undefined)
     })
-    const { showLog, toggleLog, isExecuting } = useSystemState()
-    const { getRootEntryId, getChildren } = useEntryOperation()
-    const { isBusy, lastError, lastReport, saveRecipe, loadRecipe } = useEntryPersistance()
+    const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
+    const entryManager = inject('entryManager')
+    const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
 
     const onSaveRecipe = async () => {
       await saveRecipe()
@@ -49,8 +59,8 @@ export default {
     }
 
     const onLoadRecipe = async () => {
-      const rootEntryId = getRootEntryId()
-      if (rootEntryId && getChildren(rootEntryId).length > 0) {
+      const rootEntryId = entryManager.getRoot()
+      if (rootEntryId && entryManager.getChildren(rootEntryId).length > 0) {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }
@@ -68,7 +78,6 @@ export default {
       showLog,
       toggleLog,
       isExecuting,
-      isBusy,
       onSaveRecipe,
       onLoadRecipe
     }
@@ -137,9 +146,13 @@ export default {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
   cursor: grab;
 }
-.rect-icon.lime {
+.rect-icon.plain-container {
   background-color: #8eec9a;
   border: 1px solid #7bc97b;
+}
+.rect-icon.if-container {
+  background-color: #ffd8b0;
+  border: 1px solid #f0a860;
 }
 .log-toggle-btn {
   width: 20px;

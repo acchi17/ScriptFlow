@@ -137,7 +137,7 @@ export default class ExecutionLogService {
         timestamp: new Date(),
         entryId: entryId,
         entryName: this.entryManager?.getEntryName(entryId),
-        entryType: this.entryManager?.getEntryType(entryId),
+        isContainer: this.entryManager?.isContainer(entryId),
         inputParams: inputParams,
         result: null,
         execTime: null,

@@ -4,7 +4,7 @@
   >
     <div class="recipe-content">
       <div class="recipe-header">
-        <button class="recipe-btn recipe-run-btn" title="Run" :disabled="isExecuting || isBusy" @click.stop="executeRecipe"></button>
+        <button class="recipe-btn recipe-run-btn" title="Run" :disabled="isExecuting" @click.stop="executeRecipe"></button>
         <button
           class="recipe-btn recipe-com-btn"
           :class="{
@@ -14,7 +14,7 @@
           title="Communication Setting"
           @click.stop="openComSetting"
         ></button>
-        <button class="recipe-btn recipe-clear-btn" title="Clear" :disabled="isExecuting || isBusy" @click.stop="clearRecipe"></button>
+        <button class="recipe-btn recipe-clear-btn" title="Clear" :disabled="isExecuting" @click.stop="clearRecipe"></button>
       </div>
       <div class="recipe-panel">
         <div class="background-panel">
@@ -48,8 +48,7 @@
 
 <script>
 import { ref, computed, inject, watch, nextTick } from 'vue'
-import { useEntryExecution } from '../composables/useEntryExecution'
-import { useEntryPersistance } from '../composables/useEntryPersistance'
+import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
@@ -65,9 +64,8 @@ export default {
 
   setup() {
     const entryManager = inject('entryManager')
-    const { executeEntry } = useEntryExecution()
+    const { executeEntry } = useEntryOperation()
     const { isExecuting } = useSystemState()
-    const { isBusy } = useEntryPersistance()
 
     const rootContainerId = entryManager.addEntry('container', 'root-container')
     entryManager.moveEntry(rootContainerId, null, 0)
@@ -115,7 +113,7 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyTick.value, () => nextTick(() => measureEntries()))
+    watch(() => entryManager.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
 
     const entryLayoutMap = computed(() => {
       entryManager.layoutsTick.value
@@ -132,8 +130,7 @@ export default {
       onCommSettingClose,
       entryPanelRef,
       entryLayoutMap,
-      isExecuting,
-      isBusy
+      isExecuting
     }
   }
 }

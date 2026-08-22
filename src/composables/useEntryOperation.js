@@ -1,91 +1,63 @@
-import { inject } from 'vue'
+import { ref, inject } from 'vue'
+import { useSystemState } from './useSystemState'
 
+const lastReport = ref(null)
+
+/**
+ * Vue-side glue for EntryExecutionService and EntryPersistanceService: executing
+ * entries, saving/loading recipes, and the last load report. Busy/error state is
+ * shared with useSystemState (isExecuting/lastError).
+ */
 export function useEntryOperation() {
-  const entryManager = inject('entryManager')
+  const entryExecutionService = inject('entryExecutionService')
+  const entryPersistanceService = inject('entryPersistanceService')
+  const { setExecuting, resetState, setError, clearError } = useSystemState()
 
-  const addEntry = (type, parentId, name, index) => {
-    const entryId = entryManager.addEntry(type, name)
-    entryManager.moveEntry(entryId, parentId, index)
-    return entryId
+  /**
+   * Execute an entry (Block or Container)
+   * @param {string} entryId Id of the entry to execute
+   */
+  const executeEntry = async (entryId) => {
+    if (!entryId) return
+
+    setExecuting(true, entryId)
+    try {
+      await entryExecutionService.executeEntry(entryId)
+    } finally {
+      await new Promise(resolve => setTimeout(resolve, 500))
+      setExecuting(false)
+    }
   }
 
-  const removeEntry = (entryId) => {
-    entryManager.removeEntry(entryId)
+  const saveRecipe = async (fileName, name) => {
+    setExecuting(true)
+    clearError()
+    try {
+      await entryPersistanceService.saveRecipe(fileName, name)
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setExecuting(false)
+    }
   }
 
-  const reorderEntry = (parentId, entryId, index) => {
-    entryManager.reorderEntry(parentId, entryId, index)
-  }
-
-  const moveEntry = (entryId, targetParentId, index) => {
-    entryManager.moveEntry(entryId, targetParentId, index)
-  }
-
-  const isContainer = (entryId) => {
-    return entryManager.isContainer(entryId)
-  }
-
-  const isBlock = (entryId) => {
-    return entryManager.isBlock(entryId)
-  }
-
-  const getAllDescendantIds = (entryId) => {
-    return entryManager.getAllDescendants(entryId)
-  }
-
-  const getParentId = (entryId) => {
-    return entryManager.getParent(entryId)
-  }
-
-  const getEntryName = (entryId) => {
-    return entryManager.getEntryName(entryId)
-  }
-
-  const getRootEntryId = () => {
-    return entryManager.getRootEntry()
-  }
-
-  const getChildren = (entryId) => {
-    return entryManager.getChildren(entryId)
-  }
-
-  const hierarchyTick = entryManager.hierarchyTick
-  const outputParamsTick = entryManager.paramHandler.outputParamsTick
-
-  const getInputParams = (entryId) => {
-    return entryManager.paramHandler.getInputParams(entryId)
-  }
-
-  const getOutputParams = (entryId) => {
-    return entryManager.paramHandler.getOutputParams(entryId)
-  }
-
-  const setInputParam = (entryId, paramName, value) => {
-    entryManager.paramHandler.setInputParam(entryId, paramName, value)
-  }
-
-  const hasParams = (entryId) => {
-    return Object.keys(entryManager.paramHandler.getInputParamTypes(entryId)).length > 0 ||
-      Object.keys(entryManager.paramHandler.getOutputParamTypes(entryId)).length > 0
+  const loadRecipe = async (fileName) => {
+    setExecuting(true)
+    clearError()
+    resetState()
+    try {
+      lastReport.value = await entryPersistanceService.loadRecipe(fileName)
+    } catch (error) {
+      setError(error.message)
+    } finally {
+      setExecuting(false)
+    }
   }
 
   return {
-    addEntry,
-    removeEntry,
-    reorderEntry,
-    moveEntry,
-    getAllDescendantIds,
-    getParentId,
-    getEntryName,
-    getRootEntryId,
-    getChildren,
-    hierarchyTick,
-    outputParamsTick,
-    getInputParams,
-    getOutputParams,
-    setInputParam,
-    hasParams,
-    isContainer,
-    isBlock,
+    executeEntry,
+    lastReport,
+    saveRecipe,
+    loadRecipe
   }
 }

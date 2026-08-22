@@ -1,7 +1,7 @@
 <template>
   <div
     class="container-item"
-    :class="{ 'dragging': isDragging, 'selected': isSelected }"
+    :class="[containerTypeClass, { 'dragging': isDragging, 'selected': isSelected }]"
     draggable="true"
     @dragstart="onDragStart"
     @dragend="onDragEnd"
@@ -18,7 +18,7 @@
           <div
             v-if="(isSelected || isConnectingTargetValue) && hasParamsValue"
             class="container-content-param"
-            :class="{ 'selected': isSelected }"
+            :class="[containerTypeClass, { 'selected': isSelected }]"
           >
             <EntryParamsRow :entry-id="entryId" :is-connecting-tgt="isConnectingTargetValue" />
           </div>
@@ -30,10 +30,9 @@
 </template>
 
 <script>
-import { computed } from 'vue'
-import { useEntryOperation } from '../composables/useEntryOperation'
+import { computed, inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
-import { useEntryExecution } from '../composables/useEntryExecution'
+import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import EntryParamsRow from './EntryParamsRow.vue'
 
@@ -58,14 +57,8 @@ export default {
       onDragEnd,
       setOnDragStartCallback
     } = useDraggable()
-    const { executeEntry } = useEntryExecution()
-
-    const {
-      getAllDescendantIds,
-      getParentId,
-      getEntryName,
-      hasParams,
-    } = useEntryOperation()
+    const { executeEntry } = useEntryOperation()
+    const entryManager = inject('entryManager')
     const {
       isExecuting,
       getSelectedEntryId,
@@ -82,7 +75,9 @@ export default {
 
     const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParamsValue = computed(() => hasParams(props.entryId))
+    const hasParamsValue = computed(() => entryManager.hasParam(props.entryId))
+    const getEntryName = (entryId) => entryManager.getEntryName(entryId)
+    const containerTypeClass = computed(() => `type-${getEntryName(props.entryId).toLowerCase()}`)
 
     const onSelect = () => {
       if (isSelected.value) {
@@ -95,11 +90,11 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
-      const allIds = getAllDescendantIds(props.entryId)
+      const allIds = entryManager.getAllDescendants(props.entryId)
       dragDropState.setDraggedIds(allIds)
 
       // Get parent ID
-      const parentId = getParentId(props.entryId)
+      const parentId = entryManager.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'container')
@@ -141,6 +136,7 @@ export default {
       isSelected,
       isConnectingTargetValue,
       hasParamsValue,
+      containerTypeClass,
       getEntryName,
       onDragStart,
       onDragEnd,
@@ -159,7 +155,7 @@ export default {
   border: var(--container-border);
   border-radius: var(--entry-border-radius);
   box-shadow: var(--container-box-shadow);
-  background-color: var(--container-bg-color);
+  background-color: var(--container-item-bg);
 }
 
 .container-item.dragging {
@@ -206,7 +202,7 @@ export default {
   border: var(--entry-border);
   border-radius: var(--entry-border-radius);
   box-shadow: var(--entry-box-shadow);
-  background-color: var(--container-bg-color);
+  background-color: var(--container-item-bg);
 }
 
 .container-content-param.selected {
