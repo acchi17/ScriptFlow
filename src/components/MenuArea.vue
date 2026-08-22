@@ -59,8 +59,8 @@ export default {
     }
 
     const onLoadRecipe = async () => {
-      const rootEntryId = entryManager.hierarchyHandler.getRoot()
-      if (rootEntryId && entryManager.hierarchyHandler.getChildren(rootEntryId).length > 0) {
+      const rootEntryId = entryManager.getRoot()
+      if (rootEntryId && entryManager.getChildren(rootEntryId).length > 0) {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }

@@ -19,11 +19,43 @@ export default class EntryHierarchyHandler {
   }
 
   /**
+   * Check whether an entry is a block (i.e. its hierarchy component has no children array)
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a block
+   */
+  isBlock(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy !== undefined && hierarchy.children === null;
+  }
+
+  /**
+   * Check whether an entry is a container (i.e. its hierarchy component has a children array)
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a container
+   */
+  isContainer(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    return hierarchy !== undefined && hierarchy.children !== null;
+  }
+
+  /**
   * Get the root entry's ID
   * @returns {string|null} Root entry ID or null
   */
   getRoot() {
     return this._rootId;
+  }
+
+  /**
+   * Set the root container
+   * Must be called once after the root container is registered.
+   * @param {string} rootId
+   */
+  setRoot(rootId) {
+    if (this._rootId == null) {
+      console.log('Root entry set');
+      this._rootId = rootId;
+    }
   }
 
   /**
@@ -43,26 +75,6 @@ export default class EntryHierarchyHandler {
   getChildren(entryId) {
     const hierarchy = this._world.hierarchies.get(entryId);
     return hierarchy?.children ? [...hierarchy.children] : [];
-  }
-
-  /**
-   * Check whether an entry is a container (i.e. its hierarchy component has a children array)
-   * @param {string} entryId - ID of the entry to check
-   * @returns {boolean} Whether the entry is a container
-   */
-  isContainer(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
-    return hierarchy !== undefined && hierarchy.children !== null;
-  }
-
-  /**
-   * Check whether an entry is a block (i.e. its hierarchy component has no children array)
-   * @param {string} entryId - ID of the entry to check
-   * @returns {boolean} Whether the entry is a block
-   */
-  isBlock(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
-    return hierarchy !== undefined && hierarchy.children === null;
   }
 
   /**
@@ -109,18 +121,6 @@ export default class EntryHierarchyHandler {
    */
   initialize(entryId, noChildren = false) {
     this._world.hierarchies.add(entryId, { parent: null, children: noChildren ? null : [] });
-  }
-
-  /**
-   * Set the root container
-   * Must be called once after the root container is registered.
-   * @param {string} rootId
-   */
-  setRoot(rootId) {
-    if (this._rootId == null) {
-      console.log('Root entry set');
-      this._rootId = rootId;
-    }
   }
 
   /**
@@ -183,18 +183,6 @@ export default class EntryHierarchyHandler {
   }
 
   /**
-   * Truncate an entry's children
-   * @param {string} entryId - ID of the entry whose children array should be cleared
-   */
-  clearChildren(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
-    if (hierarchy) {
-      hierarchy.children.length = 0;
-    }
-    this.rebuildSequenceNumbers();
-  }
-
-  /**
    * Reorder an entry within a parent entry
    * @param {string} parentId - ID of the parent entry
    * @param {string} entryId - ID of the entry to reorder
@@ -219,6 +207,18 @@ export default class EntryHierarchyHandler {
       return true;
     }
     return false;
+  }
+
+  /**
+   * Truncate an entry's children
+   * @param {string} entryId - ID of the entry whose children array should be cleared
+   */
+  clearChildren(entryId) {
+    const hierarchy = this._world.hierarchies.get(entryId);
+    if (hierarchy) {
+      hierarchy.children.length = 0;
+    }
+    this.rebuildSequenceNumbers();
   }
 
   /**

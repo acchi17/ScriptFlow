@@ -74,7 +74,7 @@ export default {
 
     const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParamsValue = computed(() => entryManager.paramHandler.hasParam(props.entryId))
+    const hasParamsValue = computed(() => entryManager.hasParam(props.entryId))
     const getEntryName = (entryId) => entryManager.getEntryName(entryId)
 
     const onSelect = () => {
@@ -88,7 +88,7 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event) => {
       // Get parent ID
-      const parentId = entryManager.hierarchyHandler.getParent(props.entryId)
+      const parentId = entryManager.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'block')

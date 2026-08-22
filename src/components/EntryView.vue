@@ -91,21 +91,21 @@ export default {
     // Depends on outputParamsTick so this re-runs when output param values change during
     // execution, since the underlying ECS store itself isn't deep-reactive
     const localOutputParams = computed(() => {
-      entryManager.paramHandler.outputParamsTick.value
+      entryManager.outputParamsTick.value
       const id = selectedEntryId.value
-      return id ? entryManager.paramHandler.getOutputParamValues(id) : {}
+      return id ? entryManager.getOutputParamValues(id) : {}
     })
 
     // Reload local input params when selected entry changes
     watch(selectedEntryId, (id) => {
-      localInputParams.value = id ? { ...entryManager.paramHandler.getInputParamValues(id) } : {}
+      localInputParams.value = id ? { ...entryManager.getInputParamValues(id) } : {}
     }, { immediate: true })
 
     const onParamChange = (paramName, value) => {
       const id = selectedEntryId.value
       if (!id) return
       localInputParams.value[paramName] = value
-      entryManager.paramHandler.setInputParam(id, paramName, value)
+      entryManager.setInputParam(id, paramName, value)
     }
 
     return {

@@ -42,15 +42,15 @@ export default class EntryExecutionService {
    * @private
    */
   _resolveInputParams(entryId) {
-    const base = this.entryManager ? this.entryManager.paramHandler.getInputParamValues(entryId) : {};
+    const base = this.entryManager ? this.entryManager.getInputParamValues(entryId) : {};
     if (!this.entryManager) return base;
 
     const result = { ...base };
-    const connections = this.entryManager.connectionHandler
+    const connections = this.entryManager
       .getConnectionsByEntryId(entryId)
       .filter(conn => conn.input.entryId === entryId);
     for (const conn of connections) {
-      const outputParam = this.entryManager.paramHandler.getOutputParam(conn.output.entryId, conn.output.paramName);
+      const outputParam = this.entryManager.getOutputParam(conn.output.entryId, conn.output.paramName);
       if (outputParam !== undefined) {
         result[conn.input.paramName] = outputParam.value;
       }
@@ -78,10 +78,10 @@ export default class EntryExecutionService {
       result = await this.scriptExecutionService.executeScript(command, inputParams);
       // Store result values into output params
       if (this.entryManager) {
-        const outputParamNames = Object.keys(this.entryManager.paramHandler.getOutputParamValues(entryId));
+        const outputParamNames = Object.keys(this.entryManager.getOutputParamValues(entryId));
         for (const key of outputParamNames) {
           if (key in result) {
-            this.entryManager.paramHandler.setOutputParam(entryId, key, result[key]);
+            this.entryManager.setOutputParam(entryId, key, result[key]);
           }
         }
       }

@@ -102,10 +102,10 @@ export default {
       const panelRect = entryPanelRef.value.getBoundingClientRect()
 
       const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
-      entryManager.layoutHandler.clearLayouts()
+      entryManager.clearLayouts()
       for (const node of nodes) {
         const rect = node.getBoundingClientRect()
-        entryManager.layoutHandler.addLayout(
+        entryManager.addLayout(
           node.dataset.entryId,
           rect.top - panelRect.top,
           rect.height
@@ -113,11 +113,11 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyHandler.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
+    watch(() => entryManager.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
 
     const entryLayoutMap = computed(() => {
-      entryManager.layoutHandler.layoutsTick.value
-      return entryManager.layoutHandler.getAllLayouts()
+      entryManager.layoutsTick.value
+      return entryManager.getAllLayouts()
     })
 
     return {

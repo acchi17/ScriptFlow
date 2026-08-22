@@ -41,8 +41,8 @@ export default {
     }
 
     const listItems = computed(() => {
-      entryManager.connectionHandler.connectionsTick.value
-      const connections = entryManager.connectionHandler.getConnectionsByEndpoint(
+      entryManager.connectionsTick.value
+      const connections = entryManager.getConnectionsByEndpoint(
         props.entryId, props.paramCategory, props.paramName
       )
       return connections.map(conn => ({
@@ -54,7 +54,7 @@ export default {
     })
 
     const removeConnection = (connectionId) => {
-      entryManager.connectionHandler.removeConnection(connectionId)
+      entryManager.removeConnection(connectionId)
     }
 
     return { listItems, removeConnection, paramTypeClass }

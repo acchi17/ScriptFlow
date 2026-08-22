@@ -121,7 +121,7 @@ export default {
       const result = [];
       try {
         const executionsTree = logs.value;
-        const rootEntryId = entryManager.hierarchyHandler.getRoot();
+        const rootEntryId = entryManager.getRoot();
         for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
           const execution = executionsTree.rootExecutions[i];
           const isRootContainer = execution.entryId === rootEntryId;

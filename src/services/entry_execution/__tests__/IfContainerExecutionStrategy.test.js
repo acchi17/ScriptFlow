@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import IfContainerExecutionStrategy from '../IfContainerExecutionStrategy.js'
 
 function buildEntryManager(children) {
-  return { hierarchyHandler: { getChildren: () => children } }
+  return { getChildren: () => children }
 }
 
 describe('IfContainerExecutionStrategy.execute', () => {

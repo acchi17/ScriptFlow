@@ -75,7 +75,7 @@ export default {
 
     const isConnectingTargetValue = isConnectingTarget(props.entryId)
 
-    const hasParamsValue = computed(() => entryManager.paramHandler.hasParam(props.entryId))
+    const hasParamsValue = computed(() => entryManager.hasParam(props.entryId))
     const getEntryName = (entryId) => entryManager.getEntryName(entryId)
     const containerTypeClass = computed(() => `type-${getEntryName(props.entryId).toLowerCase()}`)
 
@@ -90,11 +90,11 @@ export default {
     // Set callback for drag start
     setOnDragStartCallback((event, dragDropState) => {
       // Get the list of IDs for this entry and all its descendants
-      const allIds = entryManager.hierarchyHandler.getAllDescendants(props.entryId)
+      const allIds = entryManager.getAllDescendants(props.entryId)
       dragDropState.setDraggedIds(allIds)
 
       // Get parent ID
-      const parentId = entryManager.hierarchyHandler.getParent(props.entryId)
+      const parentId = entryManager.getParent(props.entryId)
 
       // Set data for transfer
       event.dataTransfer.setData('entryType', 'container')

@@ -69,10 +69,10 @@ export function useSystemState() {
       const dstSeq = entryManager.hierarchyHandler.getSequenceNumber(entryId)
       if (dstSeq === null || srcSeq === null) return false
       if (connectingSource.value.paramCategory === 'input') {
-        if (!entryManager.paramHandler.hasOutputParam(entryId)) return false
+        if (!entryManager.hasOutputParam(entryId)) return false
         return dstSeq < srcSeq
       } else {
-        if (!entryManager.paramHandler.hasInputParam(entryId)) return false
+        if (!entryManager.hasInputParam(entryId)) return false
         return dstSeq > srcSeq
       }
     })
@@ -80,8 +80,8 @@ export function useSystemState() {
   const isConnectedEndPoint = (entryId, paramName, paramCategory) =>
     computed(() => {
       if (!entryManager) return false
-      entryManager.connectionHandler.connectionsTick.value
-      return entryManager.connectionHandler.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
+      entryManager.connectionsTick.value
+      return entryManager.getConnectionsByEndpoint(entryId, paramCategory, paramName).length > 0
     })
 
   const startConnection = (entryId, paramName, paramCategory, paramType) => {
@@ -99,7 +99,7 @@ export function useSystemState() {
     const [outputEndpoint, inputEndpoint] = source.paramCategory === 'output'
       ? [sourceEndpoint, targetEndpoint]
       : [targetEndpoint, sourceEndpoint]
-    entryManager.connectionHandler.addConnection(outputEndpoint, inputEndpoint)
+    entryManager.addConnection(outputEndpoint, inputEndpoint)
     cancelConnection()
   }
 

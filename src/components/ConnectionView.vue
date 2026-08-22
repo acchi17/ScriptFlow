@@ -35,14 +35,14 @@ export default {
     const entryManager = inject('entryManager')
 
     const connectionsWithLanes = computed(() => {
-      entryManager.connectionHandler.connectionsTick.value
-      entryManager.layoutHandler.layoutsTick.value
-      const connections = entryManager.connectionHandler.getConnections()
+      entryManager.connectionsTick.value
+      entryManager.layoutsTick.value
+      const connections = entryManager.getConnections()
 
       const withCoords = []
       for (const conn of connections) {
-        const outLayout = entryManager.layoutHandler.getLayout(conn.output.entryId)
-        const inLayout = entryManager.layoutHandler.getLayout(conn.input.entryId)
+        const outLayout = entryManager.getLayout(conn.output.entryId)
+        const inLayout = entryManager.getLayout(conn.input.entryId)
         if (!outLayout || !inLayout) continue
 
         const y1 = outLayout.y + outLayout.height / 2

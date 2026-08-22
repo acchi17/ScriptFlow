@@ -47,7 +47,7 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyHandler.hierarchyTick.value, () => {
+    watch(() => entryManager.hierarchyTick.value, () => {
       cancelConnection()
       const id = getSelectedEntryId.value
       if (id && !entryManager.isAlive(id)) {

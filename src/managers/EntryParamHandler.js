@@ -37,6 +37,19 @@ export default class EntryParamHandler {
   }
 
   /**
+   * Set a single input parameter
+   * @param {string} entryId - ID of the entry
+   * @param {string} paramName - Name of the input parameter
+   * @param {any} value - New value
+   */
+  setInputParam(entryId, paramName, value) {
+    if (!entryId || !paramName) return;
+    const params = this._world.inputParams.get(entryId);
+    if (!params?.[paramName]) return;
+    params[paramName].value = convertValue(value, params[paramName].dataType);
+  }
+
+  /**
    * Get a specific output parameter
    * @param {string} entryId - ID of the entry
    * @param {string} paramName - Name of the parameter
@@ -45,6 +58,20 @@ export default class EntryParamHandler {
   getOutputParam(entryId, paramName) {
     const params = this._world.outputParams.get(entryId);
     return params?.[paramName];
+  }
+
+  /**
+   * Set a single output parameter
+   * @param {string} entryId - ID of the entry
+   * @param {string} paramName - Name of the output parameter
+   * @param {any} value - New value
+   */
+  setOutputParam(entryId, paramName, value) {
+    if (!entryId || !paramName) return;
+    const params = this._world.outputParams.get(entryId);
+    if (!params?.[paramName]) return;
+    params[paramName].value = convertValue(value, params[paramName].dataType);
+    this._outputParamsTick.value++;
   }
 
   /**
@@ -63,55 +90,6 @@ export default class EntryParamHandler {
    */
   getOutputParams(entryId) {
     return this._world.outputParams.get(entryId);
-  }
-
-  /**
-   * Get input parameters
-   * @param {string} entryId - ID of the entry
-   * @returns {Object} Input parameters object in the form { name: value }
-   */
-  getInputParamValues(entryId) {
-    const params = this._world.inputParams.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.value]));
-  }
-
-  /**
-   * Get output parameters
-   * @param {string} entryId - ID of the entry
-   * @returns {Object} Output parameters object in the form { name: value }
-   */
-  getOutputParamValues(entryId) {
-    const params = this._world.outputParams.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.value]));
-  }
-
-  /**
-   * Get input parameter data types
-   * @param {string} entryId - ID of the entry
-   * @returns {Object} Input parameter types in the form { name: type }
-   */
-  getInputParamTypes(entryId) {
-    const params = this._world.inputParams.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
-  }
-
-  /**
-   * Get output parameter data types
-   * @param {string} entryId - ID of the entry
-   * @returns {Object} Output parameter types in the form { name: type }
-   */
-  getOutputParamTypes(entryId) {
-    const params = this._world.outputParams.get(entryId) || {};
-    return Object.fromEntries(Object.entries(params).map(([k, d]) => [k, d.dataType]));
-  }
-
-  /**
-   * Check if an entry has one or more input or output parameters
-   * @param {string} entryId - ID of the entry
-   * @returns {boolean} True if the entry has at least one input or output parameter
-   */
-  hasParam(entryId) {
-    return this.hasInputParam(entryId) || this.hasOutputParam(entryId);
   }
 
   /**
@@ -163,33 +141,6 @@ export default class EntryParamHandler {
     if (!entryId) return;
     this._world.inputParams.remove(entryId);
     this._world.outputParams.remove(entryId);
-    this._outputParamsTick.value++;
-  }
-
-  /**
-   * Set a single input parameter
-   * @param {string} entryId - ID of the entry
-   * @param {string} paramName - Name of the input parameter
-   * @param {any} value - New value
-   */
-  setInputParam(entryId, paramName, value) {
-    if (!entryId || !paramName) return;
-    const params = this._world.inputParams.get(entryId);
-    if (!params?.[paramName]) return;
-    params[paramName].value = convertValue(value, params[paramName].dataType);
-  }
-
-  /**
-   * Set a single output parameter
-   * @param {string} entryId - ID of the entry
-   * @param {string} paramName - Name of the output parameter
-   * @param {any} value - New value
-   */
-  setOutputParam(entryId, paramName, value) {
-    if (!entryId || !paramName) return;
-    const params = this._world.outputParams.get(entryId);
-    if (!params?.[paramName]) return;
-    params[paramName].value = convertValue(value, params[paramName].dataType);
     this._outputParamsTick.value++;
   }
 }
