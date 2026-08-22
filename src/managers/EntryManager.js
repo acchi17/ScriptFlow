@@ -75,17 +75,6 @@ export default class EntryManager {
   }
 
   /**
-   * Get the type of an entry
-   * @param {string} entryId - ID of the entry
-   * @returns {string|null} Entry type ('block' or 'container'), or null if not found
-   */
-  getEntryType(entryId) {
-    if (this.isContainer(entryId)) return 'container';
-    if (this.isBlock(entryId)) return 'block';
-    return null;
-  }
-
-  /**
    * Get the name of an entry
    * @param {string} entryId - ID of the entry
    * @returns {string|null} Entry name, or null if not found

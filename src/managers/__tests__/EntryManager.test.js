@@ -24,7 +24,7 @@ describe('EntryManager.addEntry', () => {
     expect(entryManager.hierarchyHandler.getParent(containerAId)).toBe(rootId)
     expect(entryManager.hierarchyHandler.getParent(rootId)).toBe(null)
 
-    expect(entryManager.getEntryType(blockId)).toBe('block')
+    expect(entryManager.isBlock(blockId)).toBe(true)
     expect(entryManager.getEntryName(blockId)).toBe('Add')
   })
 

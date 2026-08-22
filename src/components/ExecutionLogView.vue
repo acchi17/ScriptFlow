@@ -70,8 +70,8 @@ export default {
     function entryRowClass(entry) {
       return {
         'entry-row': true,
-        'block-row': entry?.entryType === 'block',
-        'container-row': entry?.entryType === 'container'
+        'block-row': entry?.isContainer === false,
+        'container-row': entry?.isContainer === true
       };
     }
 
@@ -109,7 +109,7 @@ export default {
       const children = executionsTree.executionsByParent[parentId] || [];
       children.forEach(childExecution => {
         result.push({ type: 'entry', key: `entry_${childExecution.executionId}`, data: childExecution });
-        if (childExecution.entryType === 'container') {
+        if (childExecution.isContainer) {
           addChildExecutions(childExecution.executionId, executionsTree, result);
           result.push({ type: 'container-end', key: `end_${childExecution.executionId}`, containerName: childExecution.entryName });
         }
@@ -128,7 +128,7 @@ export default {
           if (!isRootContainer) {
             result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
           }
-          if (execution.entryType === 'container') {
+          if (execution.isContainer) {
             addChildExecutions(execution.executionId, executionsTree, result);
             if (!isRootContainer) {
               result.push({ type: 'container-end', key: `end_${execution.executionId}`, containerName: execution.entryName });
