@@ -39,22 +39,22 @@ export default class EntryPersistanceService {
   }
 
   /**
-   * Build and persist the current recipe.
-   * @param {string} fileName
+   * Build the current recipe and let the user pick where to save it.
    * @param {string} name - Recipe display name stored in meta.name
+   * @returns {Promise<string|null>} chosen path/name, or null if canceled
    */
-  async saveRecipe(fileName = 'recipe.json', name = '') {
+  async saveRecipe(name = '') {
     const data = this.buildRecipe(name)
-    await this.platformService.writeRecipe(fileName, data)
+    return this.platformService.saveRecipeAs(data, `${name || 'recipe'}.json`)
   }
 
   /**
-   * Load and restore a recipe from storage.
-   * @param {string} fileName
-   * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }>}
+   * Let the user pick a recipe file and restore it.
+   * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }|null>} null if canceled
    */
-  async loadRecipe(fileName = 'recipe.json') {
-    const data = await this.platformService.readRecipe(fileName)
-    return this.restoreRecipe(data)
+  async loadRecipe() {
+    const picked = await this.platformService.openRecipe()
+    if (!picked) return null
+    return this.restoreRecipe(picked.data)
   }
 }

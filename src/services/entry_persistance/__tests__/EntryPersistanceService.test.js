@@ -14,7 +14,7 @@ async function createContext() {
   const entryManager = new EntryManager(undefined, entryDefinitionService)
   const socketManager = new SocketManager()
 
-  const platformService = { readRecipe: async () => null, writeRecipe: async () => {} }
+  const platformService = { openRecipe: async () => null, saveRecipeAs: async () => null }
 
   const service = new EntryPersistanceService(
     platformService, entryManager,
@@ -89,7 +89,7 @@ describe('EntryPersistanceService round trip', () => {
 
     const recipe = ctx.service.buildRecipe('My recipe')
 
-    // Mirrors what Electron's IPC/contextBridge does internally when writeRecipe()
+    // Mirrors what Electron's IPC/contextBridge does internally when saveRecipeAs()
     // sends this object to the main process. Guards against connections becoming
     // non-cloneable again (e.g. if EntryConnectionHandler's storage ever goes back
     // to wrapping connections in a Vue reactive Proxy).
@@ -227,5 +227,24 @@ describe('EntryPersistanceService round trip', () => {
     expect(ctx.entryManager.hasInputParam(block1Id)).toBe(false)
     expect(ctx.entryManager.hasInputParam(block2Id)).toBe(false)
     expect(ctx.entryManager.getLayout(block1Id)).toBeUndefined()
+  })
+
+  it('loadRecipe returns null when the user cancels the open dialog', async () => {
+    const ctx = await createContext()
+    addBlock(ctx, ctx.rootId, 'Add', 0)
+
+    const result = await ctx.service.loadRecipe()
+
+    expect(result).toBeNull()
+    expect(ctx.entryManager.getChildren(ctx.rootId)).toHaveLength(1)
+  })
+
+  it('saveRecipe returns null when the user cancels the save dialog', async () => {
+    const ctx = await createContext()
+    addBlock(ctx, ctx.rootId, 'Add', 0)
+
+    const result = await ctx.service.saveRecipe('My recipe')
+
+    expect(result).toBeNull()
   })
 })

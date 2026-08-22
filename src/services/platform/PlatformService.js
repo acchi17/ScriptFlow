@@ -49,28 +49,79 @@ export default class PlatformService {
     throw new Error('saveScript is not supported in the browser build')
   }
 
-  async readRecipe(fileName) {
+  /**
+   * Prompt the user for a save location and write the recipe there.
+   * @param {Object} data
+   * @param {string} suggestedName
+   * @returns {Promise<string|null>} chosen path/name, or null if canceled
+   */
+  async saveRecipeAs(data, suggestedName = 'recipe.json') {
     if (this.isElectron) {
-      return window.electronAPI.readRecipe(fileName)
+      return window.electronAPI.saveRecipeAs(data, suggestedName)
     }
-    const res = await fetch(`/recipes/${fileName}`)
-    if (!res.ok) {
-      throw new Error(`Failed to load recipe "${fileName}": HTTP ${res.status}`)
+    if (window.showSaveFilePicker) {
+      let handle
+      try {
+        handle = await window.showSaveFilePicker({
+          suggestedName,
+          types: [{ description: 'Recipe JSON', accept: { 'application/json': ['.json'] } }]
+        })
+      } catch (err) {
+        if (err.name === 'AbortError') return null
+        throw err
+      }
+      const writable = await handle.createWritable()
+      await writable.write(JSON.stringify(data, null, 2))
+      await writable.close()
+      return handle.name
     }
-    return res.json()
-  }
-
-  async writeRecipe(fileName, data) {
-    if (this.isElectron) {
-      return window.electronAPI.writeRecipe(fileName, data)
-    }
-    // Browser build has no filesystem write access; trigger a download instead.
+    // Fallback for browsers without the File System Access API: trigger a download.
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = fileName
+    link.download = suggestedName
     link.click()
     URL.revokeObjectURL(url)
+    return suggestedName
+  }
+
+  /**
+   * Prompt the user to pick a recipe file and read it.
+   * @returns {Promise<{fileName: string, data: Object}|null>} null if canceled
+   */
+  async openRecipe() {
+    if (this.isElectron) {
+      return window.electronAPI.openRecipe()
+    }
+    if (window.showOpenFilePicker) {
+      let handle
+      try {
+        [handle] = await window.showOpenFilePicker({
+          types: [{ description: 'Recipe JSON', accept: { 'application/json': ['.json'] } }]
+        })
+      } catch (err) {
+        if (err.name === 'AbortError') return null
+        throw err
+      }
+      const file = await handle.getFile()
+      return { fileName: handle.name, data: JSON.parse(await file.text()) }
+    }
+    // Fallback for browsers without the File System Access API.
+    return new Promise((resolve, reject) => {
+      const input = document.createElement('input')
+      input.type = 'file'
+      input.accept = 'application/json'
+      input.onchange = async () => {
+        const file = input.files[0]
+        if (!file) { resolve(null); return }
+        try {
+          resolve({ fileName: file.name, data: JSON.parse(await file.text()) })
+        } catch (err) {
+          reject(err)
+        }
+      }
+      input.click()
+    })
   }
 }
