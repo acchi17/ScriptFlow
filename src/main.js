@@ -6,7 +6,6 @@ import appConfig from './config/app-config'
 import EntryManager from './managers/EntryManager'
 import SocketManager from './managers/SocketManager'
 import { World } from './ecs/core/World'
-import FileService from './services/file/FileService'
 import PlatformService from './services/platform/PlatformService'
 import EntryExecutionService from './services/entry_execution/EntryExecutionService'
 import ExecutionLogService from './services/log/ExecutionLogService'
@@ -18,7 +17,6 @@ const app = createApp(App)
 
 // Create Services
 const platformService = new PlatformService()
-const fileService = new FileService()
 const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
 
 // Create Managers
@@ -41,7 +39,6 @@ app.provide('entryManager', entryManager)
 app.provide('world', world)
 app.provide('socketManager', socketManager)
 app.provide('platformService', platformService)
-app.provide('fileService', fileService)
 app.provide('executionLogService', executionLogService)
 app.provide('entryExecutionService', entryExecutionService)
 app.provide('entryDefinitionService', entryDefinitionService)

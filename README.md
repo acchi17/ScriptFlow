@@ -2,7 +2,7 @@
 
 A drag-and-drop workflow builder where you construct nested workflows by combining blocks and containers. Blocks execute JavaScript scripts; containers hold and run child entries sequentially.
 
-Runs as both a **browser app** (Vite) and a **desktop app** (Electron).
+Runs as a **desktop app** (Electron).
 
 ## Prerequisites
 
@@ -17,14 +17,6 @@ npm install
 
 ## Development
 
-### Browser
-
-```bash
-npm run dev
-```
-
-Opens at `http://localhost:8080` with hot module replacement.
-
 ### Desktop (Electron)
 
 ```bash
@@ -38,13 +30,6 @@ npm run lint
 ```
 
 ## Production Build
-
-### Browser
-
-```bash
-npm run build       # Output: dist/
-npm run preview     # Preview the built app locally
-```
 
 ### Desktop (Electron)
 
@@ -75,8 +60,7 @@ On Windows, `electron:make` produces a Squirrel installer (`.exe`) and a `.zip`.
 └── index.html
 ```
 
-**Browser:** scripts and definitions are served read-only from `public/`.  
-**Electron:** on first launch, `public/scripts/` and `public/settings/` are seeded into `<app-dir>/scripts/` and `<app-dir>/settings/`, where they can be edited by the user.
+On first launch, `public/scripts/` and `public/settings/` are seeded into `<app-dir>/scripts/` and `<app-dir>/settings/`, where they can be edited by the user.
 
 ## Writing Block Scripts
 

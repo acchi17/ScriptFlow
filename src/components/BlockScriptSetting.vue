@@ -55,7 +55,6 @@ export default {
     });
 
     const status = computed(() => {
-      if (!platformService.isElectron) return 'unavailable';
       if (!props.blockName) return 'none';
       return availableScripts.value.includes(command.value) ? 'found' : 'missing';
     });
