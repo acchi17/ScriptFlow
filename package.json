@@ -2,16 +2,21 @@
   "name": "scriptflow",
   "version": "0.1.0",
   "private": true,
-  "main": ".vite/build/main.js",
+  "type": "module",
+  "main": ".vite/build/main.cjs",
   "scripts": {
     "lint": "eslint --ext .js,.vue src",
     "test": "vitest run",
     "test:watch": "vitest",
     "electron:start": "electron-forge start",
     "electron:package": "electron-forge package",
-    "electron:make": "electron-forge make"
+    "electron:make": "electron-forge make",
+    "web:build": "vite build",
+    "web:start": "node server/index.js"
   },
   "dependencies": {
+    "express": "^5.2.1",
+    "open": "^11.0.1",
     "vue": "^3.2.13"
   },
   "devDependencies": {

@@ -15,9 +15,8 @@ export default class JavaScriptExecutionEngine extends IScriptExecutionEngine {
     super();
     this.scriptsDir = scriptsDir;
 
-    // Kept as a property (rather than assumed true) because the planned Web
-    // server execution mode will need a way to tell whether it's running
-    // under Electron IPC or the future HTTP transport.
+    // Tells executeScript() whether to route through Electron IPC or the
+    // Web server's HTTP API.
     this.isElectron = typeof window !== 'undefined' && !!window.electronAPI;
   }
 
@@ -46,9 +45,21 @@ export default class JavaScriptExecutionEngine extends IScriptExecutionEngine {
    */
   async executeScript(scriptName, inputParams = {}) {
     try {
-      // Route to the main process, which forwards to the utility-process
-      // script runner.
-      return await window.electronAPI.executeScript(scriptName, inputParams);
+      if (this.isElectron) {
+        // Route to the main process, which forwards to the utility-process
+        // script runner.
+        return await window.electronAPI.executeScript(scriptName, inputParams);
+      }
+      const response = await fetch(`/api/scripts/${encodeURIComponent(scriptName)}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inputParams)
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(text || `Script execution failed: ${response.status}`);
+      }
+      return await response.json();
     } catch (error) {
       this._log(`executeScript() failed: ${error.message}`);
       throw error;

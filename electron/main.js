@@ -1,3 +1,9 @@
+// shared/*.js are real ES modules; Rollup traces these imports and inlines
+// them directly into this bundle, so no separate Forge build entry (and no
+// runtime file lookup) is needed for them.
+import { createAppPaths, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appPaths.js'
+import RunnerHost from '../shared/RunnerHost.js'
+
 const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
@@ -11,30 +17,14 @@ try {
   // electron-squirrel-startup is optional; ignore if not installed
 }
 
-const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
-const DEFS_FILENAME = 'BlockDefinitions.json'
-
 let mainWindow = null
-let scriptRunner = null
-const pendingExecutions = new Map()
-let executionCounter = 0
+let appPaths = null
+let runnerHost = null
 
-function getAppRootDir() {
+function getRootDir() {
   return app.isPackaged
     ? path.dirname(app.getPath('exe'))
-    : app.getAppPath()
-}
-
-function getUserScriptsDir() {
-  return app.isPackaged
-    ? path.join(getAppRootDir(), 'scripts')
-    : path.join(app.getAppPath(), 'public', 'scripts')
-}
-
-function getUserSettingsDir() {
-  return app.isPackaged
-    ? path.join(getAppRootDir(), 'settings')
-    : path.join(app.getAppPath(), 'public', 'settings')
+    : path.join(app.getAppPath(), 'public')
 }
 
 function getDefaultsDir() {
@@ -43,146 +33,25 @@ function getDefaultsDir() {
     : path.join(app.getAppPath(), 'public')
 }
 
-function copyDirRecursive(src, dest) {
-  if (!fs.existsSync(src)) return
-  fs.mkdirSync(dest, { recursive: true })
-  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
-    const srcPath = path.join(src, entry.name)
-    const destPath = path.join(dest, entry.name)
-    if (entry.isDirectory()) {
-      copyDirRecursive(srcPath, destPath)
-    } else {
-      fs.copyFileSync(srcPath, destPath)
-    }
-  }
-}
+function ensureRunnerHost() {
+  if (runnerHost) return runnerHost
 
-function seedUserDirs() {
-  const scriptsDir = getUserScriptsDir()
-  const settingsDir = getUserSettingsDir()
-  const defaultsDir = getDefaultsDir()
-
-  if (!fs.existsSync(scriptsDir)) {
-    copyDirRecursive(path.join(defaultsDir, 'scripts'), scriptsDir)
-  }
-  if (!fs.existsSync(path.join(settingsDir, DEFS_FILENAME))) {
-    fs.mkdirSync(settingsDir, { recursive: true })
-    const srcDefs = path.join(defaultsDir, 'settings', DEFS_FILENAME)
-    if (fs.existsSync(srcDefs)) {
-      fs.copyFileSync(srcDefs, path.join(settingsDir, DEFS_FILENAME))
-    }
-  }
-}
-
-function isInsideDir(parent, candidate) {
-  const resolvedParent = path.resolve(parent) + path.sep
-  const resolvedCandidate = path.resolve(candidate)
-  return resolvedCandidate.startsWith(resolvedParent)
-}
-
-function resolveScriptPath(scriptName) {
-  if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
-    throw new Error(`Invalid script name: ${scriptName}`)
-  }
-  const scriptsDir = getUserScriptsDir()
-  const resolved = path.join(scriptsDir, `${scriptName}.mjs`)
-  if (!isInsideDir(scriptsDir, resolved)) {
-    throw new Error(`Path escapes scripts directory: ${scriptName}`)
-  }
-  return resolved
-}
-
-function ensureScriptRunner() {
-  if (scriptRunner) return scriptRunner
-
-  // Both main.js and script-runner.js are bundled by Forge into the same
+  // Both main.cjs and script-runner.cjs are bundled by Forge into the same
   // directory (.vite/build/ in dev, app.asar/.vite/build/ in prod), so __dirname
   // is the right anchor in either mode.
-  const runnerPath = path.join(__dirname, 'script-runner.js')
+  const runnerPath = path.join(__dirname, 'script-runner.cjs')
 
-  scriptRunner = utilityProcess.fork(runnerPath, [getUserScriptsDir()], {
+  runnerHost = new RunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
     serviceName: 'scriptflow-runner',
     stdio: 'pipe'
-  })
+  }))
 
-  scriptRunner.on('message', (msg) => {
-    if (!msg || typeof msg !== 'object') return
-    const { type, id, result, errmsg } = msg
-    const pending = id != null ? pendingExecutions.get(id) : null
-    if (type === 'result' && pending) {
-      pending.resolve(result)
-      pendingExecutions.delete(id)
-    } else if (type === 'error' && pending) {
-      pending.reject(new Error(errmsg || 'Unknown runner error'))
-      pendingExecutions.delete(id)
-    }
-  })
-
-  scriptRunner.on('exit', () => {
-    for (const { reject } of pendingExecutions.values()) {
-      reject(new Error('Script runner exited'))
-    }
-    pendingExecutions.clear()
-    scriptRunner = null
-  })
-
-  if (scriptRunner.stdout) scriptRunner.stdout.on('data', d => console.log('[runner]', d.toString()))
-  if (scriptRunner.stderr) scriptRunner.stderr.on('data', d => console.error('[runner]', d.toString()))
-
-  return scriptRunner
-}
-
-function executeScriptInRunner(scriptName, inputParams) {
-  if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
-    return Promise.reject(new Error(`Invalid script name: ${scriptName}`))
-  }
-  const runner = ensureScriptRunner()
-  const id = ++executionCounter
-  return new Promise((resolve, reject) => {
-    pendingExecutions.set(id, { resolve, reject })
-    runner.postMessage({ type: 'execute', id, scriptName, inputParams })
-    setTimeout(() => {
-      if (pendingExecutions.has(id)) {
-        pendingExecutions.get(id).reject(new Error(`Script execution timed out: ${scriptName}`))
-        pendingExecutions.delete(id)
-      }
-    }, 10000)
-  })
-}
-
-function createSocketInRunner(host, port) {
-  const runner = ensureScriptRunner()
-  const id = ++executionCounter
-  return new Promise((resolve) => {
-    pendingExecutions.set(id, { resolve, reject: resolve })
-    runner.postMessage({ type: 'createSocket', id, host, port })
-    setTimeout(() => {
-      if (pendingExecutions.has(id)) {
-        pendingExecutions.get(id).resolve(null)
-        pendingExecutions.delete(id)
-      }
-    }, 10000)
-  })
-}
-
-function destroySocketInRunner(socketId) {
-  const runner = ensureScriptRunner()
-  const id = ++executionCounter
-  return new Promise((resolve) => {
-    pendingExecutions.set(id, { resolve, reject: resolve })
-    runner.postMessage({ type: 'destroySocket', id, socketId })
-    setTimeout(() => {
-      if (pendingExecutions.has(id)) {
-        pendingExecutions.delete(id)
-        resolve(false)
-      }
-    }, 5000)
-  })
+  return runnerHost
 }
 
 function registerIpcHandlers() {
   ipcMain.handle('scripts:list', async () => {
-    const dir = getUserScriptsDir()
+    const dir = appPaths.scriptsDir
     if (!fs.existsSync(dir)) return []
     return fs.readdirSync(dir)
       .filter(f => f.endsWith('.mjs'))
@@ -191,18 +60,18 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('scripts:read', async (_evt, scriptName) => {
-    const filePath = resolveScriptPath(scriptName)
+    const filePath = appPaths.resolveScriptPath(scriptName)
     return fs.readFileSync(filePath, 'utf8')
   })
 
   ipcMain.handle('scripts:save', async (_evt, scriptName, content) => {
-    const filePath = resolveScriptPath(scriptName)
+    const filePath = appPaths.resolveScriptPath(scriptName)
     fs.mkdirSync(path.dirname(filePath), { recursive: true })
     fs.writeFileSync(filePath, content, 'utf8')
   })
 
   ipcMain.handle('defs:read', async () => {
-    const filePath = path.join(getUserSettingsDir(), DEFS_FILENAME)
+    const filePath = path.join(appPaths.settingsDir, DEFS_FILENAME)
     if (!fs.existsSync(filePath)) {
       throw new Error(`Block definitions file not found: ${filePath}`)
     }
@@ -210,7 +79,7 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('defs:write', async (_evt, data) => {
-    const settingsDir = getUserSettingsDir()
+    const settingsDir = appPaths.settingsDir
     fs.mkdirSync(settingsDir, { recursive: true })
     const target = path.join(settingsDir, DEFS_FILENAME)
     const tmp = `${target}.tmp`
@@ -240,15 +109,15 @@ function registerIpcHandlers() {
   })
 
   ipcMain.handle('script:execute', async (_evt, scriptName, inputParams) => {
-    return executeScriptInRunner(scriptName, inputParams)
+    return ensureRunnerHost().executeScript(scriptName, inputParams)
   })
 
   ipcMain.handle('socket:create', async (_evt, host, port) => {
-    return createSocketInRunner(host, port)
+    return ensureRunnerHost().createSocket(host, port)
   })
 
   ipcMain.handle('socket:destroy', async (_evt, socketId) => {
-    return destroySocketInRunner(socketId)
+    return ensureRunnerHost().destroySocket(socketId)
   })
 }
 
@@ -260,7 +129,7 @@ function createMainWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.cjs')
     }
   })
 
@@ -280,7 +149,8 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
-  seedUserDirs()
+  appPaths = createAppPaths({ rootDir: getRootDir(), defaultsDir: getDefaultsDir() })
+  appPaths.seed()
   registerIpcHandlers()
   createMainWindow()
 
@@ -294,11 +164,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', (event) => {
-  if (!scriptRunner) return
+  if (!runnerHost) return
   event.preventDefault()
-  const runner = scriptRunner
-  scriptRunner = null
-  const forceKill = setTimeout(() => { try { runner.kill() } catch { /* noop */ } }, 2000)
-  runner.once('exit', () => { clearTimeout(forceKill); app.quit() })
-  runner.postMessage({ type: 'shutdown' })
+  const host = runnerHost
+  runnerHost = null
+  host.shutdown().then(() => app.quit())
 })
