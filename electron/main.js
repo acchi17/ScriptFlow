@@ -24,7 +24,7 @@ let runnerHost = null
 function getRootDir() {
   return app.isPackaged
     ? path.dirname(app.getPath('exe'))
-    : path.join(app.getAppPath(), 'configs')
+    : app.getAppPath()
 }
 
 function getDefaultsDir() {
