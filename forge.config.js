@@ -6,7 +6,7 @@
 export default {
   packagerConfig: {
     asar: true,
-    extraResource: ['./public']
+    extraResource: ['./configs']
   },
   rebuildConfig: {},
   makers: [

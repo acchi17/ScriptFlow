@@ -24,13 +24,13 @@ let runnerHost = null
 function getRootDir() {
   return app.isPackaged
     ? path.dirname(app.getPath('exe'))
-    : path.join(app.getAppPath(), 'public')
+    : path.join(app.getAppPath(), 'configs')
 }
 
 function getDefaultsDir() {
   return app.isPackaged
-    ? path.join(process.resourcesPath, 'public')
-    : path.join(app.getAppPath(), 'public')
+    ? path.join(process.resourcesPath, 'configs')
+    : path.join(app.getAppPath(), 'configs')
 }
 
 function ensureRunnerHost() {

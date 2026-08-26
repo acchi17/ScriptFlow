@@ -53,21 +53,21 @@ On Windows, `electron:make` produces a Squirrel installer (`.exe`) and a `.zip`.
 │   ├── services/              # Execution, logging, platform services
 │   ├── composables/           # Vue composables
 │   └── config/app-config.js   # Centralized configuration
-├── public/
+├── configs/
 │   ├── scripts/               # Default block scripts (.mjs)
 │   └── settings/
 │       └── BlockDefinitions.json  # Block registry (categories, parameters)
 └── index.html
 ```
 
-On first launch, `public/scripts/` and `public/settings/` are seeded into `<app-dir>/scripts/` and `<app-dir>/settings/`, where they can be edited by the user.
+On first launch, `configs/scripts/` and `configs/settings/` are seeded into `<app-dir>/scripts/` and `<app-dir>/settings/`, where they can be edited by the user.
 
 ## Writing Block Scripts
 
 Each script is an ES module (`.mjs`) that exports an `execute` function:
 
 ```js
-// public/scripts/Add.mjs
+// configs/scripts/Add.mjs
 export function execute(inputParams) {
   const result = { success: false };
   try {
@@ -80,4 +80,4 @@ export function execute(inputParams) {
 }
 ```
 
-Add the corresponding entry to `public/settings/BlockDefinitions.json` to make the block available in the UI.
+Add the corresponding entry to `configs/settings/BlockDefinitions.json` to make the block available in the UI.

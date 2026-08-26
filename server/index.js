@@ -12,10 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const PORT = Number(process.env.PORT) || 3000
 const ROOT_DIR = path.resolve(__dirname, '..')
-const DEFAULTS_DIR = path.join(ROOT_DIR, 'public')
+const CONFIGS_DIR = path.join(ROOT_DIR, 'configs')
 const DIST_DIR = path.join(ROOT_DIR, 'dist')
 
-const appPaths = createAppPaths({ rootDir: ROOT_DIR, defaultsDir: DEFAULTS_DIR })
+const appPaths = createAppPaths({ rootDir: ROOT_DIR, defaultsDir: CONFIGS_DIR })
 appPaths.seed()
 
 const runnerHost = new RunnerHost(() => fork(
