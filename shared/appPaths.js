@@ -51,16 +51,9 @@ export function createAppPaths({ rootDir, defaultsDir }) {
   }
 
   function seed() {
-    if (!fs.existsSync(scriptsDir)) {
-      copyDirRecursive(path.join(defaultsDir, 'scripts'), scriptsDir)
-    }
     const defsPath = path.join(settingsDir, DEFS_FILENAME)
-    if (!fs.existsSync(defsPath)) {
-      fs.mkdirSync(settingsDir, { recursive: true })
-      const srcDefs = path.join(defaultsDir, 'settings', DEFS_FILENAME)
-      if (fs.existsSync(srcDefs)) {
-        fs.copyFileSync(srcDefs, defsPath)
-      }
+    if (!fs.existsSync(scriptsDir) || !fs.existsSync(defsPath)) {
+      copyDirRecursive(defaultsDir, rootDir)
     }
   }
 
