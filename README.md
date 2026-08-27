@@ -2,7 +2,7 @@
 
 A drag-and-drop workflow builder where you construct nested workflows by combining blocks and containers. Blocks execute JavaScript scripts; containers hold and run child entries sequentially.
 
-Runs as both a **browser app** (Vite) and a **desktop app** (Electron).
+Runs as a **desktop app** (Electron) or as a **Web server**, accessible from a browser on the same machine or LAN.
 
 ## Prerequisites
 
@@ -17,18 +17,17 @@ npm install
 
 ## Development
 
-### Browser
-
-```bash
-npm run dev
-```
-
-Opens at `http://localhost:8080` with hot module replacement.
-
 ### Desktop (Electron)
 
 ```bash
 npm run electron:start
+```
+
+### Web server
+
+```bash
+npm run web:build   # builds the Vue frontend into dist/
+npm run web:start   # serves dist/ and the API on http://localhost:3000
 ```
 
 ## Linting
@@ -39,13 +38,6 @@ npm run lint
 
 ## Production Build
 
-### Browser
-
-```bash
-npm run build       # Output: dist/
-npm run preview     # Preview the built app locally
-```
-
 ### Desktop (Electron)
 
 ```bash
@@ -55,35 +47,21 @@ npm run electron:make      # Build installer artifacts → out/make/
 
 On Windows, `electron:make` produces a Squirrel installer (`.exe`) and a `.zip`.
 
-## Project Structure
+### Web server (portable, Windows)
 
-```
-├── electron/                  # Electron main process
-│   ├── main.js                # App entry, IPC handlers, utility-process management
-│   ├── preload.js             # Exposes window.electronAPI to the renderer
-│   └── script-runner.js       # Utility process that executes user scripts
-├── src/                       # Vue 3 application
-│   ├── components/            # UI components
-│   ├── classes/               # Core managers (EntryManager, etc.)
-│   ├── services/              # Execution, logging, platform services
-│   ├── composables/           # Vue composables
-│   └── config/app-config.js   # Centralized configuration
-├── public/
-│   ├── scripts/               # Default block scripts (.mjs)
-│   └── settings/
-│       └── BlockDefinitions.json  # Block registry (categories, parameters)
-└── index.html
+```bash
+npm run web:build     # build the frontend into dist/
+npm run web:package   # assemble out/scriptflow-web/
 ```
 
-**Browser:** scripts and definitions are served read-only from `public/`.  
-**Electron:** on first launch, `public/scripts/` and `public/settings/` are seeded into `<app-dir>/scripts/` and `<app-dir>/settings/`, where they can be edited by the user.
+`web:package` downloads a portable Node.js runtime and bundles it together with `server/`, `shared/`, `dist/`, `appdata/`, and the production dependencies (`express`, `open`) into `out/scriptflow-web/`. Copy that whole folder to the target machine and double-click `Start ScriptFlow.bat` — it starts the server and opens the default browser at `http://localhost:3000`. No Node.js installation is required on the target machine.
 
 ## Writing Block Scripts
 
 Each script is an ES module (`.mjs`) that exports an `execute` function:
 
 ```js
-// public/scripts/Add.mjs
+// appdata/scripts/Add.mjs
 export function execute(inputParams) {
   const result = { success: false };
   try {
@@ -96,4 +74,4 @@ export function execute(inputParams) {
 }
 ```
 
-Add the corresponding entry to `public/settings/BlockDefinitions.json` to make the block available in the UI.
+Add the corresponding entry to `appdata/settings/BlockDefinitions.json` to make the block available in the UI.

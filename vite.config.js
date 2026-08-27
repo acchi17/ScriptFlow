@@ -7,11 +7,8 @@ export default defineConfig({
   base: './',
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src')
+      '@': path.resolve(__dirname, 'client')
     }
-  },
-  worker: {
-    format: 'es'
   },
   server: {
     port: 8080

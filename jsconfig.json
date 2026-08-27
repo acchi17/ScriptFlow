@@ -5,7 +5,7 @@
     "moduleResolution": "bundler",
     "paths": {
       "@/*": [
-        "./src/*"
+        "./client/*"
       ]
     },
     "lib": [

@@ -1,6 +1,6 @@
 ---
 paths:
-  - "src/**/*.vue"
+  - "client/**/*.vue"
 ---
 
 # Vue Component Conventions

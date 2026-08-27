@@ -3,6 +3,10 @@ node_modules
 /dist
 /out
 
+# Seeded runtime data (copied from appdata/ on first run)
+/scripts
+/settings
+
 # Electron Forge dev/build artefacts
 .vite/
 

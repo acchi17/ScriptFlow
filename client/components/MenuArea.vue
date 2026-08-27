@@ -64,10 +64,10 @@ export default {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }
-      await loadRecipe()
+      const loaded = await loadRecipe()
       if (lastError.value) {
         window.alert(`Failed to load recipe: ${lastError.value}`)
-      } else if (lastReport.value?.warnings?.length) {
+      } else if (loaded && lastReport.value?.warnings?.length) {
         console.warn('Recipe loaded with warnings:', lastReport.value.warnings)
       }
     }

@@ -1,7 +1,7 @@
-const path = require('node:path')
-const net = require('node:net')
-const { pathToFileURL } = require('node:url')
-const { randomUUID } = require('node:crypto')
+import path from 'node:path'
+import net from 'node:net'
+import { pathToFileURL } from 'node:url'
+import { randomUUID } from 'node:crypto'
 
 const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
 const scriptsDir = process.argv[2] || ''

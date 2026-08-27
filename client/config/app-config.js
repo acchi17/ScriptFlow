@@ -2,8 +2,7 @@
  * Application Configuration
  *
  * Logical names only — actual filesystem paths are resolved by PlatformService:
- * - Electron: <app-dir>/scripts/*.js, <app-dir>/settings/BlockDefinitions.json
- * - Browser:  /scripts/*.js, /settings/BlockDefinitions.json (served from public/)
+ * <app-dir>/scripts/*.js, <app-dir>/settings/BlockDefinitions.json
  */
 export default {
   // Block definition settings

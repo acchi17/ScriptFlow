@@ -29,11 +29,11 @@ export function useEntryOperation() {
     }
   }
 
-  const saveRecipe = async (fileName, name) => {
+  const saveRecipe = async (name) => {
     setExecuting(true)
     clearError()
     try {
-      await entryPersistanceService.saveRecipe(fileName, name)
+      await entryPersistanceService.saveRecipe(name)
     } catch (error) {
       setError(error.message)
     } finally {
@@ -41,14 +41,21 @@ export function useEntryOperation() {
     }
   }
 
-  const loadRecipe = async (fileName) => {
+  /**
+   * @returns {Promise<boolean>} true if a recipe was actually loaded (false if the user canceled)
+   */
+  const loadRecipe = async () => {
     setExecuting(true)
     clearError()
-    resetState()
     try {
-      lastReport.value = await entryPersistanceService.loadRecipe(fileName)
+      const report = await entryPersistanceService.loadRecipe()
+      if (!report) return false
+      resetState()
+      lastReport.value = report
+      return true
     } catch (error) {
       setError(error.message)
+      return false
     } finally {
       setExecuting(false)
     }

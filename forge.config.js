@@ -3,10 +3,10 @@
  * Uses the @electron-forge/plugin-vite plugin to build main/preload/utility-process
  * code with Vite, in addition to the renderer process.
  */
-module.exports = {
+export default {
   packagerConfig: {
     asar: true,
-    extraResource: ['./public']
+    extraResource: ['./appdata']
   },
   rebuildConfig: {},
   makers: [
@@ -35,7 +35,7 @@ module.exports = {
             config: 'vite.preload.config.js'
           },
           {
-            entry: 'electron/script-runner.js',
+            entry: 'shared/script-runner.js',
             config: 'vite.runner.config.js'
           }
         ],
