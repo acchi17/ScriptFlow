@@ -12,7 +12,8 @@
     "electron:package": "electron-forge package",
     "electron:make": "electron-forge make",
     "web:build": "vite build",
-    "web:start": "node server/index.js"
+    "web:start": "node server/index.js",
+    "web:package": "node tools/package-web.js"
   },
   "dependencies": {
     "express": "^5.2.1",

@@ -16,6 +16,11 @@ npm run electron:start   # Run the desktop app in dev mode
 npm run electron:package # Package the desktop app (output: out/)
 npm run electron:make    # Build installer artefacts (Squirrel/zip)
 
+# Web server target — Express, serves the Vite build statically
+npm run web:build        # Build the Vue frontend into dist/
+npm run web:start        # Run the server against dist/ (http://localhost:3000)
+npm run web:package      # Assemble a portable Windows distribution (out/ScriptFlow-Web/), see tools/package-web.js
+
 ```
 
 Unit tests live alongside their subject in `__tests__/` directories (e.g. `src/managers/__tests__/EntryManager.test.js`). For UI verification beyond what unit tests cover, run `npm run electron:start`.
