@@ -90,7 +90,7 @@
 ### 4.3 ビルド・配布
 
 - ビルドスクリプトをElectronパッケージ用とWebサーバ用の2系統で用意する
-- Web版の配布形態は「ポータブルNode同梱フォルダ」に決定した（`npm run web:package`、`tools/package-web.js`）。公式Node.js Windows x64バイナリと本番依存（`express`, `open`）・`server/`/`shared/`/`dist/`/`configs/`一式をフォルダにまとめ、`Start ScriptFlow.bat`をダブルクリックすると起動・既定ブラウザ表示まで行われる
+- Web版の配布形態は「ポータブルNode同梱フォルダ」に決定した（`npm run web:package`、`tools/package-web.js`）。公式Node.js Windows x64バイナリと本番依存（`express`, `open`）・`server/`/`shared/`/`dist/`/`appdata/`一式をフォルダにまとめ、`Start ScriptFlow.bat`をダブルクリックすると起動・既定ブラウザ表示まで行われる
 - `pkg`/`@yao-pkg/pkg`等による単一exe化は、`child_process.fork()`（スクリプト実行用の子プロセス）やスナップショット環境下での静的ファイル配信の動作検証コストが高いため不採用とした
 
 ---

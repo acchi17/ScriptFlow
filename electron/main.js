@@ -1,7 +1,7 @@
 // shared/*.js are real ES modules; Rollup traces these imports and inlines
 // them directly into this bundle, so no separate Forge build entry (and no
 // runtime file lookup) is needed for them.
-import { createAppPaths, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appPaths.js'
+import { createAppDataPaths, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
 import RunnerHost from '../shared/RunnerHost.js'
 
 const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
@@ -29,8 +29,8 @@ function getRootDir() {
 
 function getDefaultsDir() {
   return app.isPackaged
-    ? path.join(process.resourcesPath, 'configs')
-    : path.join(app.getAppPath(), 'configs')
+    ? path.join(process.resourcesPath, 'appdata')
+    : path.join(app.getAppPath(), 'appdata')
 }
 
 function ensureRunnerHost() {
@@ -149,7 +149,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
-  appPaths = createAppPaths({ rootDir: getRootDir(), defaultsDir: getDefaultsDir() })
+  appPaths = createAppDataPaths({ rootDir: getRootDir(), defaultsDir: getDefaultsDir() })
   appPaths.seed()
   registerIpcHandlers()
   createMainWindow()

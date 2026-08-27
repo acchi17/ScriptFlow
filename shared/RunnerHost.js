@@ -1,4 +1,4 @@
-import { SCRIPT_NAME_PATTERN } from './appPaths.js'
+import { SCRIPT_NAME_PATTERN } from './appDataPaths.js'
 
 /**
  * Manages a single forked script-runner child process (either an Electron

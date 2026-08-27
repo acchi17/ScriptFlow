@@ -29,7 +29,7 @@ Unit tests live alongside their subject in `__tests__/` directories (e.g. `src/m
 
 A Vue 3 drag-and-drop UI builder where users construct nested workflows by dragging blocks and containers. Blocks execute scripts; containers hold and execute child entries sequentially. The application loads block definitions from JSON and executes JavaScript scripts via an Electron utility process.
 
-The app ships as an Electron desktop app (Electron Forge + Vite). User-editable scripts live at `<app-dir>/scripts/*.js` next to the executable, and the app-editable `<app-dir>/settings/BlockDefinitions.json` is written via Node `fs` through IPC. Both folders are seeded from `configs/` on first launch if missing.
+The app ships as an Electron desktop app (Electron Forge + Vite). User-editable scripts live at `<app-dir>/scripts/*.js` next to the executable, and the app-editable `<app-dir>/settings/BlockDefinitions.json` is written via Node `fs` through IPC. Both folders are seeded from `appdata/` on first launch if missing.
 
 ## Design Process
 
@@ -45,8 +45,8 @@ Always use `graph TD` (top-down) or `graph LR` (left-right) syntax.
 Always use EntryManager methods, never manipulate `children` arrays or parent relationships directly. The manager maintains internal maps that must stay synchronized.
 
 ### Default Bundling
-- `configs/scripts/` and `configs/settings/BlockDefinitions.json` are the single source of truth.
-- The Electron build bundles `configs/` via `extraResource` and seeds `<app-dir>/scripts/` and `<app-dir>/settings/` from it on first launch. The Web server target seeds the same way from `configs/` (see `server/index.js`).
+- `appdata/scripts/` and `appdata/settings/BlockDefinitions.json` are the single source of truth.
+- The Electron build bundles `appdata/` via `extraResource` and seeds `<app-dir>/scripts/` and `<app-dir>/settings/` from it on first launch. The Web server target seeds the same way from `appdata/` (see `server/index.js`).
 
 ### Class Design Conventions
 

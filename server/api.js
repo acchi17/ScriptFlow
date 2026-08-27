@@ -1,7 +1,7 @@
 import path from 'node:path'
 import fs from 'node:fs'
 import express from 'express'
-import { DEFS_FILENAME, SCRIPT_NAME_PATTERN } from '../shared/appPaths.js'
+import { DEFS_FILENAME, SCRIPT_NAME_PATTERN } from '../shared/appDataPaths.js'
 
 /**
  * Express router exposing the HTTP equivalents of the Electron IPC channels
@@ -10,7 +10,7 @@ import { DEFS_FILENAME, SCRIPT_NAME_PATTERN } from '../shared/appPaths.js'
  * browser upload/download.
  *
  * @param {Object} deps
- * @param {ReturnType<import('../shared/appPaths.js').createAppPaths>} deps.appPaths
+ * @param {ReturnType<import('../shared/appDataPaths.js').createAppDataPaths>} deps.appPaths
  * @param {import('../shared/RunnerHost.js').default} deps.runnerHost
  */
 export default function createApiRouter({ appPaths, runnerHost }) {

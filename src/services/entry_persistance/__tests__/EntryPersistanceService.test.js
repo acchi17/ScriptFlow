@@ -3,7 +3,7 @@ import EntryManager from '@/managers/EntryManager.js'
 import SocketManager from '@/managers/SocketManager.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
 import EntryPersistanceService from '@/services/entry_persistance/EntryPersistanceService.js'
-import blockDefinitionsRaw from '../../../../configs/settings/BlockDefinitions.json'
+import blockDefinitionsRaw from '../../../../appdata/settings/BlockDefinitions.json'
 
 async function createContext() {
   const entryDefinitionService = new EntryDefinitionService({}, {

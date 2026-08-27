@@ -109,7 +109,7 @@ async function main() {
   fs.mkdirSync(path.join(OUT_DIR, 'node'), { recursive: true })
   fs.copyFileSync(nodeExePath, path.join(OUT_DIR, 'node', 'node.exe'))
 
-  for (const dir of ['server', 'shared', 'configs']) {
+  for (const dir of ['server', 'shared', 'appdata']) {
     fs.cpSync(path.join(ROOT_DIR, dir), path.join(OUT_DIR, dir), { recursive: true })
   }
   fs.cpSync(distDir, path.join(OUT_DIR, 'dist'), { recursive: true })

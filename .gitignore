@@ -3,7 +3,7 @@ node_modules
 /dist
 /out
 
-# Seeded runtime data (copied from configs/ on first run)
+# Seeded runtime data (copied from appdata/ on first run)
 /scripts
 /settings
 

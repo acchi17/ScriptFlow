@@ -54,14 +54,14 @@ npm run web:build     # build the frontend into dist/
 npm run web:package   # assemble out/scriptflow-web/
 ```
 
-`web:package` downloads a portable Node.js runtime and bundles it together with `server/`, `shared/`, `dist/`, `configs/`, and the production dependencies (`express`, `open`) into `out/scriptflow-web/`. Copy that whole folder to the target machine and double-click `Start ScriptFlow.bat` — it starts the server and opens the default browser at `http://localhost:3000`. No Node.js installation is required on the target machine.
+`web:package` downloads a portable Node.js runtime and bundles it together with `server/`, `shared/`, `dist/`, `appdata/`, and the production dependencies (`express`, `open`) into `out/scriptflow-web/`. Copy that whole folder to the target machine and double-click `Start ScriptFlow.bat` — it starts the server and opens the default browser at `http://localhost:3000`. No Node.js installation is required on the target machine.
 
 ## Writing Block Scripts
 
 Each script is an ES module (`.mjs`) that exports an `execute` function:
 
 ```js
-// configs/scripts/Add.mjs
+// appdata/scripts/Add.mjs
 export function execute(inputParams) {
   const result = { success: false };
   try {
@@ -74,4 +74,4 @@ export function execute(inputParams) {
 }
 ```
 
-Add the corresponding entry to `configs/settings/BlockDefinitions.json` to make the block available in the UI.
+Add the corresponding entry to `appdata/settings/BlockDefinitions.json` to make the block available in the UI.

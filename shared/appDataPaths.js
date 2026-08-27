@@ -35,7 +35,7 @@ function isInsideDir(parent, candidate) {
  * @param {string} opts.rootDir Directory that owns `scripts/` and `settings/`
  * @param {string} opts.defaultsDir Directory to seed `scripts/`/`settings/` from on first run
  */
-export function createAppPaths({ rootDir, defaultsDir }) {
+export function createAppDataPaths({ rootDir, defaultsDir }) {
   const scriptsDir = path.join(rootDir, 'scripts')
   const settingsDir = path.join(rootDir, 'settings')
 

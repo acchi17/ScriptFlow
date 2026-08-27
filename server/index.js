@@ -4,7 +4,7 @@ import { fork } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import open from 'open'
-import { createAppPaths } from '../shared/appPaths.js'
+import { createAppDataPaths } from '../shared/appDataPaths.js'
 import RunnerHost from '../shared/RunnerHost.js'
 import createApiRouter from './api.js'
 
@@ -12,10 +12,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const PORT = Number(process.env.PORT) || 3000
 const ROOT_DIR = path.resolve(__dirname, '..')
-const CONFIGS_DIR = path.join(ROOT_DIR, 'configs')
+const APPDATA_DIR = path.join(ROOT_DIR, 'appdata')
 const DIST_DIR = path.join(ROOT_DIR, 'dist')
 
-const appPaths = createAppPaths({ rootDir: ROOT_DIR, defaultsDir: CONFIGS_DIR })
+const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, defaultsDir: APPDATA_DIR })
 appPaths.seed()
 
 const runnerHost = new RunnerHost(() => fork(
