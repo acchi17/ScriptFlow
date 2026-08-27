@@ -11,7 +11,7 @@ import { execFileSync, execSync } from 'node:child_process'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const ROOT_DIR = path.resolve(__dirname, '..')
 const CACHE_DIR = path.join(ROOT_DIR, 'out', '.cache')
-const OUT_DIR = path.join(ROOT_DIR, 'out', 'ScriptFlow-Web')
+const OUT_DIR = path.join(ROOT_DIR, 'out', 'scriptflow-web')
 
 const NODE_VERSION = process.env.PORTABLE_NODE_VERSION || '24.20.0'
 const NODE_ARCHIVE_NAME = `node-v${NODE_VERSION}-win-x64`

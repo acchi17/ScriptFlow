@@ -19,7 +19,7 @@ npm run electron:make    # Build installer artefacts (Squirrel/zip)
 # Web server target — Express, serves the Vite build statically
 npm run web:build        # Build the Vue frontend into dist/
 npm run web:start        # Run the server against dist/ (http://localhost:3000)
-npm run web:package      # Assemble a portable Windows distribution (out/ScriptFlow-Web/), see tools/package-web.js
+npm run web:package      # Assemble a portable Windows distribution (out/scriptflow-web/), see tools/package-web.js
 
 ```
 
