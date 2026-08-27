@@ -23,7 +23,7 @@ npm run web:package      # Assemble a portable Windows distribution (out/scriptf
 
 ```
 
-Unit tests live alongside their subject in `__tests__/` directories (e.g. `src/managers/__tests__/EntryManager.test.js`). For UI verification beyond what unit tests cover, run `npm run electron:start`.
+Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/managers/__tests__/EntryManager.test.js`). For UI verification beyond what unit tests cover, run `npm run electron:start`.
 
 ## Project Overview
 
@@ -48,20 +48,3 @@ Always use EntryManager methods, never manipulate `children` arrays or parent re
 - `appdata/scripts/` and `appdata/settings/BlockDefinitions.json` are the single source of truth.
 - The Electron build bundles `appdata/` via `extraResource` and seeds `<app-dir>/scripts/` and `<app-dir>/settings/` from it on first launch. The Web server target seeds the same way from `appdata/` (see `server/index.js`).
 
-### Class Design Conventions
-
-The codebase uses a four-layer architecture. Place new classes in the correct layer:
-
-| Layer | Directory | Role |
-|---|---|---|
-| **Models** | `src/models/` | Lightweight data carriers. No Vue imports. Shallow inheritance from `Entry` is allowed. |
-| **Managers** | `src/managers/` | Stateful lifecycle and relationship management (e.g. tree structure, connections, parameters). Injected into composables via `provide/inject`. |
-| **Services** | `src/services/<domain>/` | I/O, orchestration, and engine abstraction. Group by domain subdirectory (e.g. `entry_execution/`, `script_execution/`). Mostly stateless facades. |
-| **Composables** | `src/composables/` | Vue 3 reactive glue only. Use `ref`/`reactive`/`computed` here, not in classes. Delegate business logic to managers and services. |
-
-Rules:
-- One class per file. File name matches class name.
-- Prefer composition over inheritance. Inheritance is reserved for models only.
-- Models must not import from Vue (`reactive`, `ref`, etc.).
-- Composables must not contain business logic — delegate to the appropriate manager or service.
-- If a manager or service exceeds ~250 lines or has more than ~12 public methods, consider splitting it by concern.
