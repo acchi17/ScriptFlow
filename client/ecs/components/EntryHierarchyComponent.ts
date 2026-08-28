@@ -1,6 +1,6 @@
 import type { EntityId } from '../core/Entity'
 
-export interface HierarchyComponent {
+export interface EntryHierarchyComponent {
   parent: EntityId | null
   children: EntityId[] | null
 }

@@ -21,8 +21,10 @@ import { World } from '../ecs/core/World'
  */
 export default class EntryConnectionHandler {
   constructor(world = new World()) {
-    // ECS world holding connection components
+    // ECS world, needed for spawn/despawn of connection entities
     this._world = world;
+    // Component store holding connection (output/input endpoint) data
+    this._connections = world.getStore('connections');
     // Reactive counter incremented on every connection change (add/remove/clear/restore).
     // ComponentStore wraps a plain Map, so Vue can't auto-track reads through it -
     // consumers must read this tick inside a computed() before calling a getter below.
@@ -62,7 +64,7 @@ export default class EntryConnectionHandler {
    * @private
    */
   _connectionExists(output, input) {
-    for (const [, conn] of this._world.connections.entries()) {
+    for (const [, conn] of this._connections.entries()) {
       if (
         conn.output.entryId === output.entryId &&
         conn.output.paramName === output.paramName &&
@@ -90,7 +92,7 @@ export default class EntryConnectionHandler {
    * @returns {Object|null}
    */
   getConnection(connectionId) {
-    const conn = this._world.connections.get(connectionId);
+    const conn = this._connections.get(connectionId);
     return conn ? { id: connectionId, output: conn.output, input: conn.input } : null;
   }
 
@@ -100,7 +102,7 @@ export default class EntryConnectionHandler {
    */
   getConnections() {
     const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
+    for (const [id, conn] of this._connections.entries()) {
       result.push({ id, output: conn.output, input: conn.input });
     }
     return result;
@@ -114,7 +116,7 @@ export default class EntryConnectionHandler {
    */
   getConnectionsByEntryId(entryId) {
     const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
+    for (const [id, conn] of this._connections.entries()) {
       if (conn.output.entryId === entryId || conn.input.entryId === entryId) {
         result.push({ id, output: conn.output, input: conn.input });
       }
@@ -131,7 +133,7 @@ export default class EntryConnectionHandler {
    */
   getConnectionsByEndpoint(entryId, category, paramName) {
     const result = [];
-    for (const [id, conn] of this._world.connections.entries()) {
+    for (const [id, conn] of this._connections.entries()) {
       const out = conn.output;
       const inp = conn.input;
       if (
@@ -172,7 +174,7 @@ export default class EntryConnectionHandler {
     }
 
     const id = this._world.spawn(preferredId);
-    this._world.connections.add(id, {
+    this._connections.add(id, {
       output: { ...output },
       input: { ...input }
     });
@@ -186,7 +188,7 @@ export default class EntryConnectionHandler {
    * @returns {boolean} true if the connection was found and removed
    */
   removeConnection(connectionId) {
-    if (!this._world.connections.has(connectionId)) return false;
+    if (!this._connections.has(connectionId)) return false;
     this._world.despawn(connectionId);
     this._connectionsTick.value++;
     return true;
@@ -199,7 +201,7 @@ export default class EntryConnectionHandler {
  */
   removeConnectionsByEntryId(entryId) {
     const ids = [];
-    for (const [id, conn] of this._world.connections.entries()) {
+    for (const [id, conn] of this._connections.entries()) {
       if (conn.output.entryId === entryId || conn.input.entryId === entryId) {
         ids.push(id);
       }
@@ -213,7 +215,7 @@ export default class EntryConnectionHandler {
    * Clear all connections.
    */
   clearConnections() {
-    const ids = Array.from(this._world.connections.entries(), ([id]) => id);
+    const ids = Array.from(this._connections.entries(), ([id]) => id);
     ids.forEach(id => this._world.despawn(id));
     if (ids.length) this._connectionsTick.value++;
   }

@@ -8,10 +8,10 @@ import { World } from '../ecs/core/World'
  */
 export default class EntryHierarchyHandler {
   constructor(world = new World()) {
-    // ECS world holding hierarchy components
-    this._world = world;
-    // Cache of entryId → 1-based sequence number (DFS visual order)
-    this._sequenceNumbers = new Map();
+    // Component store holding hierarchy (parent/children) data
+    this._hierarchies = world.getStore('hierarchies');
+    // Component store holding entryId → 1-based sequence number (DFS visual order)
+    this._orders = world.getStore('orders');
     // ID of the root container for sequence number computation
     this._rootId = null;
     // Reactive counter incremented on every structural change (add/remove/reorder/move)
@@ -24,7 +24,7 @@ export default class EntryHierarchyHandler {
    * @returns {boolean} Whether the entry is a block
    */
   isBlock(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
+    const hierarchy = this._hierarchies.get(entryId);
     return hierarchy !== undefined && hierarchy.children === null;
   }
 
@@ -34,7 +34,7 @@ export default class EntryHierarchyHandler {
    * @returns {boolean} Whether the entry is a container
    */
   isContainer(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
+    const hierarchy = this._hierarchies.get(entryId);
     return hierarchy !== undefined && hierarchy.children !== null;
   }
 
@@ -64,7 +64,7 @@ export default class EntryHierarchyHandler {
    * @returns {string|null} Parent entry ID or null
    */
   getParent(entryId) {
-    return this._world.hierarchies.get(entryId)?.parent ?? null;
+    return this._hierarchies.get(entryId)?.parent ?? null;
   }
 
   /**
@@ -73,7 +73,7 @@ export default class EntryHierarchyHandler {
    * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
    */
   getChildren(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
+    const hierarchy = this._hierarchies.get(entryId);
     return hierarchy?.children ? [...hierarchy.children] : [];
   }
 
@@ -88,7 +88,7 @@ export default class EntryHierarchyHandler {
     if (!this.isContainer(entryId)) return Array.from(ids);
 
     // Recursively get child entries
-    for (const childId of this._world.hierarchies.get(entryId)?.children ?? []) {
+    for (const childId of this._hierarchies.get(entryId)?.children ?? []) {
       const descendantIds = this.getAllDescendants(childId);
       descendantIds.forEach(id => ids.add(id));
     }
@@ -102,7 +102,7 @@ export default class EntryHierarchyHandler {
    * @returns {number|null} Sequence number or null if not found
    */
   getSequenceNumber(entryId) {
-    return this._sequenceNumbers.get(entryId) ?? null;
+    return this._orders.get(entryId)?.order ?? null;
   }
 
   /**
@@ -120,7 +120,7 @@ export default class EntryHierarchyHandler {
    * @param {boolean} [noChildren=false] - If true, initialize children as null instead of an empty array
    */
   initialize(entryId, noChildren = false) {
-    this._world.hierarchies.add(entryId, { parent: null, children: noChildren ? null : [] });
+    this._hierarchies.add(entryId, { parent: null, children: noChildren ? null : [] });
   }
 
   /**
@@ -134,7 +134,7 @@ export default class EntryHierarchyHandler {
     // Only containers may receive children
     if (!this.isContainer(parentId)) return false;
 
-    const parentHierarchy = this._world.hierarchies.get(parentId);
+    const parentHierarchy = this._hierarchies.get(parentId);
     if (!parentHierarchy) return false;
 
     // Validate before mutating anything
@@ -144,7 +144,7 @@ export default class EntryHierarchyHandler {
     parentHierarchy.children.splice(index, 0, entryId);
 
     // Set parent-child relationship
-    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const entryHierarchy = this._hierarchies.get(entryId);
     if (entryHierarchy) {
       entryHierarchy.parent = parentId;
     }
@@ -163,12 +163,12 @@ export default class EntryHierarchyHandler {
     if (!entryId) return false;
 
     // Get parent entry
-    const entryHierarchy = this._world.hierarchies.get(entryId);
+    const entryHierarchy = this._hierarchies.get(entryId);
     const parentId = entryHierarchy?.parent;
     if (!parentId) return true;
 
     // Remove from parent's children array
-    const parentHierarchy = this._world.hierarchies.get(parentId);
+    const parentHierarchy = this._hierarchies.get(parentId);
     if (!parentHierarchy) return false;
 
     const index = parentHierarchy.children.indexOf(entryId);
@@ -191,7 +191,7 @@ export default class EntryHierarchyHandler {
    */
   reorderInParent(parentId, entryId, index) {
     // Get parent's children array (only containers have one)
-    const parentHierarchy = this._world.hierarchies.get(parentId);
+    const parentHierarchy = this._hierarchies.get(parentId);
     if (!parentHierarchy) return false;
 
     // Reorder within parent's children array
@@ -214,7 +214,7 @@ export default class EntryHierarchyHandler {
    * @param {string} entryId - ID of the entry whose children array should be cleared
    */
   clearChildren(entryId) {
-    const hierarchy = this._world.hierarchies.get(entryId);
+    const hierarchy = this._hierarchies.get(entryId);
     if (hierarchy) {
       hierarchy.children.length = 0;
     }
@@ -225,7 +225,7 @@ export default class EntryHierarchyHandler {
    * Rebuild the sequence number map using DFS from the root.
    */
   rebuildSequenceNumbers() {
-    this._sequenceNumbers.clear();
+    this._orders.clear();
     if (!this._rootId) return;
 
     if (!this.isContainer(this._rootId)) return;
@@ -233,13 +233,13 @@ export default class EntryHierarchyHandler {
     let counter = 0;
     const traverse = (childIds) => {
       for (const childId of childIds) {
-        this._sequenceNumbers.set(childId, ++counter);
+        this._orders.add(childId, { order: ++counter });
         if (this.isContainer(childId)) {
-          traverse(this._world.hierarchies.get(childId)?.children ?? []);
+          traverse(this._hierarchies.get(childId)?.children ?? []);
         }
       }
     };
-    traverse(this._world.hierarchies.get(this._rootId)?.children ?? []);
+    traverse(this._hierarchies.get(this._rootId)?.children ?? []);
     this._hierarchyTick.value++;
   }
 }

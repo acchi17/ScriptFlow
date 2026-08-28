@@ -9,8 +9,10 @@ import { World } from '../ecs/core/World'
  */
 export default class EntryParamHandler {
   constructor(world = new World()) {
-    // ECS world holding input/output param components
-    this._world = world;
+    // Component store holding input parameter values/types
+    this._inputParams = world.getStore('inputParams');
+    // Component store holding output parameter values/types
+    this._outputParams = world.getStore('outputParams');
     // Reactive counter incremented whenever an output parameter value/definition changes,
     // since output params are read live by the UI while a script executes
     this._outputParamsTick = ref(0);
@@ -32,7 +34,7 @@ export default class EntryParamHandler {
    * @returns {{value: any, dataType: string}|undefined} Parameter value and type, or undefined
    */
   getInputParam(entryId, paramName) {
-    const params = this._world.inputParams.get(entryId);
+    const params = this._inputParams.get(entryId);
     return params?.[paramName];
   }
 
@@ -44,7 +46,7 @@ export default class EntryParamHandler {
    */
   setInputParam(entryId, paramName, value) {
     if (!entryId || !paramName) return;
-    const params = this._world.inputParams.get(entryId);
+    const params = this._inputParams.get(entryId);
     if (!params?.[paramName]) return;
     params[paramName].value = convertValue(value, params[paramName].dataType);
   }
@@ -56,7 +58,7 @@ export default class EntryParamHandler {
    * @returns {{value: any, dataType: string}|undefined} Parameter value and type, or undefined
    */
   getOutputParam(entryId, paramName) {
-    const params = this._world.outputParams.get(entryId);
+    const params = this._outputParams.get(entryId);
     return params?.[paramName];
   }
 
@@ -68,7 +70,7 @@ export default class EntryParamHandler {
    */
   setOutputParam(entryId, paramName, value) {
     if (!entryId || !paramName) return;
-    const params = this._world.outputParams.get(entryId);
+    const params = this._outputParams.get(entryId);
     if (!params?.[paramName]) return;
     params[paramName].value = convertValue(value, params[paramName].dataType);
     this._outputParamsTick.value++;
@@ -80,7 +82,7 @@ export default class EntryParamHandler {
    * @returns {Object<string, {value: any, dataType: string}>|undefined} Input parameters keyed by name, or undefined
    */
   getInputParams(entryId) {
-    return this._world.inputParams.get(entryId);
+    return this._inputParams.get(entryId);
   }
 
   /**
@@ -89,7 +91,7 @@ export default class EntryParamHandler {
    * @returns {Object<string, {value: any, dataType: string}>|undefined} Output parameters keyed by name, or undefined
    */
   getOutputParams(entryId) {
-    return this._world.outputParams.get(entryId);
+    return this._outputParams.get(entryId);
   }
 
   /**
@@ -98,7 +100,7 @@ export default class EntryParamHandler {
    * @returns {boolean} True if the entry has at least one input parameter
    */
   hasInputParam(entryId) {
-    const params = this._world.inputParams.get(entryId);
+    const params = this._inputParams.get(entryId);
     return params ? Object.keys(params).length > 0 : false;
   }
 
@@ -108,7 +110,7 @@ export default class EntryParamHandler {
    * @returns {boolean} True if the entry has at least one output parameter
    */
   hasOutputParam(entryId) {
-    const params = this._world.outputParams.get(entryId);
+    const params = this._outputParams.get(entryId);
     return params ? Object.keys(params).length > 0 : false;
   }
 
@@ -119,7 +121,7 @@ export default class EntryParamHandler {
    */
   setInputParamDef(entryId, inputParamDef = {}) {
     if (!entryId) return;
-    this._world.inputParams.add(entryId, inputParamDef);
+    this._inputParams.add(entryId, inputParamDef);
   }
 
   /**
@@ -129,7 +131,7 @@ export default class EntryParamHandler {
    */
   setOutputParamDef(entryId, outputParamDef = {}) {
     if (!entryId) return;
-    this._world.outputParams.add(entryId, outputParamDef);
+    this._outputParams.add(entryId, outputParamDef);
     this._outputParamsTick.value++;
   }
 
@@ -139,8 +141,8 @@ export default class EntryParamHandler {
    */
   removeParamDef(entryId) {
     if (!entryId) return;
-    this._world.inputParams.remove(entryId);
-    this._world.outputParams.remove(entryId);
+    this._inputParams.remove(entryId);
+    this._outputParams.remove(entryId);
     this._outputParamsTick.value++;
   }
 }

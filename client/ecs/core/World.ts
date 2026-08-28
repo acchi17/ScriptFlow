@@ -2,20 +2,22 @@ import { ComponentStore } from './ComponentStrore';
 import { generateUUID } from './Entity';
 import type { EntityId } from './Entity';
 import type { EntryInfoComponent } from '../components/EntryInfoComponent';
-import type { HierarchyComponent } from '../components/HierarchyComponent';
+import type { EntryHierarchyComponent } from '../components/EntryHierarchyComponent';
 import type { EntryParamComponent } from '../components/EntryParamComponent';
 import type { EntryConnectionComponent } from '../components/EntryConnectionComponent';
 import type { EntryLayoutComponent } from '../components/EntryLayoutComponent';
+import type { EntryOrderComponent } from '../components/EntryOrderComponent';
 
-type StoreName = 'entryInfos' | 'hierarchies' | 'inputParams' | 'outputParams' | 'connections' | 'layouts';
+type StoreName = 'entryInfos' | 'hierarchies' | 'inputParams' | 'outputParams' | 'connections' | 'layouts' | 'orders';
 
 export class World {
   readonly entryInfos = new ComponentStore<EntryInfoComponent>();
-  readonly hierarchies = new ComponentStore<HierarchyComponent>();
+  readonly hierarchies = new ComponentStore<EntryHierarchyComponent>();
   readonly inputParams = new ComponentStore<EntryParamComponent>();
   readonly outputParams = new ComponentStore<EntryParamComponent>();
   readonly connections = new ComponentStore<EntryConnectionComponent>();
   readonly layouts = new ComponentStore<EntryLayoutComponent>();
+  readonly orders = new ComponentStore<EntryOrderComponent>();
   private readonly _liveIds = new Set<EntityId>();
 
   getStore<K extends StoreName>(key: K): World[K] {
@@ -36,6 +38,7 @@ export class World {
     this.outputParams.remove(id);
     this.connections.remove(id);
     this.layouts.remove(id);
+    this.orders.remove(id);
   }
 
   isAlive(id: EntityId): boolean {
