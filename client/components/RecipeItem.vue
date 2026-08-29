@@ -16,7 +16,7 @@
         ></button>
         <button class="recipe-btn recipe-clear-btn" title="Clear" :disabled="isExecuting" @click.stop="clearRecipe"></button>
       </div>
-      <div class="recipe-panel">
+      <div class="recipe-panel" ref="recipePanelRef" @dragover="onPanelDragOver">
         <div class="background-panel">
           <div
             v-for="[id, rect] in entryLayoutMap"
@@ -50,6 +50,7 @@
 import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
+import { useAutoScroll } from '../composables/useAutoScroll'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
 import CommSettingView from './CommSettingView.vue'
@@ -93,6 +94,8 @@ export default {
     }
 
     const entryPanelRef = ref(null)
+    const recipePanelRef = ref(null)
+    const { onDragOver: onPanelDragOver } = useAutoScroll(recipePanelRef)
 
     // Re-measures the Y position and height of every entry's header element on
     // structural changes, so the connection panel can align lines with entry headers.
@@ -129,6 +132,8 @@ export default {
       commBtnStatus,
       onCommSettingClose,
       entryPanelRef,
+      recipePanelRef,
+      onPanelDragOver,
       entryLayoutMap,
       isExecuting
     }

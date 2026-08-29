@@ -10,6 +10,10 @@ node_modules
 # Electron Forge dev/build artefacts
 .vite/
 
+# Playwright e2e test artefacts
+/test-results/
+/playwright-report/
+
 # local env files
 .env.local
 .env.*.local

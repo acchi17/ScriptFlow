@@ -21,9 +21,12 @@ npm run web:build        # Build the Vue frontend into dist/
 npm run web:start        # Run the server against dist/ (http://localhost:3000)
 npm run web:package      # Assemble a portable Windows distribution (out/scriptflow-web/), see tools/package-web.js
 
+# End-to-end tests — Playwright, drives a real Chromium against the web target
+npm run test:e2e         # Builds the web target, starts it, and runs e2e-tests/*.spec.js against it
+
 ```
 
-Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/managers/__tests__/EntryManager.test.js`). For UI verification beyond what unit tests cover, run `npm run electron:start`.
+Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/managers/__tests__/EntryManager.test.js`). End-to-end tests that need a real browser (native drag-and-drop, real layout/scrolling) live in `e2e-tests/*.spec.js` and run via `npm run test:e2e`. For UI verification beyond what unit/e2e tests cover, run `npm run electron:start`.
 
 ## Project Overview
 
