@@ -2,7 +2,10 @@
 
 Explains how a script execution request travels from the host process (Web
 server or Electron main) into the forked `script-runner` child process and
-back, via `RunnerHost`.
+back, via `RunnerHost`. `RunnerHost` is the sole IPC layer in this flow: it
+forks the child, sends it messages (`postMessage`/`send`), and listens for
+the child's replies (`message` event) to resolve or reject the caller's
+promise.
 
 ## Participants
 
