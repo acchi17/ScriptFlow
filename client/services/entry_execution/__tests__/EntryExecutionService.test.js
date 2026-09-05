@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import EntryManager from '../../../managers/EntryManager.js'
+import EntryHandlerFacade from '../../../ecs/component-handlers/EntryHandlerFacade.js'
 import EntryExecutionService from '../EntryExecutionService.js'
 
 function buildEntryDefinitionService() {
@@ -22,7 +22,7 @@ function buildService(entryManager) {
 
 describe('EntryExecutionService container execution', () => {
   it('skips an if-container\'s children when its Execute input is resolved to false via a wired connection', async () => {
-    const entryManager = new EntryManager(undefined, buildEntryDefinitionService())
+    const entryManager = new EntryHandlerFacade(undefined, buildEntryDefinitionService())
     const sourceBlockId = entryManager.addEntry('block', 'BoolBlock')
     entryManager.setOutputParam(sourceBlockId, 'Flag', false)
 
@@ -44,7 +44,7 @@ describe('EntryExecutionService container execution', () => {
   })
 
   it('runs an if-container\'s children when Execute resolves to true, and a plain container always runs its children', async () => {
-    const entryManager = new EntryManager(undefined, buildEntryDefinitionService())
+    const entryManager = new EntryHandlerFacade(undefined, buildEntryDefinitionService())
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
     const ifChildId = entryManager.addEntry('block', 'ChildBlock')

@@ -9,7 +9,7 @@ export default class ContainerExecutionFactory {
    * Creates a container execution strategy for the specified container name
    *
    * @param {string} containerName Container entry name (e.g., 'Container', 'if-container')
-   * @param {EntryManager} entryManager Provides access to a container's children
+   * @param {EntryHandlerFacade} entryManager Provides access to a container's children
    * @return {IContainerExecutionStrategy} Strategy instance
    *
    * @example

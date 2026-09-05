@@ -5,7 +5,7 @@
 export default class IContainerExecutionStrategy {
   /**
    * Constructor
-   * @param {EntryManager} entryManager Provides access to a container's children
+   * @param {EntryHandlerFacade} entryManager Provides access to a container's children
    */
   constructor(entryManager) {
     this.entryManager = entryManager;

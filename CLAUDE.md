@@ -26,7 +26,7 @@ npm run test:e2e         # Builds the web target, starts it, and runs e2e-tests/
 
 ```
 
-Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/managers/__tests__/EntryManager.test.js`). End-to-end tests that need a real browser (native drag-and-drop, real layout/scrolling) live in `e2e-tests/*.spec.js` and run via `npm run test:e2e`. For UI verification beyond what unit/e2e tests cover, run `npm run electron:start`.
+Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/ecs/component-handlers/__tests__/EntryManagementFacade.test.js`). End-to-end tests that need a real browser (native drag-and-drop, real layout/scrolling) live in `e2e-tests/*.spec.js` and run via `npm run test:e2e`. For UI verification beyond what unit/e2e tests cover, run `npm run electron:start`.
 
 ## Project Overview
 
@@ -45,9 +45,8 @@ Always use `graph TD` (top-down) or `graph LR` (left-right) syntax.
 ## Important Patterns
 
 ### When Modifying Entry Structure
-Always use EntryManager methods, never manipulate `children` arrays or parent relationships directly. The manager maintains internal maps that must stay synchronized.
+Always use EntryHandlerFacade methods, he facade maintains internal maps that must stay synchronized.
 
 ### Default Bundling
 - `appdata/scripts/` and `appdata/settings/BlockDefinitions.json` are the single source of truth.
 - The Electron build bundles `appdata/` via `extraResource` and seeds `<app-dir>/scripts/` and `<app-dir>/settings/` from it on first launch. The Web server target seeds the same way from `appdata/` (see `server/index.js`).
-

@@ -7,7 +7,7 @@ import { ref, readonly } from 'vue';
 export default class ExecutionLogService {
   /**
    * Constructor
-   * @param {EntryManager} entryManager Entry manager instance (optional)
+   * @param {EntryHandlerFacade} entryManager Entry management facade instance (optional)
    */
   constructor(entryManager = null) {
     this.entryManager = entryManager;

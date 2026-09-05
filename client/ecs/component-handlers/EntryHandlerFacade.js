@@ -1,16 +1,16 @@
 import { ref } from 'vue'
-import { World } from '../ecs/core/World'
-import EntryParamHandler from './EntryParamHandler'
-import EntryConnectionHandler from './EntryConnectionHandler'
-import EntryHierarchyHandler from './EntryHierarchyHandler'
+import { World } from '../core/World'
+import EntryParamHandler from './internal/EntryParamHandler'
+import EntryConnectionHandler from './internal/EntryConnectionHandler'
+import EntryHierarchyHandler from './internal/EntryHierarchyHandler'
 
 /**
- * EntryManager class
+ * EntryHandlerFacade class
  * Composition root for entry-related handlers. Owns entry identity (type/name/command)
  * and orchestrates the create/remove lifecycle across the hierarchy, param, and
  * connection handlers.
  */
-export default class EntryManager {
+export default class EntryHandlerFacade {
   constructor(world = new World(), entryDefnitionStore = null) {
     // ECS world holding entry components
     this._world = world;

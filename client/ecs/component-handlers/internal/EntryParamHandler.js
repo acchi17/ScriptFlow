@@ -1,6 +1,6 @@
 import { ref } from 'vue'
-import { convertValue } from '../utils/common.js'
-import { World } from '../ecs/core/World'
+import { convertValue } from '../../../utils/common.js'
+import { World } from '../../core/World'
 
 /**
  * EntryParamHandler class

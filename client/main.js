@@ -3,7 +3,7 @@ import { createApp } from 'vue'
 import './assets/styles/variables.css'
 import App from './App.vue'
 import appConfig from './config/app-config'
-import EntryManager from './managers/EntryManager'
+import EntryHandlerFacade from './ecs/component-handlers/EntryHandlerFacade'
 import SocketManager from './managers/SocketManager'
 import { World } from './ecs/core/World'
 import PlatformService from './services/platform/PlatformService'
@@ -21,7 +21,7 @@ const entryDefinitionService = new EntryDefinitionService(appConfig, platformSer
 
 // Create Managers
 const world = new World()
-const entryManager = new EntryManager(world, entryDefinitionService)
+const entryManager = new EntryHandlerFacade(world, entryDefinitionService)
 const socketManager = new SocketManager()
 
 // Create remaining Services

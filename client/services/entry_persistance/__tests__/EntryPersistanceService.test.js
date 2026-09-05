@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import EntryManager from '@/managers/EntryManager.js'
+import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
 import SocketManager from '@/managers/SocketManager.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
 import EntryPersistanceService from '@/services/entry_persistance/EntryPersistanceService.js'
@@ -11,7 +11,7 @@ async function createContext() {
   })
   await entryDefinitionService.loadBlockDefinitions()
 
-  const entryManager = new EntryManager(undefined, entryDefinitionService)
+  const entryManager = new EntryHandlerFacade(undefined, entryDefinitionService)
   const socketManager = new SocketManager()
 
   const platformService = { openRecipe: async () => null, saveRecipeAs: async () => null }

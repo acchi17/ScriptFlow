@@ -9,7 +9,7 @@ export default class EntryExecutionService {
   /**
    * Constructor
    * @param {Object} config Configuration object
-   * @param {EntryManager} entryManager Entry manager instance (optional)
+   * @param {EntryHandlerFacade} entryManager Entry management facade instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    */
   constructor(config, entryManager = null, executionLogService = null) {

@@ -1,5 +1,5 @@
 import { ref } from 'vue'
-import { World } from '../ecs/core/World'
+import { World } from '../../core/World'
 
 /**
  * EntryHierarchyHandler class

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import EntryManager from '../EntryManager.js'
+import EntryHandlerFacade from '../EntryHandlerFacade.js'
 
 // Mirrors the pre-refactor addEntry(parentId, type, name, index, id) shape,
 // composed from the current addEntry() + moveEntry() API.
@@ -9,9 +9,9 @@ function addAndAttach(entryManager, parentId, type, name, index, id = null) {
   return entryId
 }
 
-describe('EntryManager.addEntry', () => {
+describe('EntryHandlerFacade.addEntry', () => {
   it('attaches an entry to a multiply-nested container with the intended parent chain, type and name', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerAId = addAndAttach(entryManager, rootId, 'container', 'A', 0)
     const containerBId = addAndAttach(entryManager, containerAId, 'container', 'B', 0)
@@ -29,7 +29,7 @@ describe('EntryManager.addEntry', () => {
   })
 
   it('does not allow attaching a child to a block parent', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockId = addAndAttach(entryManager, rootId, 'block', 'Add', 0)
 
@@ -42,14 +42,14 @@ describe('EntryManager.addEntry', () => {
   })
 })
 
-describe('EntryManager.addEntry container param defs', () => {
+describe('EntryHandlerFacade.addEntry container param defs', () => {
   it('sets the built-in Execute input param when the name matches a known container kind', () => {
     const entryDefnitionStore = {
       getContainerParamDef: (name) => name === 'if-container'
         ? { input: { Execute: { value: true, dataType: 'boolean' } }, output: {} }
         : { input: {}, output: {} }
     }
-    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+    const entryManager = new EntryHandlerFacade(undefined, entryDefnitionStore)
 
     const ifContainerId = entryManager.addEntry('container', 'if-container')
 
@@ -60,7 +60,7 @@ describe('EntryManager.addEntry container param defs', () => {
     const entryDefnitionStore = {
       getContainerParamDef: () => ({ input: {}, output: {} })
     }
-    const entryManager = new EntryManager(undefined, entryDefnitionStore)
+    const entryManager = new EntryHandlerFacade(undefined, entryDefnitionStore)
 
     const containerId = entryManager.addEntry('container', 'Container')
 
@@ -68,9 +68,9 @@ describe('EntryManager.addEntry container param defs', () => {
   })
 })
 
-describe('EntryManager.removeEntry', () => {
+describe('EntryHandlerFacade.removeEntry', () => {
   it('clears a removed block from the world', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockId = addAndAttach(entryManager, rootId, 'block', 'Add', 0)
 
@@ -81,7 +81,7 @@ describe('EntryManager.removeEntry', () => {
   })
 
   it('recursively clears a removed container and its descendants from the world', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerId = addAndAttach(entryManager, rootId, 'container', 'Sub', 0)
     const blockId = addAndAttach(entryManager, containerId, 'block', 'Add', 0)
@@ -95,7 +95,7 @@ describe('EntryManager.removeEntry', () => {
   })
 
   it('recursively clears every level of a multiply-nested container chain', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerAId = addAndAttach(entryManager, rootId, 'container', 'A', 0)
     const containerBId = addAndAttach(entryManager, containerAId, 'container', 'B', 0)
@@ -111,9 +111,9 @@ describe('EntryManager.removeEntry', () => {
   })
 })
 
-describe('EntryManager.reorderInParent', () => {
+describe('EntryHandlerFacade.reorderInParent', () => {
   it('moves an entry forward within its parent to the intended position', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 0)
     const blockBId = addAndAttach(entryManager, rootId, 'block', 'B', 1)
@@ -129,7 +129,7 @@ describe('EntryManager.reorderInParent', () => {
   })
 
   it('moves an entry backward within its parent to the intended position', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 0)
     const blockBId = addAndAttach(entryManager, rootId, 'block', 'B', 1)
@@ -142,7 +142,7 @@ describe('EntryManager.reorderInParent', () => {
   })
 
   it("leaves a reordered container's own children and their parent ids unchanged", () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerId = addAndAttach(entryManager, rootId, 'container', 'Sub', 0)
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 1)
@@ -157,7 +157,7 @@ describe('EntryManager.reorderInParent', () => {
   })
 
   it('returns false and leaves children unchanged when the entry is not a child of the given parent', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 0)
     const containerId = addAndAttach(entryManager, rootId, 'container', 'Sub', 1)
@@ -171,9 +171,9 @@ describe('EntryManager.reorderInParent', () => {
   })
 })
 
-describe('EntryManager.moveEntry', () => {
+describe('EntryHandlerFacade.moveEntry', () => {
   it('moves an entry from one container to another, updating both containers and the parent id', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerAId = addAndAttach(entryManager, rootId, 'container', 'A', 0)
     const containerBId = addAndAttach(entryManager, rootId, 'container', 'B', 1)
@@ -188,7 +188,7 @@ describe('EntryManager.moveEntry', () => {
   })
 
   it("moves a container along with its descendants, leaving the descendants' parent ids unchanged", () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const containerAId = addAndAttach(entryManager, rootId, 'container', 'A', 0)
     const containerBId = addAndAttach(entryManager, rootId, 'container', 'B', 1)
@@ -205,7 +205,7 @@ describe('EntryManager.moveEntry', () => {
   })
 
   it('detaches the entry from its old parent even when attaching to the new parent fails', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockTargetId = addAndAttach(entryManager, rootId, 'block', 'Target', 0)
     const blockMovedId = addAndAttach(entryManager, rootId, 'block', 'Moved', 1)
@@ -218,7 +218,7 @@ describe('EntryManager.moveEntry', () => {
   })
 
   it('returns false and makes no changes when the entry does not exist', () => {
-    const entryManager = new EntryManager()
+    const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
     const blockAId = addAndAttach(entryManager, rootId, 'block', 'A', 0)
 
