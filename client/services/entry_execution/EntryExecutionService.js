@@ -8,12 +8,11 @@ import ContainerExecutionFactory from './ContainerExecutionFactory';
 export default class EntryExecutionService {
   /**
    * Constructor
-   * @param {Object} config Configuration object
    * @param {EntryHandlerFacade} entryManager Entry management facade instance (optional)
    * @param {ExecutionLogService} executionLogService Execution log service instance (optional)
    */
-  constructor(config, entryManager = null, executionLogService = null) {
-    this.scriptExecutionService = new ScriptExecutionService(config.script);
+  constructor(entryManager = null, executionLogService = null) {
+    this.scriptExecutionService = new ScriptExecutionService();
     this.entryManager = entryManager;
     this.executionLogService = executionLogService;
     this._executionStack = []; // Stack to track currently executing entries

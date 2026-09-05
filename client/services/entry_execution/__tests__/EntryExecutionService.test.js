@@ -15,7 +15,7 @@ function buildEntryDefinitionService() {
 }
 
 function buildService(entryManager) {
-  const service = new EntryExecutionService({ script: {} }, entryManager)
+  const service = new EntryExecutionService(entryManager)
   service.scriptExecutionService.executeScript = vi.fn(async () => ({ success: true }))
   return service
 }

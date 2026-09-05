@@ -1,12 +1,14 @@
 // shared/*.js are real ES modules; Rollup traces these imports and inlines
 // them directly into this bundle, so no separate Forge build entry (and no
 // runtime file lookup) is needed for them.
-import { createAppDataPaths, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
+import { createAppDataPaths, readAppSettings, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
 import RunnerHost from '../shared/RunnerHost.js'
+import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 
 const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
+const { spawn } = require('node:child_process')
 
 // Squirrel installer side-effects (Windows): exit early if invoked by the installer
 try {
@@ -19,6 +21,7 @@ try {
 
 let mainWindow = null
 let appPaths = null
+let appSettings = null
 let runnerHost = null
 
 function getRootDir() {
@@ -33,8 +36,20 @@ function getDefaultsDir() {
     : path.join(app.getAppPath(), 'appdata')
 }
 
+function getPythonRunnerPath() {
+  return path.join(getDefaultsDir(), 'script_runner.py')
+}
+
 function ensureRunnerHost() {
   if (runnerHost) return runnerHost
+
+  if (appSettings.script.interpreterName === 'python') {
+    runnerHost = new PythonRunnerHost(() => spawn(
+      appSettings.script.interpreterPath,
+      [getPythonRunnerPath(), appPaths.scriptsDir]
+    ))
+    return runnerHost
+  }
 
   // Both main.cjs and script-runner.cjs are bundled by Forge into the same
   // directory (.vite/build/ in dev, app.asar/.vite/build/ in prod), so __dirname
@@ -151,6 +166,7 @@ app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
   appPaths = createAppDataPaths({ rootDir: getRootDir(), defaultsDir: getDefaultsDir() })
   appPaths.seed()
+  appSettings = readAppSettings(appPaths.settingsDir)
   registerIpcHandlers()
   createMainWindow()
 

@@ -1,16 +1,31 @@
 # Script Runner: Process Creation & IPC Workflow
 
 Explains how a script execution request travels from the host process (Web
-server or Electron main) into the forked `script-runner` child process and
-back, via `RunnerHost`. `RunnerHost` is the sole IPC layer in this flow: it
-forks the child, sends it messages (`postMessage`/`send`), and listens for
-the child's replies (`message` event) to resolve or reject the caller's
-promise.
+server or Electron main) into a child process and back. There are two
+independent, parallel implementations of this, selected once at host
+startup by the `interpreterName` field in `appdata/settings/AppSettings.json`
+(`"javascript"`, the default, or `"python"`) — never both at once, since the
+interpreter is a single app-wide setting:
+
+- **JavaScript**: `RunnerHost` forks `shared/script-runner.js` and talks to
+  it over Node's native child_process IPC (`postMessage`/`send`, `message`
+  event). This is the original mechanism and is unchanged by the addition of
+  Python support.
+- **Python**: `PythonRunnerHost` (`shared/PythonRunnerHost.js`) spawns
+  `appdata/script_runner.py` as a plain subprocess and talks to it over
+  newline-delimited JSON (NDJSON) on stdin/stdout, since a spawned Python
+  process can't join Node's IPC channel. See "Python execution" below.
+
+Both classes expose the same `executeScript(scriptName, inputParams)` /
+`shutdown()` shape, so the rest of the host process (`ipcMain.handle` /
+Express routes) doesn't need to know which one is active.
 
 ## Participants
 
 - **Host process** — either `server/index.js` (Express/Node) or
-  `electron/main.js` (Electron main process). Each owns one `RunnerHost`.
+  `electron/main.js` (Electron main process). Each owns one host (a
+  `RunnerHost` or a `PythonRunnerHost`, chosen once at startup — see
+  "5. Python execution").
 - **RunnerHost** (`shared/RunnerHost.js`) — shared class that lazily creates
   the child process and manages the request/response bookkeeping.
 - **Child process** (`shared/script-runner.js`, bundled as `script-runner.cjs`
@@ -27,6 +42,9 @@ the same `RunnerHost` and the same message contract:
 
 `script-runner.js` checks `process.parentPort` first and falls back to
 `process.send`, so the same file works under either host.
+
+Sections 1-4 below describe the JavaScript path (`RunnerHost`/`script-runner.js`).
+See "5. Python execution" for the parallel `PythonRunnerHost`/`script_runner.py` path.
 
 ## 1. Lazy process creation
 
@@ -63,7 +81,7 @@ round trip.
 
 ```mermaid
 sequenceDiagram
-    participant Caller as JavaScriptExecutionEngine
+    participant Caller as ScriptExecutionService
     participant Entry as Host process entry point
     participant RH as RunnerHost
     participant Child as script-runner.js (child process)
@@ -94,8 +112,8 @@ sequenceDiagram
 
 Key points:
 
-- **Single client-side caller, two entry points**: `JavaScriptExecutionEngine.executeScript()`
-  (`client/services/script_execution/JavaScriptExecutionEngine.js`) branches
+- **Single client-side caller, two entry points**: `ScriptExecutionService.executeScript()`
+  (`client/services/script_execution/ScriptExecutionService.js`) branches
   on `this.isElectron`. On the Web target it does a `fetch` to
   `/api/scripts/:name/execute`, handled by the Express route in
   `server/api.js`. On Electron it calls `window.electronAPI.executeScript(...)`
@@ -160,12 +178,51 @@ sequenceDiagram
 If the child doesn't exit within 2 seconds of the shutdown message, `RunnerHost`
 force-kills it via `proc.kill()`.
 
+## 5. Python execution
+
+When `appdata/settings/AppSettings.json`'s `script.interpreterName` is `"python"`,
+the host constructs a `PythonRunnerHost` instead of a `RunnerHost`. Both
+classes expose the same `executeScript`/`shutdown` shape, so `ipcMain.handle`
+and the Express route are unaware of which one is active — this decision is
+made once, at host startup, by reading `AppSettings.json` directly (there's
+no renderer-side IPC for it; the renderer's `ScriptExecutionService` sends
+exactly the same `executeScript(scriptName, inputParams)` call either way).
+
+The Python worker (`appdata/script_runner.py`) is a persistent process, like
+`script-runner.js`, but since a plain `child_process.spawn`'d process can't
+join Node's native IPC channel, the protocol is one JSON object per line
+(NDJSON) over stdin/stdout instead:
+
+- **in** (written to the worker's stdin): `{"type": "execute", "id": <int>, "scriptName": <str>, "inputParams": {...}}`, or `{"type": "shutdown"}`.
+- **out** (read from the worker's stdout, one line per response): `{"type": "result", "id": <int>, "result": {...}}` or `{"type": "error", "id": <int>, "errmsg": <str>}`.
+
+`PythonRunnerHost._handleChunk()` buffers partial stdout chunks and splits on
+`\n` to reconstruct complete lines before parsing, since `data` events can
+split a line arbitrarily. Correlation by `id`, the 10s execute timeout, and
+the shutdown grace-period/force-kill behavior all mirror `RunnerHost`
+exactly. `createSocket`/`destroySocket` are stubbed to resolve `null`/`false`
+on `PythonRunnerHost` — Python scripts don't get the TCP socket passthrough
+feature.
+
+The worker resolves `<scriptsDir>/<scriptName>.py` (passed as `argv[1]` at
+spawn time, mirroring `script-runner.js`'s own `argv[2]`), loads it via
+`importlib.util`, and calls its exported `execute(input_params)`. The result
+may be a coroutine (`async def execute`) — the worker detects this and drives
+it with `asyncio.run()`. While running user code, `sys.stdout` is redirected
+to `sys.stderr` so a stray `print()` can't corrupt the one-JSON-line-per-
+response protocol; it still surfaces via `PythonRunnerHost`'s
+`[python-runner]`-prefixed stderr logging, matching how `script-runner.js`'s
+own stdout/stderr are logged today.
+
 ## Files involved
 
-- [server/index.js](../server/index.js) — Web host, creates `RunnerHost` with `child_process.fork`.
-- [electron/main.js](../electron/main.js) — Electron host and Electron entry point, creates `RunnerHost` with `utilityProcess.fork` and handles `ipcMain.handle('script:execute', ...)`.
-- [shared/RunnerHost.js](../shared/RunnerHost.js) — request/response bookkeeping, timeouts, shutdown.
-- [shared/script-runner.js](../shared/script-runner.js) — child process entry point, message dispatch, script loading.
+- [server/index.js](../server/index.js) — Web host, reads `AppSettings.json` and creates either `RunnerHost` (`child_process.fork`) or `PythonRunnerHost` (`child_process.spawn`).
+- [electron/main.js](../electron/main.js) — Electron host and entry point; same choice, using `utilityProcess.fork` for `RunnerHost` and `child_process.spawn` for `PythonRunnerHost`; handles `ipcMain.handle('script:execute', ...)`.
+- [shared/RunnerHost.js](../shared/RunnerHost.js) — JavaScript-child request/response bookkeeping, timeouts, shutdown.
+- [shared/PythonRunnerHost.js](../shared/PythonRunnerHost.js) — Python-worker NDJSON request/response bookkeeping, timeouts, shutdown.
+- [shared/script-runner.js](../shared/script-runner.js) — JS child process entry point, message dispatch, script loading. Unaffected by Python support.
+- [appdata/script_runner.py](../appdata/script_runner.py) — Python worker entry point, NDJSON request loop, script loading.
+- [shared/appDataPaths.js](../shared/appDataPaths.js) — `readAppSettings()`, shared by both hosts to resolve `script.interpreterName`/`script.interpreterPath` once at startup.
 - [server/api.js](../server/api.js) — Web entry point, Express routes calling `runnerHost.executeScript/createSocket/destroySocket`.
 - [electron/preload.js](../electron/preload.js) — exposes `window.electronAPI.executeScript/createSocket/destroySocket` to the renderer via `contextBridge`.
-- [client/services/script_execution/JavaScriptExecutionEngine.js](../client/services/script_execution/JavaScriptExecutionEngine.js) — client-side caller; branches on `isElectron` to reach either entry point.
+- [client/services/script_execution/ScriptExecutionService.js](../client/services/script_execution/ScriptExecutionService.js) — client-side caller; branches on `isElectron` to reach either entry point.

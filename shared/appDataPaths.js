@@ -3,6 +3,26 @@ import fs from 'node:fs'
 
 export const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
 export const DEFS_FILENAME = 'BlockDefinitions.json'
+export const APP_SETTINGS_FILENAME = 'AppSettings.json'
+
+const DEFAULT_APP_SETTINGS = { script: { interpreterName: 'javascript', interpreterPath: '' } }
+
+/**
+ * Read <settingsDir>/AppSettings.json, merged onto defaults. Falls back to
+ * the defaults entirely on any read/parse error (missing file, corrupt
+ * JSON) — this setting must never be able to crash host startup.
+ * @param {string} settingsDir
+ * @returns {{ script: { interpreterName: string, interpreterPath: string } }}
+ */
+export function readAppSettings(settingsDir) {
+  try {
+    const raw = fs.readFileSync(path.join(settingsDir, APP_SETTINGS_FILENAME), 'utf8')
+    const parsed = JSON.parse(raw)
+    return { script: { ...DEFAULT_APP_SETTINGS.script, ...(parsed.script || {}) } }
+  } catch {
+    return DEFAULT_APP_SETTINGS
+  }
+}
 
 function copyDirRecursive(src, dest) {
   if (!fs.existsSync(src)) return
@@ -54,6 +74,20 @@ export function createAppDataPaths({ rootDir, defaultsDir }) {
     const defsPath = path.join(settingsDir, DEFS_FILENAME)
     if (!fs.existsSync(scriptsDir) || !fs.existsSync(defsPath)) {
       copyDirRecursive(defaultsDir, rootDir)
+    }
+
+    // Independent, non-destructive backfill: an existing install upgrading
+    // to a version that introduced AppSettings.json already has scriptsDir
+    // and defsPath, so the check above no-ops — copy just this one file
+    // instead of re-running copyDirRecursive (which would clobber any
+    // hand-edited BlockDefinitions.json/scripts).
+    const appSettingsPath = path.join(settingsDir, APP_SETTINGS_FILENAME)
+    if (!fs.existsSync(appSettingsPath)) {
+      const defaultAppSettingsPath = path.join(defaultsDir, 'settings', APP_SETTINGS_FILENAME)
+      if (fs.existsSync(defaultAppSettingsPath)) {
+        fs.mkdirSync(settingsDir, { recursive: true })
+        fs.copyFileSync(defaultAppSettingsPath, appSettingsPath)
+      }
     }
   }
 

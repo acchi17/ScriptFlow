@@ -1,23 +1,12 @@
-import ScriptExecutionFactory from './ScriptExecutionFactory';
-
 /**
  * Script Execution Service
- * Unified interface for script execution
+ * Forwards a script execution request to the host process (Electron IPC or
+ * the Web server's HTTP API). Which interpreter actually runs the script is
+ * decided by the host process from its own AppSettings.json, not here.
  */
 export default class ScriptExecutionService {
-  /**
-   * Constructor
-   * @param {Object} configScript Script configuration object (optional)
-   */
-  constructor(configScript) {   
-    this.engineName = configScript?.engineName || 'javascript';
-    this.scriptsDir = configScript?.scriptsDir || '';
-    
-    // Create engine instance using factory
-    this.scriptExecutionEngine = ScriptExecutionFactory.createEngine(
-      this.engineName,
-      this.scriptsDir
-    );
+  constructor() {
+    this.isElectron = typeof window !== 'undefined' && !!window.electronAPI
   }
 
   /**
@@ -36,19 +25,28 @@ export default class ScriptExecutionService {
    */
   async executeScript(scriptName = '', inputParams = {}) {
     try {
-      return await this.scriptExecutionEngine.executeScript(scriptName, inputParams);
+      if (this.isElectron) {
+        return await window.electronAPI.executeScript(scriptName, inputParams);
+      }
+      const response = await fetch(`/api/scripts/${encodeURIComponent(scriptName)}/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(inputParams)
+      });
+      if (!response.ok) {
+        const text = await response.text().catch(() => '');
+        throw new Error(text || `Script execution failed: ${response.status}`);
+      }
+      return await response.json();
     } catch (error) {
       console.log(`[${this.constructor.name}] executeScript() failed: ${error.message}`);
       throw error;
     }
   }
-  
+
   /**
    * Service termination process
    */
   terminate() {
-    if (this.scriptExecutionEngine) {
-      this.scriptExecutionEngine.terminate();
-    }
   }
 }

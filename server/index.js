@@ -1,11 +1,12 @@
 import path from 'node:path'
 import os from 'node:os'
-import { fork } from 'node:child_process'
+import { fork, spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import open from 'open'
-import { createAppDataPaths } from '../shared/appDataPaths.js'
+import { createAppDataPaths, readAppSettings } from '../shared/appDataPaths.js'
 import RunnerHost from '../shared/RunnerHost.js'
+import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 import createApiRouter from './api.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -17,11 +18,17 @@ const DIST_DIR = path.join(ROOT_DIR, 'dist')
 
 const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, defaultsDir: APPDATA_DIR })
 appPaths.seed()
+const appSettings = readAppSettings(appPaths.settingsDir)
 
-const runnerHost = new RunnerHost(() => fork(
-  path.join(ROOT_DIR, 'shared', 'script-runner.js'),
-  [appPaths.scriptsDir]
-))
+const runnerHost = appSettings.script.interpreterName === 'python'
+  ? new PythonRunnerHost(() => spawn(
+    appSettings.script.interpreterPath,
+    [path.join(APPDATA_DIR, 'script_runner.py'), appPaths.scriptsDir]
+  ))
+  : new RunnerHost(() => fork(
+    path.join(ROOT_DIR, 'shared', 'script-runner.js'),
+    [appPaths.scriptsDir]
+  ))
 
 const app = express()
 app.use(express.json())

@@ -6,7 +6,7 @@ import EntryPersistanceService from '@/services/entry_persistance/EntryPersistan
 import blockDefinitionsRaw from '../../../../appdata/settings/BlockDefinitions.json'
 
 async function createContext() {
-  const entryDefinitionService = new EntryDefinitionService({}, {
+  const entryDefinitionService = new EntryDefinitionService({
     readBlockDefinitions: async () => blockDefinitionsRaw
   })
   await entryDefinitionService.loadBlockDefinitions()

@@ -2,7 +2,6 @@ import { createApp } from 'vue'
 
 import './assets/styles/variables.css'
 import App from './App.vue'
-import appConfig from './config/app-config'
 import EntryHandlerFacade from './ecs/component-handlers/EntryHandlerFacade'
 import SocketManager from './managers/SocketManager'
 import { World } from './ecs/core/World'
@@ -17,7 +16,7 @@ const app = createApp(App)
 
 // Create Services
 const platformService = new PlatformService()
-const entryDefinitionService = new EntryDefinitionService(appConfig, platformService)
+const entryDefinitionService = new EntryDefinitionService(platformService)
 
 // Create Managers
 const world = new World()
@@ -27,7 +26,7 @@ const socketManager = new SocketManager()
 // Create remaining Services
 const executionLogService = new ExecutionLogService(entryManager)
 const entryExecutionService = new EntryExecutionService(
-  appConfig, entryManager, executionLogService
+  entryManager, executionLogService
 )
 const entryPersistanceService = new EntryPersistanceService(
   platformService, entryManager,

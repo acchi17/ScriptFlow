@@ -24,8 +24,7 @@ const CONTAINER_DEFINITIONS = [
  * and the built-in container definitions. I/O for block definitions is delegated to PlatformService.
  */
 export default class EntryDefinitionService {
-  constructor(config, platformService) {
-    this.config = config;
+  constructor(platformService) {
     this.platformService = platformService;
     this._blockDefinitions = [];
   }
