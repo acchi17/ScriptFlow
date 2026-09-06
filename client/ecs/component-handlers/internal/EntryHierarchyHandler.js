@@ -75,20 +75,6 @@ export default class EntryHierarchyHandler {
   }
 
   /**
-   * Register an entry as a root, creating its hierarchy tick if not already present
-   * @param {string} rootId
-   */
-  addRoot(rootId) {
-    const hierarchy = this._hierarchies.get(rootId);
-    if (hierarchy) {
-      hierarchy.isRoot = true;
-      if (!this._hierarchyTicks.has(rootId)) {
-        this._hierarchyTicks.set(rootId, ref(0));
-      }
-    }
-  }
-
-  /**
    * Get the parent ID of an entry
    * @param {string} entryId - ID of the child entry
    * @returns {string|null} Parent entry ID or null
@@ -139,8 +125,7 @@ export default class EntryHierarchyHandler {
    * Get the reactive counter for one root's tree, incremented on every structural
    * change (add/remove/reorder/move) within it. Watch this to react to mutations
    * in a specific tree without traversing it, and without being notified about
-   * unrelated roots' changes. Registered by addRoot(); undefined if rootId was
-   * never registered as a root.
+   * unrelated roots' changes. Undefined if rootId was never registered as a root.
    * @param {string} rootId
    * @returns {import('vue').Ref<number>|undefined}
    */
@@ -155,6 +140,33 @@ export default class EntryHierarchyHandler {
    */
   initialize(entryId, noChildren = false) {
     this._hierarchies.add(entryId, { parent: null, children: noChildren ? null : [], isRoot: false });
+  }
+
+  /**
+   * Register an entry as a root, creating its hierarchy tick if not already present
+   * @param {string} entryId
+   */
+  setRoot(entryId) {
+    const hierarchy = this._hierarchies.get(entryId);
+    if (hierarchy) {
+      hierarchy.isRoot = true;
+      if (!this._hierarchyTicks.has(entryId)) {
+        this._hierarchyTicks.set(entryId, ref(0));
+      }
+    }
+  }
+
+  /**
+   * Unregister an entry as a root, clearing its isRoot flag if still present
+   * and dropping its hierarchy tick so it doesn't linger after removal.
+   * @param {string} rootId
+   */
+  unsetRoot(rootId) {
+    const hierarchy = this._hierarchies.get(rootId);
+    if (hierarchy) {
+      hierarchy.isRoot = false;
+    }
+    this._hierarchyTicks.delete(rootId);
   }
 
   /**
@@ -258,9 +270,6 @@ export default class EntryHierarchyHandler {
   /**
    * Rebuild the sequence number map for one root's tree using DFS, restarting
    * belonging to the same root, so other roots' numbers are left untouched.
-   * Always bumps that root's hierarchy tick, even if rootId no longer resolves
-   * to a live root (e.g. it was just removed) - the tick registered by addRoot()
-   * outlives the root's despawn so watchers still get notified.
    * @param {string|null} rootId
    */
   rebuildSequenceNumbers(rootId) {

@@ -301,6 +301,11 @@ export default class EntryHandlerFacade {
     const rootId = this.hierarchyHandler.getRootOf(entryId);
     if (!this.hierarchyHandler.detachFromParent(entryId)) return false;
 
+    // If entryId is itself the root, unregister it so its hierarchy tick doesn't linger
+    if (rootId === entryId) {
+      this.hierarchyHandler.unsetRoot(entryId);
+    }
+
     // If the entry is a container, recursively remove all its descendants
     if (this.isContainer(entryId)) {
       this._removeDescendants(entryId);
@@ -327,7 +332,7 @@ export default class EntryHandlerFacade {
     this.hierarchyHandler.detachFromParent(entryId);
 
     if (newParentId === null) {
-      this.hierarchyHandler.addRoot(entryId);
+      this.hierarchyHandler.setRoot(entryId);
       return true;
     }
     return this.hierarchyHandler.attachToParent(newParentId, entryId, index);
