@@ -53,9 +53,9 @@ function isInsideDir(parent, candidate) {
  *
  * @param {Object} opts
  * @param {string} opts.rootDir Directory that owns `scripts/` and `settings/`
- * @param {string} opts.defaultsDir Directory to seed `scripts/`/`settings/` from on first run
+ * @param {string} opts.seedDir Directory to seed `scripts/` and `settings/` from on first run
  */
-export function createAppDataPaths({ rootDir, defaultsDir }) {
+export function createAppDataPaths({ rootDir, seedDir }) {
   const scriptsDir = path.join(rootDir, 'scripts')
   const settingsDir = path.join(rootDir, 'settings')
 
@@ -73,7 +73,7 @@ export function createAppDataPaths({ rootDir, defaultsDir }) {
   function seed() {
     const defsPath = path.join(settingsDir, DEFS_FILENAME)
     if (!fs.existsSync(scriptsDir) || !fs.existsSync(defsPath)) {
-      copyDirRecursive(defaultsDir, rootDir)
+      copyDirRecursive(seedDir, rootDir)
     }
 
     // Independent, non-destructive backfill: an existing install upgrading
@@ -83,7 +83,7 @@ export function createAppDataPaths({ rootDir, defaultsDir }) {
     // hand-edited BlockDefinitions.json/scripts).
     const appSettingsPath = path.join(settingsDir, APP_SETTINGS_FILENAME)
     if (!fs.existsSync(appSettingsPath)) {
-      const defaultAppSettingsPath = path.join(defaultsDir, 'settings', APP_SETTINGS_FILENAME)
+      const defaultAppSettingsPath = path.join(seedDir, 'settings', APP_SETTINGS_FILENAME)
       if (fs.existsSync(defaultAppSettingsPath)) {
         fs.mkdirSync(settingsDir, { recursive: true })
         fs.copyFileSync(defaultAppSettingsPath, appSettingsPath)

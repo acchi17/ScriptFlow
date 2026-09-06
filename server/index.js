@@ -16,7 +16,7 @@ const ROOT_DIR = path.resolve(__dirname, '..')
 const APPDATA_DIR = path.join(ROOT_DIR, 'appdata')
 const DIST_DIR = path.join(ROOT_DIR, 'dist')
 
-const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, defaultsDir: APPDATA_DIR })
+const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, seedDir: APPDATA_DIR })
 appPaths.seed()
 const appSettings = readAppSettings(appPaths.settingsDir)
 

@@ -164,7 +164,7 @@ function createMainWindow() {
 
 app.whenReady().then(() => {
   Menu.setApplicationMenu(null)
-  appPaths = createAppDataPaths({ rootDir: getRootDir(), defaultsDir: getDefaultsDir() })
+  appPaths = createAppDataPaths({ rootDir: getRootDir(), seedDir: getDefaultsDir() })
   appPaths.seed()
   appSettings = readAppSettings(appPaths.settingsDir)
   registerIpcHandlers()
