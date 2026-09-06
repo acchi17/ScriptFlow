@@ -3,8 +3,9 @@ import { World } from '../../core/World'
 
 /**
  * EntryHierarchyHandler class
- * Handles parent-child tree structure between entries: attaching/detaching,
- * reordering, moving, descendant lookup, and DFS-based visual sequence numbers.
+ * Handles parent-child tree structure between entries:
+ * attaching/detaching/reordering, descendant lookup, 
+ * and DFS-based visual sequence numbers.
  */
 export default class EntryHierarchyHandler {
   constructor(world = new World()) {
@@ -12,8 +13,9 @@ export default class EntryHierarchyHandler {
     this._hierarchies = world.getStore('hierarchies');
     // Component store holding entryId → 1-based sequence number (DFS visual order)
     this._orders = world.getStore('orders');
-    // Reactive counter incremented on every structural change (add/remove/reorder/move)
-    this._hierarchyTick = ref(0);
+    // Reactive counters incremented on every structural change (add/remove/reorder/move),
+    // keyed by root entry id so watchers only react to changes within their own tree
+    this._hierarchyTicks = new Map();
   }
 
   /**
@@ -37,6 +39,15 @@ export default class EntryHierarchyHandler {
   }
 
   /**
+   * Check whether an entry is a registered root
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a registered root
+   */
+  isRoot(entryId) {
+    return this._hierarchies.get(entryId)?.isRoot === true;
+  }
+
+  /**
   * Get the first registered root entry's ID
   * @returns {string|null} Root entry ID or null
   */
@@ -45,15 +56,6 @@ export default class EntryHierarchyHandler {
       if (hierarchy.isRoot) return id;
     }
     return null;
-  }
-
-  /**
-   * Check whether an entry is a registered root
-   * @param {string} entryId - ID of the entry to check
-   * @returns {boolean} Whether the entry is a registered root
-   */
-  isRoot(entryId) {
-    return this._hierarchies.get(entryId)?.isRoot === true;
   }
 
   /**
@@ -73,13 +75,16 @@ export default class EntryHierarchyHandler {
   }
 
   /**
-   * Register an entry as a root
+   * Register an entry as a root, creating its hierarchy tick if not already present
    * @param {string} rootId
    */
   addRoot(rootId) {
     const hierarchy = this._hierarchies.get(rootId);
     if (hierarchy) {
       hierarchy.isRoot = true;
+      if (!this._hierarchyTicks.has(rootId)) {
+        this._hierarchyTicks.set(rootId, ref(0));
+      }
     }
   }
 
@@ -131,12 +136,16 @@ export default class EntryHierarchyHandler {
   }
 
   /**
-   * Reactive counter that increments on every structural change (add/remove/reorder/move).
-   * Watch this to react to tree mutations without traversing the tree.
-   * @returns {import('vue').Ref<number>}
+   * Get the reactive counter for one root's tree, incremented on every structural
+   * change (add/remove/reorder/move) within it. Watch this to react to mutations
+   * in a specific tree without traversing it, and without being notified about
+   * unrelated roots' changes. Registered by addRoot(); undefined if rootId was
+   * never registered as a root.
+   * @param {string} rootId
+   * @returns {import('vue').Ref<number>|undefined}
    */
-  get hierarchyTick() {
-    return this._hierarchyTick;
+  getHierarchyTick(rootId) {
+    return this._hierarchyTicks.get(rootId);
   }
 
   /**
@@ -249,8 +258,9 @@ export default class EntryHierarchyHandler {
   /**
    * Rebuild the sequence number map for one root's tree using DFS, restarting
    * belonging to the same root, so other roots' numbers are left untouched.
-   * Always bumps the hierarchy tick, even if rootId no longer resolves to a
-   * live root (e.g. it was just removed).
+   * Always bumps that root's hierarchy tick, even if rootId no longer resolves
+   * to a live root (e.g. it was just removed) - the tick registered by addRoot()
+   * outlives the root's despawn so watchers still get notified.
    * @param {string|null} rootId
    */
   rebuildSequenceNumbers(rootId) {
@@ -267,6 +277,7 @@ export default class EntryHierarchyHandler {
       };
       traverse(hierarchy.children);
     }
-    this._hierarchyTick.value++;
+    const tick = this.getHierarchyTick(rootId);
+    if (tick) tick.value++;
   }
 }

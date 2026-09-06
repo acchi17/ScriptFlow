@@ -48,7 +48,7 @@ export default {
     const entryManager = inject('entryManager')
 
     const children = computed(() => {
-      entryManager.hierarchyTick.value
+      entryManager.getHierarchyTick(entryManager.getRootOf(props.entryId)).value
       return entryManager.getChildren(props.entryId)
     })
     const dropAllowed = isDroppable(props.entryId)

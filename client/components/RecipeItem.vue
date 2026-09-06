@@ -66,7 +66,7 @@ export default {
   setup() {
     const entryManager = inject('entryManager')
     const { executeEntry } = useEntryOperation()
-    const { isExecuting } = useSystemState()
+    const { isExecuting, cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
 
     const rootContainerId = entryManager.addEntry('container', 'root-container')
     entryManager.moveEntry(rootContainerId, null, 0)
@@ -116,7 +116,14 @@ export default {
       }
     }
 
-    watch(() => entryManager.hierarchyTick.value, () => { nextTick(() => measureEntries()) })
+    watch(() => entryManager.getHierarchyTick(rootContainerId).value, () => {
+      cancelConnection()
+      const id = getSelectedEntryId.value
+      if (id && !entryManager.isAlive(id)) {
+        clearSelection()
+      }
+      nextTick(() => measureEntries())
+    })
 
     const entryLayoutMap = computed(() => {
       entryManager.layoutsTick.value

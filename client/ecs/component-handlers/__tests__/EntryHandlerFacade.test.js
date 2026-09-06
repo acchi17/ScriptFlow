@@ -184,6 +184,32 @@ describe('EntryHandlerFacade root entries', () => {
   })
 })
 
+describe('EntryHandlerFacade.getHierarchyTick', () => {
+  it("bumps only the changed root's tick, leaving other roots' ticks untouched", () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+    const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+
+    const tickA = entryManager.getHierarchyTick(rootAId).value
+    const tickB = entryManager.getHierarchyTick(rootBId).value
+
+    addAndAttach(entryManager, rootAId, 'block', 'A', 0)
+
+    expect(entryManager.getHierarchyTick(rootAId).value).toBe(tickA + 1)
+    expect(entryManager.getHierarchyTick(rootBId).value).toBe(tickB)
+  })
+
+  it("bumps a root's own tick when the root entry itself is removed", () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
+    const tick = entryManager.getHierarchyTick(rootId).value
+
+    entryManager.removeEntry(rootId)
+
+    expect(entryManager.getHierarchyTick(rootId).value).toBe(tick + 1)
+  })
+})
+
 describe('EntryHandlerFacade.reorderInParent', () => {
   it('moves an entry forward within its parent to the intended position', () => {
     const entryManager = new EntryHandlerFacade()

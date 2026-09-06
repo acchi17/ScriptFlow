@@ -174,12 +174,14 @@ export default class EntryHandlerFacade {
 
   // #region Entry hierarchy related
   /**
-   * Reactive counter that increments on every structural change (add/remove/reorder/move).
-   * Watch this to react to tree mutations without traversing the tree.
-   * @returns {import('vue').Ref<number>}
+   * Get the reactive counter for one root's tree, incremented on every structural
+   * change (add/remove/reorder/move) within it. Watch this to react to mutations
+   * in a specific tree without traversing it.
+   * @param {string} rootId
+   * @returns {import('vue').Ref<number>|undefined}
    */
-  get hierarchyTick() {
-    return this.hierarchyHandler.hierarchyTick;
+  getHierarchyTick(rootId) {
+    return this.hierarchyHandler.getHierarchyTick(rootId);
   }
 
   /**
@@ -294,7 +296,9 @@ export default class EntryHandlerFacade {
   removeEntry(entryId) {
     if (!this.isAlive(entryId)) return false;
 
-    const parentId = this.hierarchyHandler.getParent(entryId);
+    // Resolve the owning root before detach/despawn clear entryId's hierarchy
+    // component; if entryId is itself a root, this resolves to entryId.
+    const rootId = this.hierarchyHandler.getRootOf(entryId);
     if (!this.hierarchyHandler.detachFromParent(entryId)) return false;
 
     // If the entry is a container, recursively remove all its descendants
@@ -306,12 +310,12 @@ export default class EntryHandlerFacade {
     this.paramHandler.removeParamDef(entryId);
     this._world.despawn(entryId);
 
-    this.hierarchyHandler.rebuildSequenceNumbers(this.hierarchyHandler.getRootOf(parentId));
+    this.hierarchyHandler.rebuildSequenceNumbers(rootId);
     return true;
   }
 
   /**
-   * Move an entry to a different parent
+   * Move an entry to a specified parent
    * @param {string} entryId - ID of the child entry to move
    * @param {string|null} newParentId - ID of the new parent entry (null to set as parentless)
    * @param {number} index - Target index position
