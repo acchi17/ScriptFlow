@@ -12,8 +12,6 @@ export default class EntryHierarchyHandler {
     this._hierarchies = world.getStore('hierarchies');
     // Component store holding entryId → 1-based sequence number (DFS visual order)
     this._orders = world.getStore('orders');
-    // ID of the root container for sequence number computation
-    this._rootId = null;
     // Reactive counter incremented on every structural change (add/remove/reorder/move)
     this._hierarchyTick = ref(0);
   }
@@ -39,22 +37,49 @@ export default class EntryHierarchyHandler {
   }
 
   /**
-  * Get the root entry's ID
+  * Get the first registered root entry's ID
   * @returns {string|null} Root entry ID or null
   */
   getRoot() {
-    return this._rootId;
+    for (const [id, hierarchy] of this._hierarchies.entries()) {
+      if (hierarchy.isRoot) return id;
+    }
+    return null;
   }
 
   /**
-   * Set the root container
-   * Must be called once after the root container is registered.
+   * Check whether an entry is a registered root
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a registered root
+   */
+  isRoot(entryId) {
+    return this._hierarchies.get(entryId)?.isRoot === true;
+  }
+
+  /**
+   * Find the root entry that an entry belongs to by walking up its parent chain.
+   * @param {string} entryId
+   * @returns {string|null} The owning root entry's ID, or null if the top of the
+   *   chain isn't a registered root (e.g. a freshly created entry not yet attached anywhere)
+   */
+  getRootOf(entryId) {
+    let current = entryId;
+    let parentId = this.getParent(current);
+    while (parentId !== null) {
+      current = parentId;
+      parentId = this.getParent(current);
+    }
+    return this.isRoot(current) ? current : null;
+  }
+
+  /**
+   * Register an entry as a root
    * @param {string} rootId
    */
-  setRoot(rootId) {
-    if (this._rootId == null) {
-      console.log('Root entry set');
-      this._rootId = rootId;
+  addRoot(rootId) {
+    const hierarchy = this._hierarchies.get(rootId);
+    if (hierarchy) {
+      hierarchy.isRoot = true;
     }
   }
 
@@ -120,7 +145,7 @@ export default class EntryHierarchyHandler {
    * @param {boolean} [noChildren=false] - If true, initialize children as null instead of an empty array
    */
   initialize(entryId, noChildren = false) {
-    this._hierarchies.add(entryId, { parent: null, children: noChildren ? null : [] });
+    this._hierarchies.add(entryId, { parent: null, children: noChildren ? null : [], isRoot: false });
   }
 
   /**
@@ -149,7 +174,7 @@ export default class EntryHierarchyHandler {
       entryHierarchy.parent = parentId;
     }
 
-    this.rebuildSequenceNumbers();
+    this.rebuildSequenceNumbers(this.getRootOf(parentId));
     return true;
   }
 
@@ -203,7 +228,7 @@ export default class EntryHierarchyHandler {
       }
       const childId = parentHierarchy.children.splice(currentIndex, 1)[0];
       parentHierarchy.children.splice(targetIndex, 0, childId);
-      this.rebuildSequenceNumbers();
+      this.rebuildSequenceNumbers(this.getRootOf(parentId));
       return true;
     }
     return false;
@@ -218,28 +243,30 @@ export default class EntryHierarchyHandler {
     if (hierarchy) {
       hierarchy.children.length = 0;
     }
-    this.rebuildSequenceNumbers();
+    this.rebuildSequenceNumbers(this.getRootOf(entryId));
   }
 
   /**
-   * Rebuild the sequence number map using DFS from the root.
+   * Rebuild the sequence number map for one root's tree using DFS, restarting
+   * belonging to the same root, so other roots' numbers are left untouched.
+   * Always bumps the hierarchy tick, even if rootId no longer resolves to a
+   * live root (e.g. it was just removed).
+   * @param {string|null} rootId
    */
-  rebuildSequenceNumbers() {
-    this._orders.clear();
-    if (!this._rootId) return;
-
-    if (!this.isContainer(this._rootId)) return;
-
-    let counter = 0;
-    const traverse = (childIds) => {
-      for (const childId of childIds) {
-        this._orders.add(childId, { order: ++counter });
-        if (this.isContainer(childId)) {
-          traverse(this._hierarchies.get(childId)?.children ?? []);
+  rebuildSequenceNumbers(rootId) {
+    const hierarchy = this._hierarchies.get(rootId);
+    if (hierarchy?.isRoot && hierarchy.children !== null) {
+      let counter = 0;
+      const traverse = (childIds) => {
+        for (const childId of childIds) {
+          this._orders.add(childId, { order: ++counter });
+          if (this.isContainer(childId)) {
+            traverse(this._hierarchies.get(childId)?.children ?? []);
+          }
         }
-      }
-    };
-    traverse(this._hierarchies.get(this._rootId)?.children ?? []);
+      };
+      traverse(hierarchy.children);
+    }
     this._hierarchyTick.value++;
   }
 }

@@ -210,11 +210,29 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Get the root entry's ID
+   * Get the first registered root entry's ID
    * @returns {string|null} Root entry ID or null
    */
   getRoot() {
     return this.hierarchyHandler.getRoot();
+  }
+
+  /**
+   * Check whether an entry is a registered root
+   * @param {string} entryId - ID of the entry to check
+   * @returns {boolean} Whether the entry is a registered root
+   */
+  isRoot(entryId) {
+    return this.hierarchyHandler.isRoot(entryId);
+  }
+
+  /**
+   * Find the root entry that an entry belongs to by walking up its parent chain.
+   * @param {string} entryId
+   * @returns {string|null} The owning root entry's ID, or null if not resolvable
+   */
+  getRootOf(entryId) {
+    return this.hierarchyHandler.getRootOf(entryId);
   }
 
   /**
@@ -269,15 +287,14 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Remove an entry from a parent entry
+   * Remove an entry (block, container, or root) and all of its descendants
    * @param {string} entryId - ID of the entry to remove
    * @returns {boolean} Whether the removing was successful
    */
   removeEntry(entryId) {
-    // A parentless entry (e.g. the root) must never be removed
-    const parentId = this.hierarchyHandler.getParent(entryId);
-    if (!parentId) return false;
+    if (!this.isAlive(entryId)) return false;
 
+    const parentId = this.hierarchyHandler.getParent(entryId);
     if (!this.hierarchyHandler.detachFromParent(entryId)) return false;
 
     // If the entry is a container, recursively remove all its descendants
@@ -289,7 +306,7 @@ export default class EntryHandlerFacade {
     this.paramHandler.removeParamDef(entryId);
     this._world.despawn(entryId);
 
-    this.hierarchyHandler.rebuildSequenceNumbers();
+    this.hierarchyHandler.rebuildSequenceNumbers(this.hierarchyHandler.getRootOf(parentId));
     return true;
   }
 
@@ -306,7 +323,7 @@ export default class EntryHandlerFacade {
     this.hierarchyHandler.detachFromParent(entryId);
 
     if (newParentId === null) {
-      this.hierarchyHandler.setRoot(entryId);
+      this.hierarchyHandler.addRoot(entryId);
       return true;
     }
     return this.hierarchyHandler.attachToParent(newParentId, entryId, index);

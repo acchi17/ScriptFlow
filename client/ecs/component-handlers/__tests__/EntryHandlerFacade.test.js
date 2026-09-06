@@ -109,6 +109,79 @@ describe('EntryHandlerFacade.removeEntry', () => {
       expect(entryManager._world.hierarchies.has(id)).toBe(false)
     }
   })
+
+  it('removes a root entry and all its descendants, leaving other roots untouched', () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+    const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+    const blockAId = addAndAttach(entryManager, rootAId, 'block', 'A', 0)
+    const blockB1Id = addAndAttach(entryManager, rootBId, 'block', 'B1', 0)
+    const blockB2Id = addAndAttach(entryManager, rootBId, 'block', 'B2', 1)
+
+    const removed = entryManager.removeEntry(rootAId)
+
+    expect(removed).toBe(true)
+    expect(entryManager.isAlive(rootAId)).toBe(false)
+    expect(entryManager.isAlive(blockAId)).toBe(false)
+    expect(entryManager._world.hierarchies.has(rootAId)).toBe(false)
+    expect(entryManager.isRoot(rootAId)).toBe(false)
+    expect(entryManager.getRootOf(blockAId)).toBe(null)
+
+    expect(entryManager.isAlive(rootBId)).toBe(true)
+    expect(entryManager.isRoot(rootBId)).toBe(true)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockB1Id)).toBe(1)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockB2Id)).toBe(2)
+  })
+
+  it('returns false when the entry id does not exist', () => {
+    const entryManager = new EntryHandlerFacade()
+
+    expect(entryManager.removeEntry('nonexistent-id')).toBe(false)
+  })
+})
+
+describe('EntryHandlerFacade root entries', () => {
+  it('registers a parentless entry as a root', () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
+
+    expect(entryManager.getParent(rootId)).toBe(null)
+    expect(entryManager.isRoot(rootId)).toBe(true)
+  })
+
+  it('supports two independent roots, with getRoot() returning the first one created', () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+    const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+
+    expect(entryManager.isRoot(rootAId)).toBe(true)
+    expect(entryManager.isRoot(rootBId)).toBe(true)
+    expect(entryManager.getRoot()).toBe(rootAId)
+  })
+
+  it('resolves a descendant back to the root it belongs to via getRootOf', () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+    const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+    const blockAId = addAndAttach(entryManager, rootAId, 'block', 'A', 0)
+    const blockBId = addAndAttach(entryManager, rootBId, 'block', 'B', 0)
+
+    expect(entryManager.getRootOf(blockAId)).toBe(rootAId)
+    expect(entryManager.getRootOf(blockBId)).toBe(rootBId)
+  })
+
+  it('numbers each root\'s children independently, starting at 1', () => {
+    const entryManager = new EntryHandlerFacade()
+    const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+    const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+    const blockA1Id = addAndAttach(entryManager, rootAId, 'block', 'A1', 0)
+    const blockA2Id = addAndAttach(entryManager, rootAId, 'block', 'A2', 1)
+    const blockB1Id = addAndAttach(entryManager, rootBId, 'block', 'B1', 0)
+
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockA1Id)).toBe(1)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockA2Id)).toBe(2)
+    expect(entryManager.hierarchyHandler.getSequenceNumber(blockB1Id)).toBe(1)
+  })
 })
 
 describe('EntryHandlerFacade.reorderInParent', () => {
