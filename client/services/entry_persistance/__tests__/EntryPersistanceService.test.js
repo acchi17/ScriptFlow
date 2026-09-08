@@ -54,7 +54,7 @@ describe('EntryPersistanceService round trip', () => {
     )
     expect(connId).toBeTruthy()
 
-    const recipe = ctx.service.buildRecipe('My recipe')
+    const recipe = ctx.service.buildRecipe()
     expect(recipe.formatVersion).toBe(1)
     expect(recipe.root.children).toHaveLength(2)
 
@@ -87,7 +87,7 @@ describe('EntryPersistanceService round trip', () => {
       { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
 
-    const recipe = ctx.service.buildRecipe('My recipe')
+    const recipe = ctx.service.buildRecipe()
 
     // Mirrors what Electron's IPC/contextBridge does internally when saveRecipeAs()
     // sends this object to the main process. Guards against connections becoming

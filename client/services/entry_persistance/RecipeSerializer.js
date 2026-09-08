@@ -12,10 +12,9 @@ export default class RecipeSerializer {
   }
 
   /**
-   * @param {string} name - Recipe display name stored in meta.name
    * @returns {Object} recipe object
    */
-  buildRecipe(name = '') {
+  buildRecipe() {
     const rootId = this.entryManager.getRoot()
     if (!rootId) {
       throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
@@ -24,7 +23,6 @@ export default class RecipeSerializer {
     return {
       formatVersion: FORMAT_VERSION,
       meta: {
-        name,
         savedAt: new Date().toISOString()
       },
       root: this._serialiseEntry(rootId),

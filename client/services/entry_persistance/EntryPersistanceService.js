@@ -23,11 +23,10 @@ export default class EntryPersistanceService {
   }
 
   /**
-   * @param {string} name - Recipe display name stored in meta.name
    * @returns {Object} recipe object
    */
-  buildRecipe(name = '') {
-    return this._serializer.buildRecipe(name)
+  buildRecipe() {
+    return this._serializer.buildRecipe()
   }
 
   /**
@@ -40,11 +39,11 @@ export default class EntryPersistanceService {
 
   /**
    * Build the current recipe and let the user pick where to save it.
-   * @param {string} name - Recipe display name stored in meta.name
+   * @param {string} name - Suggested file name (without extension)
    * @returns {Promise<string|null>} chosen path/name, or null if canceled
    */
   async saveRecipe(name = '') {
-    const data = this.buildRecipe(name)
+    const data = this.buildRecipe()
     return this.platformService.saveRecipeAs(data, `${name || 'recipe'}.json`)
   }
 
