@@ -18,9 +18,9 @@ export default class SocketManager {
    */
   async create(entryId, host, port) {
     await this.release(entryId)
-    const socketId = await window.electronAPI.createSocket(host, port)
-    if (!socketId) return false
-    this._entrySocketMap.set(entryId, { socketId })
+    const created = await window.electronAPI.createSocket(entryId, host, port)
+    if (!created) return false
+    this._entrySocketMap.set(entryId, { socketId: entryId })
     return true
   }
 

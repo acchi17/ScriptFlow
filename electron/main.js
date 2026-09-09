@@ -127,8 +127,8 @@ function registerIpcHandlers() {
     return ensureRunnerHost().executeScript(scriptName, inputParams)
   })
 
-  ipcMain.handle('socket:create', async (_evt, host, port) => {
-    return ensureRunnerHost().createSocket(host, port)
+  ipcMain.handle('socket:create', async (_evt, socketId, host, port) => {
+    return ensureRunnerHost().createSocket(socketId, host, port)
   })
 
   ipcMain.handle('socket:destroy', async (_evt, socketId) => {

@@ -77,12 +77,12 @@ export default class RunnerHost {
     })
   }
 
-  createSocket(host, port) {
+  createSocket(socketId, host, port) {
     const proc = this._ensureProcess()
     const id = ++this._counter
     return new Promise((resolve) => {
       this._pending.set(id, { resolve, reject: resolve })
-      this._post(proc, { type: 'createSocket', id, host, port })
+      this._post(proc, { type: 'createSocket', id, socketId, host, port })
       setTimeout(() => {
         if (this._pending.has(id)) {
           this._pending.get(id).resolve(null)

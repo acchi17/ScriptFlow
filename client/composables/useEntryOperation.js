@@ -11,6 +11,7 @@ const lastReport = ref(null)
 export function useEntryOperation() {
   const entryExecutionService = inject('entryExecutionService')
   const entryPersistanceService = inject('entryPersistanceService')
+  const socketManager = inject('socketManager')
   const { setExecuting, resetState, setError, clearError } = useSystemState()
 
   /**
@@ -61,10 +62,32 @@ export function useEntryOperation() {
     }
   }
 
+  /**
+   * Create and connect a socket for an entry.
+   * @param {string} entryId
+   * @param {string} host
+   * @param {number} port
+   * @returns {Promise<boolean>}
+   */
+  const createSocket = async (entryId, host, port) => {
+    return await socketManager.create(entryId, host, port)
+  }
+
+  /**
+   * Close the socket held by an entry.
+   * @param {string} entryId
+   * @returns {Promise<boolean>}
+   */
+  const releaseSocket = async (entryId) => {
+    return await socketManager.release(entryId)
+  }
+
   return {
     executeEntry,
     lastReport,
     saveRecipe,
-    loadRecipe
+    loadRecipe,
+    createSocket,
+    releaseSocket
   }
 }

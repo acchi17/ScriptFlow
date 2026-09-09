@@ -69,9 +69,9 @@ export default function createApiRouter({ appPaths, runnerHost }) {
   })
 
   router.post('/sockets', async (req, res) => {
-    const { host, port } = req.body || {}
-    const socketId = await runnerHost.createSocket(host, port)
-    res.json({ socketId })
+    const { socketId, host, port } = req.body || {}
+    const created = await runnerHost.createSocket(socketId, host, port)
+    res.json({ created })
   })
 
   router.delete('/sockets/:id', async (req, res) => {

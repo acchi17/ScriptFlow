@@ -199,14 +199,14 @@ describe('EntryHandlerFacade.getHierarchyTick', () => {
     expect(entryManager.getHierarchyTick(rootBId).value).toBe(tickB)
   })
 
-  it("bumps a root's own tick when the root entry itself is removed", () => {
+  it("invalidates a root's own tick when the root entry itself is removed", () => {
     const entryManager = new EntryHandlerFacade()
     const rootId = addAndAttach(entryManager, null, 'container', 'root', 0)
-    const tick = entryManager.getHierarchyTick(rootId).value
+    expect(entryManager.getHierarchyTick(rootId)).toBeDefined()
 
     entryManager.removeEntry(rootId)
 
-    expect(entryManager.getHierarchyTick(rootId).value).toBe(tick + 1)
+    expect(entryManager.getHierarchyTick(rootId)).toBeUndefined()
   })
 })
 

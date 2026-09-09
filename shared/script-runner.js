@@ -1,7 +1,6 @@
 import path from 'node:path'
 import net from 'node:net'
 import { pathToFileURL } from 'node:url'
-import { randomUUID } from 'node:crypto'
 
 const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
 const scriptsDir = process.argv[2] || ''
@@ -39,12 +38,18 @@ async function handleExecute({ id, scriptName, inputParams }) {
   }
 }
 
-function handleCreateSocket({ id, host, port }) {
+function handleCreateSocket({ id, socketId, host, port }) {
   let settled = false
-  const socketId = randomUUID()
+  const existing = sockets.get(socketId)
+  if (existing) {
+    try { existing.destroy() } catch { /* noop */ }
+  }
   const socket = new net.Socket()
   sockets.set(socketId, socket)
-  socket.once('close', () => { sockets.delete(socketId) })
+  const removeIfCurrent = () => {
+    if (sockets.get(socketId) === socket) sockets.delete(socketId)
+  }
+  socket.once('close', removeIfCurrent)
 
   const finish = (result) => {
     if (settled) return
@@ -55,21 +60,21 @@ function handleCreateSocket({ id, host, port }) {
   try {
     const onConnect = () => {
       socket.removeListener('error', onError)
-      finish(socketId)
+      finish(true)
     }
     const onError = () => {
       socket.removeListener('connect', onConnect)
-      sockets.delete(socketId)
+      removeIfCurrent()
       try { socket.destroy() } catch { /* noop */ }
-      finish(null)
+      finish(false)
     }
     socket.once('connect', onConnect)
     socket.once('error', onError)
     socket.connect(port, host)
   } catch {
-    sockets.delete(socketId)
+    removeIfCurrent()
     try { socket.destroy() } catch { /* noop */ }
-    finish(null)
+    finish(false)
   }
 }
 

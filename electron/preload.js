@@ -9,6 +9,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveRecipeAs: (data, suggestedName) => ipcRenderer.invoke('recipe:saveAs', data, suggestedName),
   openRecipe: () => ipcRenderer.invoke('recipe:open'),
   executeScript: (name, inputParams) => ipcRenderer.invoke('script:execute', name, inputParams),
-  createSocket: (host, port) => ipcRenderer.invoke('socket:create', host, port),
+  createSocket: (socketId, host, port) => ipcRenderer.invoke('socket:create', socketId, host, port),
   destroySocket: (socketId) => ipcRenderer.invoke('socket:destroy', socketId)
 })

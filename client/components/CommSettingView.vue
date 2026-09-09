@@ -44,6 +44,7 @@
 
 <script>
 import { ref, inject, onMounted, onBeforeUnmount } from 'vue'
+import { useEntryOperation } from '../composables/useEntryOperation'
 
 export default {
   name: 'CommSettingView',
@@ -54,6 +55,7 @@ export default {
 
   setup(props, { emit }) {
     const socketManager = inject('socketManager')
+    const { createSocket, releaseSocket } = useEntryOperation()
     const useTcpIp = ref(false)
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
@@ -72,9 +74,9 @@ export default {
 
       let connected = null
       if (useTcpIp.value) {
-        connected = await socketManager.create(props.entryId, host, portNum)
+        connected = await createSocket(props.entryId, host, portNum)
       } else {
-        await socketManager.release(props.entryId)
+        await releaseSocket(props.entryId)
       }
       emit('close', connected)
     }
