@@ -7,7 +7,7 @@ startup by the `interpreterName` field in `appdata/settings/AppSettings.json`
 (`"javascript"`, the default, or `"python"`) — never both at once, since the
 interpreter is a single app-wide setting:
 
-- **JavaScript**: `RunnerHost` forks `shared/script-runner.js` and talks to
+- **JavaScript**: `ScriptRunnerHost` forks `shared/script-runner.js` and talks to
   it over Node's native child_process IPC (`postMessage`/`send`, `message`
   event). This is the original mechanism and is unchanged by the addition of
   Python support.
@@ -24,16 +24,16 @@ Express routes) doesn't need to know which one is active.
 
 - **Host process** — either `server/index.js` (Express/Node) or
   `electron/main.js` (Electron main process). Each owns one host (a
-  `RunnerHost` or a `PythonRunnerHost`, chosen once at startup — see
+  `ScriptRunnerHost` or a `PythonRunnerHost`, chosen once at startup — see
   "5. Python execution").
-- **RunnerHost** (`shared/RunnerHost.js`) — shared class that lazily creates
+- **ScriptRunnerHost** (`shared/ScriptRunnerHost.js`) — shared class that lazily creates
   the child process and manages the request/response bookkeeping.
 - **Child process** (`shared/script-runner.js`, bundled as `script-runner.cjs`
   for Electron) — runs user scripts from `<app-dir>/scripts/*.mjs` in
   isolation from the host.
 
 Two different fork mechanisms are used depending on host, but both go through
-the same `RunnerHost` and the same message contract:
+the same `ScriptRunnerHost` and the same message contract:
 
 | Host | Fork call | IPC surface used by child |
 |---|---|---|
@@ -43,22 +43,22 @@ the same `RunnerHost` and the same message contract:
 `script-runner.js` checks `process.parentPort` first and falls back to
 `process.send`, so the same file works under either host.
 
-Sections 1-4 below describe the JavaScript path (`RunnerHost`/`script-runner.js`).
+Sections 1-4 below describe the JavaScript path (`ScriptRunnerHost`/`script-runner.js`).
 See "5. Python execution" for the parallel `PythonRunnerHost`/`script_runner.py` path.
 
 ## 1. Lazy process creation
 
-`RunnerHost` is constructed with a factory function, not a running process:
+`ScriptRunnerHost` is constructed with a factory function, not a running process:
 
 ```js
 // server/index.js
-const runnerHost = new RunnerHost(() => fork(
+const runnerHost = new ScriptRunnerHost(() => fork(
   path.join(ROOT_DIR, 'shared', 'script-runner.js'),
   [appPaths.scriptsDir]
 ))
 ```
 
-No child process exists yet at this point. `RunnerHost._ensureProcess()`
+No child process exists yet at this point. `ScriptRunnerHost._ensureProcess()`
 calls the factory the first time any method (`executeScript`, `createSocket`,
 `destroySocket`) is invoked, and caches the result:
 
@@ -83,7 +83,7 @@ round trip.
 sequenceDiagram
     participant Caller as ScriptExecutionService
     participant Entry as Host process entry point
-    participant RH as RunnerHost
+    participant RH as ScriptRunnerHost
     participant Child as script-runner.js (child process)
 
     Caller->>Entry: request to execute a script
@@ -120,7 +120,7 @@ Key points:
   (exposed via `contextBridge` in `electron/preload.js`), handled by
   `ipcMain.handle('script:execute', ...)` in `electron/main.js`. Both entry
   points do nothing more than forward to `runnerHost.executeScript(...)`.
-- **Correlation by `id`**: every call increments `RunnerHost._counter` and
+- **Correlation by `id`**: every call increments `ScriptRunnerHost._counter` and
   stores `{resolve, reject}` in `_pending` keyed by that id. The child echoes
   the same `id` back in its reply so `_handleMessage` can look up and settle
   the right promise. This lets multiple in-flight requests share one child
@@ -163,7 +163,7 @@ self-clean on `close` and are all destroyed on `shutdown`.
 ```mermaid
 sequenceDiagram
     participant Host as Host process - SIGINT/SIGTERM or app quit
-    participant RH as RunnerHost
+    participant RH as ScriptRunnerHost
     participant Child as script-runner.js
 
     Host->>RH: shutdown()
@@ -175,13 +175,13 @@ sequenceDiagram
     RH->>RH: clear forceKill timer, resolve()
 ```
 
-If the child doesn't exit within 2 seconds of the shutdown message, `RunnerHost`
+If the child doesn't exit within 2 seconds of the shutdown message, `ScriptRunnerHost`
 force-kills it via `proc.kill()`.
 
 ## 5. Python execution
 
 When `appdata/settings/AppSettings.json`'s `script.interpreterName` is `"python"`,
-the host constructs a `PythonRunnerHost` instead of a `RunnerHost`. Both
+the host constructs a `PythonRunnerHost` instead of a `ScriptRunnerHost`. Both
 classes expose the same `executeScript`/`shutdown` shape, so `ipcMain.handle`
 and the Express route are unaware of which one is active — this decision is
 made once, at host startup, by reading `AppSettings.json` directly (there's
@@ -199,7 +199,7 @@ join Node's native IPC channel, the protocol is one JSON object per line
 `PythonRunnerHost._handleChunk()` buffers partial stdout chunks and splits on
 `\n` to reconstruct complete lines before parsing, since `data` events can
 split a line arbitrarily. Correlation by `id`, the 10s execute timeout, and
-the shutdown grace-period/force-kill behavior all mirror `RunnerHost`
+the shutdown grace-period/force-kill behavior all mirror `ScriptRunnerHost`
 exactly. `createSocket`/`destroySocket` are stubbed to resolve `null`/`false`
 on `PythonRunnerHost` — Python scripts don't get the TCP socket passthrough
 feature.
@@ -216,9 +216,9 @@ own stdout/stderr are logged today.
 
 ## Files involved
 
-- [server/index.js](../server/index.js) — Web host, reads `AppSettings.json` and creates either `RunnerHost` (`child_process.fork`) or `PythonRunnerHost` (`child_process.spawn`).
-- [electron/main.js](../electron/main.js) — Electron host and entry point; same choice, using `utilityProcess.fork` for `RunnerHost` and `child_process.spawn` for `PythonRunnerHost`; handles `ipcMain.handle('script:execute', ...)`.
-- [shared/RunnerHost.js](../shared/RunnerHost.js) — JavaScript-child request/response bookkeeping, timeouts, shutdown.
+- [server/index.js](../server/index.js) — Web host, reads `AppSettings.json` and creates either `ScriptRunnerHost` (`child_process.fork`) or `PythonRunnerHost` (`child_process.spawn`).
+- [electron/main.js](../electron/main.js) — Electron host and entry point; same choice, using `utilityProcess.fork` for `ScriptRunnerHost` and `child_process.spawn` for `PythonRunnerHost`; handles `ipcMain.handle('script:execute', ...)`.
+- [shared/ScriptRunnerHost.js](../shared/ScriptRunnerHost.js) — JavaScript-child request/response bookkeeping, timeouts, shutdown.
 - [shared/PythonRunnerHost.js](../shared/PythonRunnerHost.js) — Python-worker NDJSON request/response bookkeeping, timeouts, shutdown.
 - [shared/script-runner.js](../shared/script-runner.js) — JS child process entry point, message dispatch, script loading. Unaffected by Python support.
 - [appdata/script_runner.py](../appdata/script_runner.py) — Python worker entry point, NDJSON request loop, script loading.

@@ -3,7 +3,7 @@ import { SCRIPT_NAME_PATTERN } from './appDataPaths.js'
 /**
  * Manages a single spawned Python worker process (appdata/script_runner.py)
  * and the request/response bookkeeping (pending promises, timeouts) around
- * its message protocol. Structurally mirrors RunnerHost (same
+ * its message protocol. Structurally mirrors ScriptRunnerHost (same
  * executeScript/shutdown shape), but the Python worker is a plain
  * child_process.spawn'd process that can't join Node's native
  * child_process IPC channel, so it speaks newline-delimited JSON (NDJSON)
@@ -104,7 +104,7 @@ export default class PythonRunnerHost {
 
   /**
    * Python scripts don't get TCP socket passthrough (JS-only feature).
-   * Stubbed the same "never reject" way RunnerHost's own createSocket does,
+   * Stubbed the same "never reject" way ScriptRunnerHost's own createSocket does,
    * so socket:create/socket:destroy IPC handlers stay safe regardless of
    * which interpreter is active.
    */

@@ -11,7 +11,7 @@ import { DEFS_FILENAME, SCRIPT_NAME_PATTERN } from '../shared/appDataPaths.js'
  *
  * @param {Object} deps
  * @param {ReturnType<import('../shared/appDataPaths.js').createAppDataPaths>} deps.appPaths
- * @param {import('../shared/RunnerHost.js').default} deps.runnerHost
+ * @param {import('../shared/ScriptRunnerHost.js').default} deps.runnerHost
  */
 export default function createApiRouter({ appPaths, runnerHost }) {
   const router = express.Router()

@@ -1,6 +1,6 @@
 """
 Python-side mirror of shared/script-runner.js: a persistent worker process
-managed by RunnerHost's Python channel. Unlike the JS child (which talks to
+managed by ScriptRunnerHost's Python channel. Unlike the JS child (which talks to
 its parent over Node's native IPC), this process is a plain subprocess, so
 the protocol is one JSON object per line (NDJSON) over stdin/stdout:
 
@@ -43,7 +43,7 @@ def _handle_execute(msg, scripts_dir, real_stdout):
 
     # Redirect stdout for the duration of user code so a stray print() can't
     # corrupt the one-JSON-line-per-response protocol; it still reaches the
-    # host process via stderr (see RunnerHost's '[python-runner]' logging).
+    # host process via stderr (see ScriptRunnerHost's '[python-runner]' logging).
     sys.stdout = sys.stderr
     try:
         result = _load_and_call(script_path, input_params)

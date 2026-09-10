@@ -2,7 +2,7 @@
 // them directly into this bundle, so no separate Forge build entry (and no
 // runtime file lookup) is needed for them.
 import { createAppDataPaths, readAppSettings, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
-import RunnerHost from '../shared/RunnerHost.js'
+import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
 import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 
 const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
@@ -56,7 +56,7 @@ function ensureRunnerHost() {
   // is the right anchor in either mode.
   const runnerPath = path.join(__dirname, 'script-runner.cjs')
 
-  runnerHost = new RunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
+  runnerHost = new ScriptRunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
     serviceName: 'scriptflow-runner',
     stdio: 'pipe'
   }))

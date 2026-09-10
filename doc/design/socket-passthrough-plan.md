@@ -4,7 +4,7 @@
 
 ## Context
 
-ScriptFlow already lets a user attach a TCP/IP socket to a Block entry via `CommSettingView.vue` → `SocketManager.create()`, which round-trips through `window.electronAPI.createSocket()` → `RunnerHost.createSocket()` → `shared/script-runner.js`'s `handleCreateSocket`, which opens a real `net.Socket` and hands back an opaque `socketId`. `destroySocket` mirrors this. This plumbing is JS-only and, critically, dead-ends: **the created socket is never actually given to the script that runs for that entry.** `inputParams` passed to `execute()` never carries a socket reference, on either the JS or Python runner.
+ScriptFlow already lets a user attach a TCP/IP socket to a Block entry via `CommSettingView.vue` → `SocketManager.create()`, which round-trips through `window.electronAPI.createSocket()` → `ScriptRunnerHost.createSocket()` → `shared/script-runner.js`'s `handleCreateSocket`, which opens a real `net.Socket` and hands back an opaque `socketId`. `destroySocket` mirrors this. This plumbing is JS-only and, critically, dead-ends: **the created socket is never actually given to the script that runs for that entry.** `inputParams` passed to `execute()` never carries a socket reference, on either the JS or Python runner.
 
 Goal: when a Block entry has an associated (connected) socket, its script's `execute` function should receive that socket as a live object it can read/write directly — on both the JavaScript runner (`shared/script-runner.js`) and the Python runner (`appdata/script_runner.py`), which currently has no socket support whatsoever (`PythonRunnerHost.createSocket/destroySocket` are hardcoded stubs returning `null`/`false`).
 
@@ -19,7 +19,7 @@ sequenceDiagram
     participant EES as EntryExecutionService
     participant SES as ScriptExecutionService
     participant IPC as electron/main.js or server/api.js
-    participant Host as RunnerHost / PythonRunnerHost
+    participant Host as ScriptRunnerHost / PythonRunnerHost
     participant Runner as script-runner.js / script_runner.py
 
     UI->>SM: create(entryId, host, port)
@@ -39,7 +39,7 @@ sequenceDiagram
     Runner-->>Host: {type:'result', result}
 ```
 
-Python gets the same `createSocket`/`destroySocket` message handling added to `appdata/script_runner.py` (new `sockets` dict keyed by a generated id, using the stdlib `socket` module, blocking `connect`/`settimeout` — consistent with the worker's existing single-threaded, one-message-at-a-time model used for `execute`). `PythonRunnerHost` stops stubbing and does a real NDJSON round trip identical in shape to `RunnerHost`.
+Python gets the same `createSocket`/`destroySocket` message handling added to `appdata/script_runner.py` (new `sockets` dict keyed by a generated id, using the stdlib `socket` module, blocking `connect`/`settimeout` — consistent with the worker's existing single-threaded, one-message-at-a-time model used for `execute`). `PythonRunnerHost` stops stubbing and does a real NDJSON round trip identical in shape to `ScriptRunnerHost`.
 
 ## Files to change
 
@@ -48,8 +48,8 @@ Python gets the same `createSocket`/`destroySocket` message handling added to `a
 - `appdata/script_runner.py` — add `sockets = {}` dict + `uuid`/`socket` imports; add `_handle_create_socket`/`_handle_destroy_socket` (mirroring the JS handlers: create+connect, store, self-contained try/except → `result: None` on failure; destroy → pop+close, always `result: True`); dispatch `createSocket`/`destroySocket` message types in `main()`; on `shutdown`, close all sockets before exiting; `_handle_execute` resolves `sockets.get(socket_id)` and calls `execute(input_params, sock)`.
 
 **Host classes (thread `socketId` through `executeScript`, add real Python support):**
-- `shared/RunnerHost.js` — `executeScript(scriptName, inputParams, socketId = null)` includes `socketId` in the posted `execute` message.
-- `shared/PythonRunnerHost.js` — same `executeScript` signature change; replace the stubbed `createSocket()`/`destroySocket()` with real implementations posting `createSocket`/`destroySocket` NDJSON messages and awaiting the response (same pattern as `RunnerHost`, "never rejects" semantics preserved).
+- `shared/ScriptRunnerHost.js` — `executeScript(scriptName, inputParams, socketId = null)` includes `socketId` in the posted `execute` message.
+- `shared/PythonRunnerHost.js` — same `executeScript` signature change; replace the stubbed `createSocket()`/`destroySocket()` with real implementations posting `createSocket`/`destroySocket` NDJSON messages and awaiting the response (same pattern as `ScriptRunnerHost`, "never rejects" semantics preserved).
 
 **IPC/HTTP boundary:**
 - `electron/preload.js` — `executeScript: (name, inputParams, socketId) => ipcRenderer.invoke('script:execute', name, inputParams, socketId)`.
@@ -64,7 +64,7 @@ Python gets the same `createSocket`/`destroySocket` message handling added to `a
 
 ## Verification
 
-- `npm test` — existing unit tests for `RunnerHost`/`PythonRunnerHost`/`EntryExecutionService`/`SocketManager` (check `__tests__/` dirs alongside each) should still pass; add/extend cases covering `socketId` threading through `executeScript` and the runner resolving it to a live socket.
+- `npm test` — existing unit tests for `ScriptRunnerHost`/`PythonRunnerHost`/`EntryExecutionService`/`SocketManager` (check `__tests__/` dirs alongside each) should still pass; add/extend cases covering `socketId` threading through `executeScript` and the runner resolving it to a live socket.
 - `npm run electron:start` — manually verify end-to-end: open a Block's Communication Setting, enable "Use TCP/IP com.", point it at a small local TCP echo listener, run the block with a script whose `execute(inputParams, socket)` writes/reads on `socket`, confirm it round-trips; also verify a script on a Block with no socket configured still runs fine with `socket === null`.
 - Repeat the same end-to-end check with `appSettings.script.interpreterName` set to `"python"` (Python script using `sock.sendall`/`recv`) against the same local listener.
 - `npm run lint`.

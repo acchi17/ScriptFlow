@@ -10,7 +10,7 @@ import { SCRIPT_NAME_PATTERN } from './appDataPaths.js'
  * @param {() => import('node:child_process').ChildProcess} forkFn Creates and
  *   returns the forked child process on first use.
  */
-export default class RunnerHost {
+export default class ScriptRunnerHost {
   constructor(forkFn) {
     this._forkFn = forkFn
     this._process = null

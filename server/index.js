@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import express from 'express'
 import open from 'open'
 import { createAppDataPaths, readAppSettings } from '../shared/appDataPaths.js'
-import RunnerHost from '../shared/RunnerHost.js'
+import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
 import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 import createApiRouter from './api.js'
 
@@ -25,7 +25,7 @@ const runnerHost = appSettings.script.interpreterName === 'python'
     appSettings.script.interpreterPath,
     [path.join(APPDATA_DIR, 'script_runner.py'), appPaths.scriptsDir]
   ))
-  : new RunnerHost(() => fork(
+  : new ScriptRunnerHost(() => fork(
     path.join(ROOT_DIR, 'shared', 'script-runner.js'),
     [appPaths.scriptsDir]
   ))
