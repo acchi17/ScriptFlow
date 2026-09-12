@@ -44,8 +44,10 @@ Always use `graph TD` (top-down) or `graph LR` (left-right) syntax.
 
 ## Important Patterns
 
-### When Modifying Entry Structure
-Always use EntryHandlerFacade methods, he facade maintains internal maps that must stay synchronized.
+### Naming Conventions (JavaScript / TypeScript)
+- Class names: PascalCase
+- Function names: camelCase
+- File name should match the type (class or function) of its main export
 
 ### Default Bundling
 - `appdata/scripts/` and `appdata/settings/BlockDefinitions.json` are the single source of truth.
