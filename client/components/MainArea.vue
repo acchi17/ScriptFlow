@@ -6,7 +6,7 @@
           <span class="tab-label">Recipe</span>
         </div>
       </div>
-      <RecipeItem class="tab-content" />
+      <RecipeItem class="tab-content" :entry-id="rootEntryId" />
       <div v-show="showLog" class="log-popup">
         <ExecutionLogView />
       </div>
@@ -15,6 +15,7 @@
 </template>
 
 <script>
+import { inject } from 'vue'
 import RecipeItem from './RecipeItem.vue'
 import ExecutionLogView from './ExecutionLogView.vue'
 import { useSystemState } from '../composables/useSystemState'
@@ -26,8 +27,14 @@ export default {
     ExecutionLogView
   },
   setup() {
+    const entryManager = inject('entryManager')
     const { isExecuting, showLog } = useSystemState()
-    return { isExecuting, showLog }
+
+    const rootEntryId = entryManager.addEntry('container', 'root-container')
+    entryManager.moveEntry(rootEntryId, null, 0)
+    entryManager.setComm(rootEntryId, false, '127.0.0.1', 8080)
+
+    return { isExecuting, showLog, rootEntryId }
   }
 }
 </script>

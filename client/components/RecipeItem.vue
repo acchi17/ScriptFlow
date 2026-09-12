@@ -28,7 +28,7 @@
         <div class="entry-panel" ref="entryPanelRef">
           <div class="main-container">
             <ContainerChildren
-              :entry-id="rootContainerId"
+              :entry-id="entryId"
             />
             <div class="bottom-spacer" />
           </div>
@@ -40,7 +40,7 @@
     </div>
     <CommSettingView
       v-if="showCommSetting"
-      :entryId="rootContainerId"
+      :entryId="entryId"
       @close="onCommSettingClose"
     />
   </div>
@@ -63,20 +63,21 @@ export default {
     CommSettingView,
   },
 
-  setup() {
+  props: {
+    entryId: { type: String, required: true }
+  },
+
+  setup(props) {
     const entryManager = inject('entryManager')
     const { executeEntry } = useEntryOperation()
     const { isExecuting, cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
-
-    const rootContainerId = entryManager.addEntry('container', 'root-container')
-    entryManager.moveEntry(rootContainerId, null, 0)
 
     const clearRecipe = () => {
       entryManager.clearEntries()
     }
 
     const executeRecipe = () => {
-      executeEntry(rootContainerId)
+      executeEntry(props.entryId)
     }
 
     const showCommSetting = ref(false)
@@ -116,7 +117,7 @@ export default {
       }
     }
 
-    watch(() => entryManager.getHierarchyTick(rootContainerId).value, () => {
+    watch(() => entryManager.getHierarchyTick(props.entryId).value, () => {
       cancelConnection()
       const id = getSelectedEntryId.value
       if (id && !entryManager.isAlive(id)) {
@@ -131,7 +132,6 @@ export default {
     })
 
     return {
-      rootContainerId,
       executeRecipe,
       clearRecipe,
       openComSetting,
