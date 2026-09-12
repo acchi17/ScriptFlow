@@ -26,6 +26,8 @@ export default class EntryHandlerFacade {
     this.connectionHandler = new EntryConnectionHandler(world);
     // Component store holding measured layout (position/height) of entries
     this._layouts = world.getStore('layouts');
+    // Component store holding TCP/IP communication settings of entries
+    this._comms = world.getStore('comms');
     // Reactive counter incremented on every layout change (set/clear).
     // ComponentStore wraps a plain Map, so Vue can't auto-track reads through it -
     // consumers must read this tick inside a computed() before calling a getter below.
@@ -169,6 +171,28 @@ export default class EntryHandlerFacade {
   clearLayouts() {
     this._layouts.clear();
     this._layoutsTick.value++;
+  }
+  // #endregion
+
+  // #region Entry comm related
+  /**
+   * Get the TCP/IP communication setting of an entry
+   * @param {string} entryId - ID of the entry
+   * @returns {{useTcpIp: boolean, host: string, port: number}|undefined} Communication setting, or undefined
+   */
+  getComm(entryId) {
+    return this._comms.get(entryId);
+  }
+  
+  /**
+   * Set the TCP/IP communication setting of an entry
+   * @param {string} entryId - ID of the entry
+   * @param {boolean} useTcpIp - Whether TCP/IP communication is enabled
+   * @param {string} host - Host address
+   * @param {number} port - Port number
+   */
+  setComm(entryId, useTcpIp, host, port) {
+    this._comms.add(entryId, { useTcpIp, host, port });
   }
   // #endregion
 

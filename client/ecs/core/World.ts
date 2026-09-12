@@ -7,8 +7,9 @@ import type { EntryParamComponent } from '../components/EntryParamComponent';
 import type { EntryConnectionComponent } from '../components/EntryConnectionComponent';
 import type { EntryLayoutComponent } from '../components/EntryLayoutComponent';
 import type { EntryOrderComponent } from '../components/EntryOrderComponent';
+import type { EntryCommComponent } from '../components/EntryCommComponent';
 
-type StoreName = 'entryInfos' | 'hierarchies' | 'inputParams' | 'outputParams' | 'connections' | 'layouts' | 'orders';
+type StoreName = 'entryInfos' | 'hierarchies' | 'inputParams' | 'outputParams' | 'connections' | 'layouts' | 'orders' | 'comms';
 
 export class World {
   readonly entryInfos = new ComponentStore<EntryInfoComponent>();
@@ -18,6 +19,7 @@ export class World {
   readonly connections = new ComponentStore<EntryConnectionComponent>();
   readonly layouts = new ComponentStore<EntryLayoutComponent>();
   readonly orders = new ComponentStore<EntryOrderComponent>();
+  readonly comms = new ComponentStore<EntryCommComponent>();
   private readonly _liveIds = new Set<EntityId>();
 
   getStore<K extends StoreName>(key: K): World[K] {
@@ -39,6 +41,7 @@ export class World {
     this.connections.remove(id);
     this.layouts.remove(id);
     this.orders.remove(id);
+    this.comms.remove(id);
   }
 
   isAlive(id: EntityId): boolean {

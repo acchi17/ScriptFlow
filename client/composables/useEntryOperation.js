@@ -29,6 +29,26 @@ export function useEntryOperation() {
     }
   }
 
+  /**
+   * Create and connect a socket for an entry.
+   * @param {string} entryId
+   * @param {string} host
+   * @param {number} port
+   * @returns {Promise<boolean>}
+   */
+  const createSocket = async (entryId, host, port) => {
+    return await entryExecutionService.createComm(entryId, host, port)
+  }
+
+  /**
+   * Close the socket held by an entry.
+   * @param {string} entryId
+   * @returns {Promise<boolean>}
+   */
+  const releaseSocket = async (entryId) => {
+    return await entryExecutionService.deleteComm(entryId)
+  }
+
   const saveRecipe = async (name) => {
     setExecuting(true)
     clearError()
@@ -59,26 +79,6 @@ export function useEntryOperation() {
     } finally {
       setExecuting(false)
     }
-  }
-
-  /**
-   * Create and connect a socket for an entry.
-   * @param {string} entryId
-   * @param {string} host
-   * @param {number} port
-   * @returns {Promise<boolean>}
-   */
-  const createSocket = async (entryId, host, port) => {
-    return await entryExecutionService.createComm(entryId, host, port)
-  }
-
-  /**
-   * Close the socket held by an entry.
-   * @param {string} entryId
-   * @returns {Promise<boolean>}
-   */
-  const releaseSocket = async (entryId) => {
-    return await entryExecutionService.deleteComm(entryId)
   }
 
   return {
