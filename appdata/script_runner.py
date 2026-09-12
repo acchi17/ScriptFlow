@@ -4,7 +4,9 @@ managed by ScriptRunnerHost's Python channel. Unlike the JS child (which talks t
 its parent over Node's native IPC), this process is a plain subprocess, so
 the protocol is one JSON object per line (NDJSON) over stdin/stdout:
 
-  in:  {"type": "execute", "id": <int>, "scriptName": <str>, "inputParams": {...}}
+  in:  {"type": "execute", "id": <int>, "scriptName": <str>, "inputParams": {...}, "socketId": <str|None>}
+       {"type": "createSocket", "id": <int>, "socketId": <str>, "host": <str>, "port": <int>}
+       {"type": "destroySocket", "id": <int>, "socketId": <str>}
   out: {"type": "result", "id": <int>, "result": {...}}
        {"type": "error", "id": <int>, "errmsg": <str>}
 
@@ -13,12 +15,55 @@ argv[1] is the scripts directory (mirrors script-runner.js's argv[2]).
 import sys
 import json
 import os
+import socket
 import importlib.util
 import asyncio
 import inspect
 
+from socket_comm import SocketComm
 
-def _load_and_call(script_path, input_params):
+# socketId (str) -> socket.socket. Sockets are created here on request and
+# kept alive for later use by scripts.
+sockets = {}
+
+
+def _handle_create_socket(msg):
+    socket_id = msg.get('socketId')
+    existing = sockets.pop(socket_id, None)
+    if existing is not None:
+        try:
+            existing.close()
+        except OSError:
+            pass
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(10)
+    try:
+        sock.connect((msg.get('host'), msg.get('port')))
+        sockets[socket_id] = sock
+        result = True
+    except OSError:
+        try:
+            sock.close()
+        except OSError:
+            pass
+        result = None
+
+    return {'type': 'result', 'id': msg.get('id'), 'result': result}
+
+
+def _handle_destroy_socket(msg):
+    socket_id = msg.get('socketId')
+    sock = sockets.pop(socket_id, None)
+    if sock is not None:
+        try:
+            sock.close()
+        except OSError:
+            pass
+    return {'type': 'result', 'id': msg.get('id'), 'result': True}
+
+
+def _load_and_call(script_path, input_params, socket_comm):
     if not os.path.isfile(script_path):
         raise FileNotFoundError(f'Python script not found: {script_path}')
 
@@ -30,7 +75,12 @@ def _load_and_call(script_path, input_params):
     if not callable(execute):
         raise AttributeError(f'Script "{script_path}" does not define an execute function')
 
-    result = execute(input_params)
+    # Existing scripts only declare execute(input_params); only pass socket_comm
+    # to scripts that actually accept a second argument.
+    if len(inspect.signature(execute).parameters) >= 2:
+        result = execute(input_params, socket_comm)
+    else:
+        result = execute(input_params)
     if inspect.iscoroutine(result):
         result = asyncio.run(result)
     return result or {}
@@ -40,13 +90,15 @@ def _handle_execute(msg, scripts_dir, real_stdout):
     script_name = msg.get('scriptName')
     input_params = msg.get('inputParams') or {}
     script_path = os.path.join(scripts_dir, f'{script_name}.py')
+    sock = sockets.get(msg.get('socketId'))
+    socket_comm = SocketComm(sock) if sock is not None else None
 
     # Redirect stdout for the duration of user code so a stray print() can't
     # corrupt the one-JSON-line-per-response protocol; it still reaches the
     # host process via stderr (see ScriptRunnerHost's '[python-runner]' logging).
     sys.stdout = sys.stderr
     try:
-        result = _load_and_call(script_path, input_params)
+        result = _load_and_call(script_path, input_params, socket_comm)
         response = {'type': 'result', 'id': msg.get('id'), 'result': result}
     except Exception as error:
         response = {'type': 'error', 'id': msg.get('id'), 'errmsg': str(error)}
@@ -71,9 +123,18 @@ def main():
 
         msg_type = msg.get('type')
         if msg_type == 'shutdown':
+            for sock in sockets.values():
+                try:
+                    sock.close()
+                except OSError:
+                    pass
             break
         if msg_type == 'execute':
             _handle_execute(msg, scripts_dir, real_stdout)
+        elif msg_type == 'createSocket':
+            print(json.dumps(_handle_create_socket(msg)), flush=True)
+        elif msg_type == 'destroySocket':
+            print(json.dumps(_handle_destroy_socket(msg)), flush=True)
 
 
 if __name__ == '__main__':

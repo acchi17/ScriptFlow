@@ -1,6 +1,7 @@
 import path from 'node:path'
 import net from 'node:net'
 import { pathToFileURL } from 'node:url'
+import SocketComm from './SocketComm.js'
 
 const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
 const scriptsDir = process.argv[2] || ''
@@ -20,7 +21,7 @@ function send(message) {
   }
 }
 
-async function handleExecute({ id, scriptName, inputParams }) {
+async function handleExecute({ id, scriptName, inputParams, socketId }) {
   try {
     if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
       throw new Error(`Invalid script name: ${scriptName}`)
@@ -31,7 +32,9 @@ async function handleExecute({ id, scriptName, inputParams }) {
     if (typeof mod.execute !== 'function') {
       throw new Error(`Script "${scriptName}" does not export an execute function`)
     }
-    const result = await mod.execute(inputParams)
+    const socket = socketId ? sockets.get(socketId) : null
+    const socketComm = socket ? new SocketComm(socket) : null
+    const result = await mod.execute(inputParams, socketComm)
     send({ type: 'result', id, result })
   } catch (error) {
     send({ type: 'error', id, errmsg: error.message })
