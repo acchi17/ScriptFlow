@@ -11,7 +11,6 @@ const lastReport = ref(null)
 export function useEntryOperation() {
   const entryExecutionService = inject('entryExecutionService')
   const entryPersistanceService = inject('entryPersistanceService')
-  const socketManager = inject('socketManager')
   const { setExecuting, resetState, setError, clearError } = useSystemState()
 
   /**
@@ -70,7 +69,7 @@ export function useEntryOperation() {
    * @returns {Promise<boolean>}
    */
   const createSocket = async (entryId, host, port) => {
-    return await socketManager.create(entryId, host, port)
+    return await entryExecutionService.createComm(entryId, host, port)
   }
 
   /**
@@ -79,7 +78,7 @@ export function useEntryOperation() {
    * @returns {Promise<boolean>}
    */
   const releaseSocket = async (entryId) => {
-    return await socketManager.release(entryId)
+    return await entryExecutionService.deleteComm(entryId)
   }
 
   return {

@@ -27,42 +27,6 @@ from socket_comm import SocketComm
 sockets = {}
 
 
-def _handle_create_socket(msg):
-    socket_id = msg.get('socketId')
-    existing = sockets.pop(socket_id, None)
-    if existing is not None:
-        try:
-            existing.close()
-        except OSError:
-            pass
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(10)
-    try:
-        sock.connect((msg.get('host'), msg.get('port')))
-        sockets[socket_id] = sock
-        result = True
-    except OSError:
-        try:
-            sock.close()
-        except OSError:
-            pass
-        result = None
-
-    return {'type': 'result', 'id': msg.get('id'), 'result': result}
-
-
-def _handle_destroy_socket(msg):
-    socket_id = msg.get('socketId')
-    sock = sockets.pop(socket_id, None)
-    if sock is not None:
-        try:
-            sock.close()
-        except OSError:
-            pass
-    return {'type': 'result', 'id': msg.get('id'), 'result': True}
-
-
 def _load_and_call(script_path, input_params, socket_comm):
     if not os.path.isfile(script_path):
         raise FileNotFoundError(f'Python script not found: {script_path}')
@@ -106,6 +70,42 @@ def _handle_execute(msg, scripts_dir, real_stdout):
         sys.stdout = real_stdout
 
     print(json.dumps(response), flush=True)
+
+
+def _handle_create_socket(msg):
+    socket_id = msg.get('socketId')
+    existing = sockets.pop(socket_id, None)
+    if existing is not None:
+        try:
+            existing.close()
+        except OSError:
+            pass
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(10)
+    try:
+        sock.connect((msg.get('host'), msg.get('port')))
+        sockets[socket_id] = sock
+        result = True
+    except OSError:
+        try:
+            sock.close()
+        except OSError:
+            pass
+        result = None
+
+    return {'type': 'result', 'id': msg.get('id'), 'result': result}
+
+
+def _handle_destroy_socket(msg):
+    socket_id = msg.get('socketId')
+    sock = sockets.pop(socket_id, None)
+    if sock is not None:
+        try:
+            sock.close()
+        except OSError:
+            pass
+    return {'type': 'result', 'id': msg.get('id'), 'result': True}
 
 
 def main():

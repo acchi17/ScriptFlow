@@ -16,10 +16,14 @@ export default class EntryExecutionService {
     this.entryManager = entryManager;
     this.executionLogService = executionLogService;
     this._executionStack = []; // Stack to track currently executing entries
-    
+
     // Centralized management of execution IDs
     this._sessionId = `session_${Date.now()}`;
     this._executionSequence = 0;
+
+    // Per-entry socket lifecycle and communication settings
+    this._entrySocketMap = new Map(); // entryId -> { socketId }
+    this._entrySettingMap = new Map(); // entryId -> { useTcpIp, host, port }
   }
 
   /**
@@ -167,10 +171,67 @@ export default class EntryExecutionService {
    * Terminate the service
    * Performs cleanup operations for ScriptExecutionService
    */
-  terminate() {   
+  terminate() {
     if (this.scriptExecutionService) {
       this.scriptExecutionService.terminate();
     }
     this._executionStack = [];
+  }
+
+  /**
+   * Ask script-runner to create and connect a socket for an entry.
+   * Destroys any existing socket for the entry before creating a new one.
+   * Returns false if the connection fails.
+   *
+   * @param {string} entryId
+   * @param {string} host
+   * @param {number} port
+   * @returns {Promise<boolean>}
+   */
+  async createComm(entryId, host, port) {
+    await this.deleteComm(entryId);
+    const created = await this.scriptExecutionService.createSocket(entryId, host, port);
+    if (!created) return false;
+    this._entrySocketMap.set(entryId, { socketId: entryId });
+    return true;
+  }
+
+  /**
+   * Ask script-runner to close the socket held by an entry.
+   *
+   * @param {string} entryId
+   * @returns {Promise<boolean>} true if a socket was released
+   */
+  async deleteComm(entryId) {
+    const record = this._entrySocketMap.get(entryId);
+    if (!record) return false;
+    this._entrySocketMap.delete(entryId);
+    await this.scriptExecutionService.destroySocket(record.socketId);
+    return true;
+  }
+
+  /**
+   * Persist the user's intended communication settings for an entry.
+   * Called before any connection attempt so settings survive failure.
+   *
+   * @param {string}  entryId
+   * @param {boolean} useTcpIp
+   * @param {string}  host
+   * @param {number}  port
+   */
+  saveSetting(entryId, useTcpIp, host, port) {
+    this._entrySettingMap.set(entryId, { useTcpIp, host, port });
+  }
+
+  /**
+   * Return the stored communication settings for an entry, or null if none.
+   *
+   * @param {string} entryId
+   * @returns {{ useTcpIp: boolean, host: string, port: number }|null}
+   */
+  getCommSetting(entryId) {
+    const record = this._entrySettingMap.get(entryId);
+    if (!record) return null;
+    return { useTcpIp: record.useTcpIp, host: record.host, port: record.port };
   }
 }

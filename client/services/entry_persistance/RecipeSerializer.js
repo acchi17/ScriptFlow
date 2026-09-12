@@ -6,9 +6,9 @@ import { FORMAT_VERSION } from './recipeFormat'
  * Stateless facade — all collaborators are injected.
  */
 export default class RecipeSerializer {
-  constructor(entryManager, socketManager) {
+  constructor(entryManager, entryExecutionService) {
     this.entryManager = entryManager
-    this.socketManager = socketManager
+    this.entryExecutionService = entryExecutionService
   }
 
   /**
@@ -55,7 +55,7 @@ export default class RecipeSerializer {
         .map(childId => this._serialiseEntry(childId))
     }
 
-    const comm = this.socketManager.getCommSetting(entryId)
+    const comm = this.entryExecutionService.getCommSetting(entryId)
     if (comm) {
       node.comm = comm
     }

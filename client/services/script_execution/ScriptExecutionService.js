@@ -45,6 +45,40 @@ export default class ScriptExecutionService {
   }
 
   /**
+   * Ask the host process to create and connect a socket.
+   * @param {string} socketId
+   * @param {string} host
+   * @param {number} port
+   * @returns {Promise<boolean>}
+   */
+  async createSocket(socketId, host, port) {
+    if (this.isElectron) {
+      return await window.electronAPI.createSocket(socketId, host, port);
+    }
+    const response = await fetch('/api/sockets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ socketId, host, port })
+    });
+    const { created } = await response.json();
+    return created;
+  }
+
+  /**
+   * Ask the host process to close a socket.
+   * @param {string} socketId
+   * @returns {Promise<boolean>}
+   */
+  async destroySocket(socketId) {
+    if (this.isElectron) {
+      return await window.electronAPI.destroySocket(socketId);
+    }
+    const response = await fetch(`/api/sockets/${encodeURIComponent(socketId)}`, { method: 'DELETE' });
+    const { destroyed } = await response.json();
+    return destroyed;
+  }
+
+  /**
    * Service termination process
    */
   terminate() {

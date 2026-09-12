@@ -8,9 +8,9 @@ import { FORMAT_VERSION } from './recipeFormat'
  */
 export default class RecipeDeserializer {
   constructor(entryManager,
-    socketManager, entryDefinitionService) {
+    entryExecutionService, entryDefinitionService) {
     this.entryManager = entryManager
-    this.socketManager = socketManager
+    this.entryExecutionService = entryExecutionService
     this.entryDefinitionService = entryDefinitionService
   }
 
@@ -45,7 +45,7 @@ export default class RecipeDeserializer {
     }
 
     this.entryManager.clearEntries()
-    await this.socketManager.release(rootId)
+    await this.entryExecutionService.deleteComm(rootId)
 
     const idMap = new Map([[recipe.root.id, rootId]])
     this.entryManager.setEntryName(rootId, recipe.root.name)
@@ -195,9 +195,9 @@ export default class RecipeDeserializer {
     if (node.comm) {
       const liveId = idMap.get(node.id) ?? node.id
       const { useTcpIp, host, port } = node.comm
-      this.socketManager.saveSetting(liveId, useTcpIp, host, port)
+      this.entryExecutionService.saveSetting(liveId, useTcpIp, host, port)
       if (useTcpIp) {
-        await this.socketManager.create(liveId, host, port)
+        await this.entryExecutionService.createComm(liveId, host, port)
       }
     }
 

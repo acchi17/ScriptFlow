@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
-import SocketManager from '@/managers/SocketManager.js'
+import EntryExecutionService from '@/services/entry_execution/EntryExecutionService.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
 import EntryPersistanceService from '@/services/entry_persistance/EntryPersistanceService.js'
 import blockDefinitionsRaw from '../../../../appdata/settings/BlockDefinitions.json'
@@ -12,13 +12,13 @@ async function createContext() {
   await entryDefinitionService.loadBlockDefinitions()
 
   const entryManager = new EntryHandlerFacade(undefined, entryDefinitionService)
-  const socketManager = new SocketManager()
+  const entryExecutionService = new EntryExecutionService(entryManager)
 
   const platformService = { openRecipe: async () => null, saveRecipeAs: async () => null }
 
   const service = new EntryPersistanceService(
     platformService, entryManager,
-    socketManager, entryDefinitionService
+    entryExecutionService, entryDefinitionService
   )
 
   const rootId = entryManager.addEntry('container', 'root-container')
@@ -26,7 +26,7 @@ async function createContext() {
 
   return {
     entryManager,
-    socketManager, entryDefinitionService, service, rootId
+    entryExecutionService, entryDefinitionService, service, rootId
   }
 }
 
