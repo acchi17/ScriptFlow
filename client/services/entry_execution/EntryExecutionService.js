@@ -21,9 +21,8 @@ export default class EntryExecutionService {
     this._sessionId = `session_${Date.now()}`;
     this._executionSequence = 0;
 
-    // Per-entry socket lifecycle and communication settings
+    // Per-entry socket lifecycle
     this._entrySocketMap = new Map(); // entryId -> { socketId }
-    this._entrySettingMap = new Map(); // entryId -> { useTcpIp, host, port }
   }
 
   /**
@@ -208,30 +207,5 @@ export default class EntryExecutionService {
     this._entrySocketMap.delete(entryId);
     await this.scriptExecutionService.destroySocket(record.socketId);
     return true;
-  }
-
-  /**
-   * Persist the user's intended communication settings for an entry.
-   * Called before any connection attempt so settings survive failure.
-   *
-   * @param {string}  entryId
-   * @param {boolean} useTcpIp
-   * @param {string}  host
-   * @param {number}  port
-   */
-  saveSetting(entryId, useTcpIp, host, port) {
-    this._entrySettingMap.set(entryId, { useTcpIp, host, port });
-  }
-
-  /**
-   * Return the stored communication settings for an entry, or null if none.
-   *
-   * @param {string} entryId
-   * @returns {{ useTcpIp: boolean, host: string, port: number }|null}
-   */
-  getCommSetting(entryId) {
-    const record = this._entrySettingMap.get(entryId);
-    if (!record) return null;
-    return { useTcpIp: record.useTcpIp, host: record.host, port: record.port };
   }
 }

@@ -54,13 +54,13 @@ export default {
   emits: ['close'],
 
   setup(props, { emit }) {
-    const entryExecutionService = inject('entryExecutionService')
+    const entryManager = inject('entryManager')
     const { createSocket, releaseSocket } = useEntryOperation()
     const useTcpIp = ref(false)
     const ipParts  = ref(['192', '168', '0', '1'])
     const port     = ref('8080')
 
-    const existing = entryExecutionService.getCommSetting(props.entryId)
+    const existing = entryManager.getComm(props.entryId)
     if (existing) {
       useTcpIp.value = existing.useTcpIp
       ipParts.value = existing.host.split('.')
@@ -70,7 +70,7 @@ export default {
     const onClose = async () => {
       const host = ipParts.value.join('.')
       const portNum = Number(port.value)
-      entryExecutionService.saveSetting(props.entryId, useTcpIp.value, host, portNum)
+      entryManager.setComm(props.entryId, useTcpIp.value, host, portNum)
 
       let connected = null
       if (useTcpIp.value) {

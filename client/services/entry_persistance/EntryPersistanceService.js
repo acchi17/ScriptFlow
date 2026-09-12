@@ -14,7 +14,7 @@ export default class EntryPersistanceService {
     entryDefinitionService) {
     this.platformService = platformService
     this._serializer = new RecipeSerializer(
-      entryManager, entryExecutionService
+      entryManager
     )
     this._deserializer = new RecipeDeserializer(
       entryManager,

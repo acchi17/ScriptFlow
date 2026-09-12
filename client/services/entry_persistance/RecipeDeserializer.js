@@ -195,7 +195,7 @@ export default class RecipeDeserializer {
     if (node.comm) {
       const liveId = idMap.get(node.id) ?? node.id
       const { useTcpIp, host, port } = node.comm
-      this.entryExecutionService.saveSetting(liveId, useTcpIp, host, port)
+      this.entryManager.setComm(liveId, useTcpIp, host, port)
       if (useTcpIp) {
         await this.entryExecutionService.createComm(liveId, host, port)
       }
