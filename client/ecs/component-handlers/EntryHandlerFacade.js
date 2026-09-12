@@ -4,6 +4,9 @@ import EntryParamHandler from './internal/EntryParamHandler'
 import EntryConnectionHandler from './internal/EntryConnectionHandler'
 import EntryHierarchyHandler from './internal/EntryHierarchyHandler'
 
+// Default TCP/IP communication setting
+const DEFAULT_COMM = { useTcpIp: false, host: '127.0.0.1', port: 8080 }
+
 /**
  * EntryHandlerFacade class
  * Composition root for entry-related handlers. Owns entry identity (type/name/command)
@@ -187,11 +190,11 @@ export default class EntryHandlerFacade {
   /**
    * Set the TCP/IP communication setting of an entry
    * @param {string} entryId - ID of the entry
-   * @param {boolean} useTcpIp - Whether TCP/IP communication is enabled
-   * @param {string} host - Host address
-   * @param {number} port - Port number
+   * @param {boolean} [useTcpIp] - Whether TCP/IP communication is enabled. Defaults to DEFAULT_COMM.useTcpIp.
+   * @param {string} [host] - Host address. Defaults to DEFAULT_COMM.host.
+   * @param {number} [port] - Port number. Defaults to DEFAULT_COMM.port.
    */
-  setComm(entryId, useTcpIp, host, port) {
+  setComm(entryId, useTcpIp = DEFAULT_COMM.useTcpIp, host = DEFAULT_COMM.host, port = DEFAULT_COMM.port) {
     this._comms.add(entryId, { useTcpIp, host, port });
   }
   // #endregion

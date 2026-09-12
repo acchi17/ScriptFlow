@@ -57,8 +57,8 @@ export default {
     const entryManager = inject('entryManager')
     const { createSocket, releaseSocket } = useEntryOperation()
     const useTcpIp = ref(false)
-    const ipParts  = ref(['192', '168', '0', '1'])
-    const port     = ref('8080')
+    const ipParts  = ref('')
+    const port     = ref('0')
 
     const existing = entryManager.getComm(props.entryId)
     if (existing) {

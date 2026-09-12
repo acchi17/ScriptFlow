@@ -32,7 +32,7 @@ export default {
 
     const rootEntryId = entryManager.addEntry('container', 'root-container')
     entryManager.moveEntry(rootEntryId, null, 0)
-    entryManager.setComm(rootEntryId, false, '127.0.0.1', 8080)
+    entryManager.setComm(rootEntryId)
 
     return { isExecuting, showLog, rootEntryId }
   }
