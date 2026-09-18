@@ -1,7 +1,7 @@
 import { SCRIPT_NAME_PATTERN } from './appDataPaths.js'
 
 /**
- * Manages a single spawned Python worker process (appdata/script_runner.py)
+ * Manages a single spawned Python worker process (appdata/python/script_runner.py)
  * and the request/response bookkeeping (pending promises, timeouts) around
  * its message protocol. Structurally mirrors ScriptRunnerHost (same
  * executeScript/shutdown shape), but the Python worker is a plain

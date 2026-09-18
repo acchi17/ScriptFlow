@@ -6,14 +6,14 @@ import PythonRunnerHost from '../PythonRunnerHost.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const scriptsDir = path.join(__dirname, '../../appdata/scripts')
-const pythonRunnerPath = path.join(__dirname, '../../appdata/script_runner.py')
+const pythonRunnerPath = path.join(__dirname, '../../appdata/python/script_runner.py')
 
 function isPythonAvailable() {
   const result = spawnSync('python', ['--version'])
   return result.status === 0
 }
 
-// Integration test: spawns the real appdata/script_runner.py over its NDJSON
+// Integration test: spawns the real appdata/python/script_runner.py over its NDJSON
 // stdio protocol, exercising the same path electron/main.js and
 // server/index.js use when AppSettings.json's interpreter is "python".
 // Skipped in environments with no "python" on PATH.

@@ -12,7 +12,7 @@ interpreter is a single app-wide setting:
   event). This is the original mechanism and is unchanged by the addition of
   Python support.
 - **Python**: `PythonRunnerHost` (`shared/PythonRunnerHost.js`) spawns
-  `appdata/script_runner.py` as a plain subprocess and talks to it over
+  `appdata/python/script_runner.py` as a plain subprocess and talks to it over
   newline-delimited JSON (NDJSON) on stdin/stdout, since a spawned Python
   process can't join Node's IPC channel. See "Python execution" below.
 
@@ -188,7 +188,7 @@ made once, at host startup, by reading `AppSettings.json` directly (there's
 no renderer-side IPC for it; the renderer's `ScriptExecutionService` sends
 exactly the same `executeScript(scriptName, inputParams)` call either way).
 
-The Python worker (`appdata/script_runner.py`) is a persistent process, like
+The Python worker (`appdata/python/script_runner.py`) is a persistent process, like
 `script-runner.js`, but since a plain `child_process.spawn`'d process can't
 join Node's native IPC channel, the protocol is one JSON object per line
 (NDJSON) over stdin/stdout instead:
@@ -221,7 +221,7 @@ own stdout/stderr are logged today.
 - [shared/ScriptRunnerHost.js](../shared/ScriptRunnerHost.js) — JavaScript-child request/response bookkeeping, timeouts, shutdown.
 - [shared/PythonRunnerHost.js](../shared/PythonRunnerHost.js) — Python-worker NDJSON request/response bookkeeping, timeouts, shutdown.
 - [shared/script-runner.js](../shared/script-runner.js) — JS child process entry point, message dispatch, script loading. Unaffected by Python support.
-- [appdata/script_runner.py](../appdata/script_runner.py) — Python worker entry point, NDJSON request loop, script loading.
+- [appdata/python/script_runner.py](../appdata/python/script_runner.py) — Python worker entry point, NDJSON request loop, script loading.
 - [shared/appDataPaths.js](../shared/appDataPaths.js) — `readAppSettings()`, shared by both hosts to resolve `script.interpreterName`/`script.interpreterPath` once at startup.
 - [server/api.js](../server/api.js) — Web entry point, Express routes calling `runnerHost.executeScript/createSocket/destroySocket`.
 - [electron/preload.js](../electron/preload.js) — exposes `window.electronAPI.executeScript/createSocket/destroySocket` to the renderer via `contextBridge`.

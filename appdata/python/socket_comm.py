@@ -1,6 +1,6 @@
 """
 Wraps a connected socket.socket with a send() that writes and blocks for the
-response. Constructed by appdata/script_runner.py and handed to a user
+response. Constructed by appdata/python/script_runner.py and handed to a user
 script's execute() as its second argument; only the script itself calls
 send() -- this class is not used by any other application code.
 """

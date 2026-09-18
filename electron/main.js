@@ -37,7 +37,7 @@ function getDefaultsDir() {
 }
 
 function getPythonRunnerPath() {
-  return path.join(getDefaultsDir(), 'script_runner.py')
+  return path.join(getDefaultsDir(), 'python', 'script_runner.py')
 }
 
 function ensureRunnerHost() {

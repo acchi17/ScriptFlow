@@ -23,7 +23,7 @@ const appSettings = readAppSettings(appPaths.settingsDir)
 const runnerHost = appSettings.script.interpreterName === 'python'
   ? new PythonRunnerHost(() => spawn(
     appSettings.script.interpreterPath,
-    [path.join(APPDATA_DIR, 'script_runner.py'), appPaths.scriptsDir]
+    [path.join(APPDATA_DIR, 'python', 'script_runner.py'), appPaths.scriptsDir]
   ))
   : new ScriptRunnerHost(() => fork(
     path.join(ROOT_DIR, 'shared', 'script-runner.js'),
