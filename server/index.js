@@ -7,6 +7,7 @@ import open from 'open'
 import { createAppDataPaths, readAppSettings } from '../shared/appDataPaths.js'
 import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
 import PythonRunnerHost from '../shared/PythonRunnerHost.js'
+import RunnerHostRegistry from '../shared/RunnerHostRegistry.js'
 import createApiRouter from './api.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -20,7 +21,7 @@ const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, seedDir: APPDATA_DIR })
 appPaths.seed()
 const appSettings = readAppSettings(appPaths.settingsDir)
 
-const runnerHost = appSettings.script.interpreterName === 'python'
+const runnerRegistry = new RunnerHostRegistry(() => appSettings.script.interpreterName === 'python'
   ? new PythonRunnerHost(() => spawn(
     appSettings.script.interpreterPath,
     [path.join(APPDATA_DIR, 'python', 'script_runner.py'), appPaths.scriptsDir]
@@ -28,11 +29,11 @@ const runnerHost = appSettings.script.interpreterName === 'python'
   : new ScriptRunnerHost(() => fork(
     path.join(ROOT_DIR, 'shared', 'script-runner.js'),
     [appPaths.scriptsDir]
-  ))
+  )))
 
 const app = express()
 app.use(express.json())
-app.use('/api', createApiRouter({ appPaths, runnerHost }))
+app.use('/api', createApiRouter({ appPaths, runnerRegistry }))
 app.use(express.static(DIST_DIR))
 
 function printLanAddresses() {
@@ -55,7 +56,7 @@ const server = app.listen(PORT, '0.0.0.0', () => {
 })
 
 function shutdown() {
-  runnerHost.shutdown().then(() => server.close(() => process.exit(0)))
+  runnerRegistry.shutdownAll().then(() => server.close(() => process.exit(0)))
 }
 
 process.on('SIGINT', shutdown)

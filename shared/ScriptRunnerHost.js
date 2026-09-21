@@ -1,54 +1,97 @@
+import net from 'node:net'
 import { SCRIPT_NAME_PATTERN } from './appDataPaths.js'
+import SocketComm from './SocketComm.js'
 
 /**
- * Manages a single forked script-runner child process (either an Electron
- * utilityProcess or a plain Node child_process), and the request/response
- * bookkeeping (pending promises, timeouts) around its message protocol.
- * Shared between the Electron main process and the Web server so both drive
- * the same shared/script-runner.js with the same message contract.
+ * Manages a single script-runner child process (JS or Python interpreter)
+ * over a TCP control channel, and the request/response bookkeeping (pending
+ * promises, timeouts) around its message protocol. Shared between the
+ * Electron main process and the Web server so both drive the same child
+ * process contract regardless of interpreter.
  *
- * @param {() => import('node:child_process').ChildProcess} forkFn Creates and
- *   returns the forked child process on first use.
+ * Connection sequence: listen on 127.0.0.1 with an OS-assigned port, spawn
+ * the child with that port, accept its first (and only) connection, then
+ * stop listening. Every method awaits this sequence before sending.
+ *
+ * @param {(port: number) => import('node:child_process').ChildProcess} spawnFn
+ *   Creates and returns the spawned child process on first use, given the
+ *   port it should connect back to. The child expects this port as its
+ *   first argv argument, followed by scriptsDir.
  */
 export default class ScriptRunnerHost {
-  constructor(forkFn) {
-    this._forkFn = forkFn
+  constructor(spawnFn) {
+    this._spawnFn = spawnFn
     this._process = null
+    this._socketComm = null
+    this._connectionPromise = null
     this._pending = new Map()
     this._counter = 0
   }
 
-  _post(proc, message) {
-    if (typeof proc.postMessage === 'function') {
-      proc.postMessage(message)
-    } else {
-      proc.send(message)
-    }
-  }
+  _ensureConnection() {
+    if (this._connectionPromise) return this._connectionPromise
 
-  _ensureProcess() {
-    if (this._process) return this._process
+    this._connectionPromise = new Promise((resolve, reject) => {
+      let connected = false
+      const server = net.createServer()
+      server.on('error', reject)
+      server.listen(0, '127.0.0.1', () => {
+        // Process creation
+        const port = server.address().port
+        let proc
+        try {
+          proc = this._spawnFn(port)
+        } catch (error) {
+          server.close()
+          reject(error)
+          return
+        }
 
-    const proc = this._forkFn()
+        // Process monitoring setup
+        if (proc.stdout) proc.stdout.on('data', d => console.log('[runner]', d.toString()))
+        if (proc.stderr) proc.stderr.on('data', d => console.error('[runner]', d.toString()))
 
-    proc.on('message', (msg) => this._handleMessage(msg))
-    proc.on('exit', () => {
-      for (const { reject } of this._pending.values()) {
-        reject(new Error('Script runner exited'))
-      }
-      this._pending.clear()
-      this._process = null
+        const onGone = (error) => {
+          if (this._process !== proc) return
+          if (connected) {
+            this._handleDisconnect(error)
+          } else {
+            server.close()
+            reject(error)
+          }
+        }
+        proc.on('error', (error) => onGone(new Error(`Failed to start script runner: ${error.message}`)))
+        proc.on('exit', (code, signal) => onGone(new Error(`Script runner exited (code=${code}, signal=${signal})`)))
+        this._process = proc
+
+        // Connection acceptance
+        server.once('connection', (socket) => {
+          connected = true
+          server.close()
+          const socketComm = new SocketComm(socket)
+          socketComm.onMessage((msg) => this._handleMessage(msg))
+          socketComm.on('close', () => {
+            if (this._socketComm !== socketComm) return
+            this._handleDisconnect()
+          })
+          this._socketComm = socketComm
+          resolve(socketComm)
+        })
+      })
     })
-    if (proc.stdout) proc.stdout.on('data', d => console.log('[runner]', d.toString()))
-    if (proc.stderr) proc.stderr.on('data', d => console.error('[runner]', d.toString()))
 
-    this._process = proc
-    return proc
+    return this._connectionPromise
   }
 
   _handleMessage(msg) {
-    if (!msg || typeof msg !== 'object') return
-    const { type, id, result, errmsg } = msg
+    let parsed
+    try {
+      parsed = JSON.parse(msg)
+    } catch {
+      return
+    }
+    if (!parsed || typeof parsed !== 'object') return
+    const { type, id, result, errmsg } = parsed
     const pending = id != null ? this._pending.get(id) : null
     if (type === 'result' && pending) {
       pending.resolve(result)
@@ -59,15 +102,43 @@ export default class ScriptRunnerHost {
     }
   }
 
-  executeScript(scriptName, inputParams) {
-    if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
-      return Promise.reject(new Error(`Invalid script name: ${scriptName}`))
+  _handleDisconnect(error) {
+    for (const { reject } of this._pending.values()) {
+      reject(error || new Error('Disconnected from script runner'))
     }
-    const proc = this._ensureProcess()
+    this._pending.clear()
+    this._process = null
+    this._socketComm = null
+    this._connectionPromise = null
+  }
+
+  /**
+   * Waits for proc to exit on its own, force-killing it after a 2 second
+   * grace period if it doesn't. Resolves once the process is gone either way.
+   * @returns {Promise<void>}
+   */
+  _forceKillAfterGracePeriod(proc) {
+    return new Promise((resolve) => {
+      const forceKill = setTimeout(() => {
+        try { proc.kill() } catch { /* noop */ }
+      }, 2000)
+      proc.once('exit', () => { clearTimeout(forceKill); resolve() })
+    })
+  }
+
+  _post(message) {
+    this._socketComm.write(JSON.stringify(message))
+  }
+
+  async executeScript(scriptName, inputParams) {
+    if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
+      throw new Error(`Invalid script name: ${scriptName}`)
+    }
+    await this._ensureConnection()
     const id = ++this._counter
     return new Promise((resolve, reject) => {
       this._pending.set(id, { resolve, reject })
-      this._post(proc, { type: 'execute', id, scriptName, inputParams })
+      this._post({ type: 'execute', id, scriptName, inputParams })
       setTimeout(() => {
         if (this._pending.has(id)) {
           this._pending.get(id).reject(new Error(`Script execution timed out: ${scriptName}`))
@@ -77,12 +148,12 @@ export default class ScriptRunnerHost {
     })
   }
 
-  createSocket(socketId, host, port) {
-    const proc = this._ensureProcess()
+  async createSocket(socketId, host, port) {
+    await this._ensureConnection()
     const id = ++this._counter
     return new Promise((resolve) => {
       this._pending.set(id, { resolve, reject: resolve })
-      this._post(proc, { type: 'createSocket', id, socketId, host, port })
+      this._post({ type: 'createSocket', id, socketId, host, port })
       setTimeout(() => {
         if (this._pending.has(id)) {
           this._pending.get(id).resolve(null)
@@ -92,12 +163,12 @@ export default class ScriptRunnerHost {
     })
   }
 
-  destroySocket(socketId) {
-    const proc = this._ensureProcess()
+  async destroySocket(socketId) {
+    await this._ensureConnection()
     const id = ++this._counter
     return new Promise((resolve) => {
       this._pending.set(id, { resolve, reject: resolve })
-      this._post(proc, { type: 'destroySocket', id, socketId })
+      this._post({ type: 'destroySocket', id, socketId })
       setTimeout(() => {
         if (this._pending.has(id)) {
           this._pending.delete(id)
@@ -113,15 +184,15 @@ export default class ScriptRunnerHost {
    * @returns {Promise<void>}
    */
   shutdown() {
-    return new Promise((resolve) => {
-      if (!this._process) { resolve(); return }
-      const proc = this._process
-      this._process = null
-      const forceKill = setTimeout(() => {
-        try { proc.kill() } catch { /* noop */ }
-      }, 2000)
-      proc.once('exit', () => { clearTimeout(forceKill); resolve() })
-      this._post(proc, { type: 'shutdown' })
-    })
+    if (!this._process) return Promise.resolve()
+    const proc = this._process
+    const connectionPromise = this._connectionPromise
+    this._handleDisconnect(new Error('Script runner is shutting down'))
+
+    connectionPromise
+      .then((socketComm) => socketComm.write(JSON.stringify({ type: 'shutdown' })))
+      .catch(() => { /* never connected; forceKill will handle it */ })
+
+    return this._forceKillAfterGracePeriod(proc)
   }
 }

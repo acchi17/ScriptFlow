@@ -77,7 +77,8 @@ export default class EntryExecutionService {
         const entryName = this.entryManager.getEntryName(entryId);
         throw new Error(`No command found for block "${entryName}"`);
       }
-      result = await this.scriptExecutionService.executeScript(command, inputParams);
+      const rootEntryId = this.entryManager.getRootOf(entryId);
+      result = await this.scriptExecutionService.executeScript(command, inputParams, rootEntryId);
       // Store result values into output params
       if (this.entryManager) {
         const outputParamNames = Object.keys(this.entryManager.getOutputParamValues(entryId));
@@ -189,7 +190,7 @@ export default class EntryExecutionService {
    */
   async createComm(entryId, host, port) {
     await this.deleteComm(entryId);
-    const created = await this.scriptExecutionService.createSocket(entryId, host, port);
+    const created = await this.scriptExecutionService.createSocket(entryId, host, port, entryId);
     if (!created) return false;
     this._entrySocketMap.set(entryId, { socketId: entryId });
     return true;
@@ -205,7 +206,7 @@ export default class EntryExecutionService {
     const record = this._entrySocketMap.get(entryId);
     if (!record) return false;
     this._entrySocketMap.delete(entryId);
-    await this.scriptExecutionService.destroySocket(record.socketId);
+    await this.scriptExecutionService.destroySocket(record.socketId, entryId);
     return true;
   }
 }

@@ -11,9 +11,9 @@ import { DEFS_FILENAME, SCRIPT_NAME_PATTERN } from '../shared/appDataPaths.js'
  *
  * @param {Object} deps
  * @param {ReturnType<import('../shared/appDataPaths.js').createAppDataPaths>} deps.appPaths
- * @param {import('../shared/ScriptRunnerHost.js').default} deps.runnerHost
+ * @param {import('../shared/RunnerHostRegistry.js').default} deps.runnerRegistry
  */
-export default function createApiRouter({ appPaths, runnerHost }) {
+export default function createApiRouter({ appPaths, runnerRegistry }) {
   const router = express.Router()
 
   router.get('/settings', (req, res) => {
@@ -61,7 +61,8 @@ export default function createApiRouter({ appPaths, runnerHost }) {
 
   router.post('/scripts/:name/execute', async (req, res) => {
     try {
-      const result = await runnerHost.executeScript(req.params.name, req.body || {})
+      const { entryId, inputParams } = req.body || {}
+      const result = await runnerRegistry.get(entryId).executeScript(req.params.name, inputParams || {})
       res.json(result)
     } catch (error) {
       res.status(500).type('text/plain').send(error.message)
@@ -69,13 +70,13 @@ export default function createApiRouter({ appPaths, runnerHost }) {
   })
 
   router.post('/sockets', async (req, res) => {
-    const { socketId, host, port } = req.body || {}
-    const created = await runnerHost.createSocket(socketId, host, port)
+    const { socketId, host, port, entryId } = req.body || {}
+    const created = await runnerRegistry.get(entryId).createSocket(socketId, host, port)
     res.json({ created })
   })
 
   router.delete('/sockets/:id', async (req, res) => {
-    const destroyed = await runnerHost.destroySocket(req.params.id)
+    const destroyed = await runnerRegistry.get(req.query.entryId).destroySocket(req.params.id)
     res.json({ destroyed })
   })
 

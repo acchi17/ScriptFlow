@@ -21,17 +21,19 @@ export default class ScriptExecutionService {
    * Execute script
    * @param {string} scriptName Script file name
    * @param {Object} inputParams Input parameters (optional)
+   * @param {string} entryId ID of the root entry the script belongs to,
+   *   used by the host process to pick which script-runner process to use
    * @return {Promise<ScriptExecutionResult>} Execution result object
    */
-  async executeScript(scriptName = '', inputParams = {}) {
+  async executeScript(scriptName = '', inputParams = {}, entryId) {
     try {
       if (this.isElectron) {
-        return await window.electronAPI.executeScript(scriptName, inputParams);
+        return await window.electronAPI.executeScript(scriptName, inputParams, entryId);
       }
       const response = await fetch(`/api/scripts/${encodeURIComponent(scriptName)}/execute`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(inputParams)
+        body: JSON.stringify({ entryId, inputParams })
       });
       if (!response.ok) {
         const text = await response.text().catch(() => '');
@@ -49,16 +51,18 @@ export default class ScriptExecutionService {
    * @param {string} socketId
    * @param {string} host
    * @param {number} port
+   * @param {string} entryId ID of the root entry the socket belongs to,
+   *   used by the host process to pick which script-runner process to use
    * @returns {Promise<boolean>}
    */
-  async createSocket(socketId, host, port) {
+  async createSocket(socketId, host, port, entryId) {
     if (this.isElectron) {
-      return await window.electronAPI.createSocket(socketId, host, port);
+      return await window.electronAPI.createSocket(socketId, JSON.stringify({ host, port }), entryId);
     }
     const response = await fetch('/api/sockets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ socketId, host, port })
+      body: JSON.stringify({ socketId, host, port, entryId })
     });
     const { created } = await response.json();
     return created;
@@ -67,13 +71,15 @@ export default class ScriptExecutionService {
   /**
    * Ask the host process to close a socket.
    * @param {string} socketId
+   * @param {string} entryId ID of the root entry the socket belongs to,
+   *   used by the host process to pick which script-runner process to use
    * @returns {Promise<boolean>}
    */
-  async destroySocket(socketId) {
+  async destroySocket(socketId, entryId) {
     if (this.isElectron) {
-      return await window.electronAPI.destroySocket(socketId);
+      return await window.electronAPI.destroySocket(socketId, entryId);
     }
-    const response = await fetch(`/api/sockets/${encodeURIComponent(socketId)}`, { method: 'DELETE' });
+    const response = await fetch(`/api/sockets/${encodeURIComponent(socketId)}?entryId=${encodeURIComponent(entryId)}`, { method: 'DELETE' });
     const { destroyed } = await response.json();
     return destroyed;
   }

@@ -4,24 +4,17 @@ import { pathToFileURL } from 'node:url'
 import SocketComm from './SocketComm.js'
 
 const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
-const scriptsDir = process.argv[2] || ''
+const port = Number(process.argv[2])
+const scriptsDir = process.argv[3] || ''
 
-// socketId (string) -> net.Socket. Sockets are created here on request and
-// kept alive for later use by scripts. Entries are removed automatically
-// when the underlying connection closes so the map does not grow unbounded.
-const sockets = new Map()
+let scriptSocket = null
+let scriptSocketComm = null
 
-function send(message) {
-  // utilityProcess.fork in the parent communicates via process.parentPort
-  // when available, falling back to process.send.
-  if (process.parentPort) {
-    process.parentPort.postMessage(message)
-  } else if (typeof process.send === 'function') {
-    process.send(message)
-  }
+function post(message) {
+  processSocketComm.write(JSON.stringify(message))
 }
 
-async function handleExecute({ id, scriptName, inputParams, socketId }) {
+async function handleExecute({ id, scriptName, inputParams }) {
   try {
     if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
       throw new Error(`Invalid script name: ${scriptName}`)
@@ -32,85 +25,90 @@ async function handleExecute({ id, scriptName, inputParams, socketId }) {
     if (typeof mod.execute !== 'function') {
       throw new Error(`Script "${scriptName}" does not export an execute function`)
     }
-    const socket = socketId ? sockets.get(socketId) : null
-    const socketComm = socket ? new SocketComm(socket) : null
-    const result = await mod.execute(inputParams, socketComm)
-    send({ type: 'result', id, result })
+    const result = await mod.execute(inputParams, scriptSocketComm)
+    post({ type: 'result', id, result })
   } catch (error) {
-    send({ type: 'error', id, errmsg: error.message })
+    post({ type: 'error', id, errmsg: error.message })
   }
 }
 
-function handleCreateSocket({ id, socketId, host, port }) {
-  let settled = false
-  const existing = sockets.get(socketId)
-  if (existing) {
-    try { existing.destroy() } catch { /* noop */ }
+function handleCreateSocket({ id, host, port }) {
+  if (scriptSocket) {
+    try { scriptSocket.destroy() } catch { /* noop */ }
   }
   const socket = new net.Socket()
-  sockets.set(socketId, socket)
-  const removeIfCurrent = () => {
-    if (sockets.get(socketId) === socket) sockets.delete(socketId)
-  }
-  socket.once('close', removeIfCurrent)
+  scriptSocket = socket
 
+  let finished = false
   const finish = (result) => {
-    if (settled) return
-    settled = true
-    send({ type: 'result', id, result })
+    if (finished) return
+    finished = true
+    post({ type: 'result', id, result })
+  }
+  const clearIfCurrent = () => {
+    if (scriptSocket === socket) {
+      scriptSocket = null
+      scriptSocketComm = null
+    }
+  }
+  const onConnect = () => {
+    socket.removeListener('error', onError)
+    scriptSocketComm = new SocketComm(socket)
+    finish(true)
+  }
+  const onError = () => {
+    socket.removeListener('connect', onConnect)
+    clearIfCurrent()
+    try { socket.destroy() } catch { /* noop */ }
+    finish(false)
   }
 
   try {
-    const onConnect = () => {
-      socket.removeListener('error', onError)
-      finish(true)
-    }
-    const onError = () => {
-      socket.removeListener('connect', onConnect)
-      removeIfCurrent()
-      try { socket.destroy() } catch { /* noop */ }
-      finish(false)
-    }
     socket.once('connect', onConnect)
     socket.once('error', onError)
+    socket.once('close', clearIfCurrent)
     socket.connect(port, host)
   } catch {
-    removeIfCurrent()
+    clearIfCurrent()
     try { socket.destroy() } catch { /* noop */ }
     finish(false)
   }
 }
 
-function handleDestroySocket({ id, socketId }) {
-  const socket = sockets.get(socketId)
-  if (socket) {
-    sockets.delete(socketId)
-    try { socket.destroy() } catch { /* noop */ }
+function handleDestroySocket({ id }) {
+  if (scriptSocket) {
+    const current = scriptSocket
+    scriptSocket = null
+    scriptSocketComm = null
+    try { current.destroy() } catch { /* noop */ }
   }
-  send({ type: 'result', id, result: true })
+  post({ type: 'result', id, result: true })
 }
 
-function onMessage(msg) {
-  if (!msg || typeof msg !== 'object') return
-  if (msg.type === 'execute') {
-    handleExecute(msg)
-  } else if (msg.type === 'createSocket') {
-    handleCreateSocket(msg)
-  } else if (msg.type === 'destroySocket') {
-    handleDestroySocket(msg)
-  } else if (msg.type === 'shutdown') {
-    for (const socket of sockets.values()) {
-      try { socket.destroy() } catch { /* noop */ }
+function onMessage(message) {
+  let parsed
+  try {
+    parsed = JSON.parse(message)
+  } catch {
+    return
+  }
+  if (!parsed || typeof parsed !== 'object') return
+  if (parsed.type === 'execute') {
+    handleExecute(parsed)
+  } else if (parsed.type === 'createSocket') {
+    handleCreateSocket(parsed)
+  } else if (parsed.type === 'destroySocket') {
+    handleDestroySocket(parsed)
+  } else if (parsed.type === 'shutdown') {
+    if (scriptSocket) {
+      try { scriptSocket.destroy() } catch { /* noop */ }
     }
     process.exit(0)
   }
 }
 
-if (process.parentPort) {
-  process.parentPort.on('message', (event) => {
-    // utilityProcess passes a { data } envelope on parentPort
-    onMessage(event && event.data ? event.data : event)
-  })
-} else {
-  process.on('message', onMessage)
-}
+const socket = net.connect(port, '127.0.0.1')
+const processSocketComm = new SocketComm(socket)
+processSocketComm.onMessage(onMessage)
+processSocketComm.on('close', () => process.exit(1))
+processSocketComm.on('error', () => process.exit(1))

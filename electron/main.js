@@ -4,6 +4,7 @@
 import { createAppDataPaths, readAppSettings, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
 import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
 import PythonRunnerHost from '../shared/PythonRunnerHost.js'
+import RunnerHostRegistry from '../shared/RunnerHostRegistry.js'
 
 const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
 const path = require('node:path')
@@ -22,7 +23,7 @@ try {
 let mainWindow = null
 let appPaths = null
 let appSettings = null
-let runnerHost = null
+let runnerRegistry = null
 
 function getRootDir() {
   return app.isPackaged
@@ -40,28 +41,29 @@ function getPythonRunnerPath() {
   return path.join(getDefaultsDir(), 'python', 'script_runner.py')
 }
 
-function ensureRunnerHost() {
-  if (runnerHost) return runnerHost
+function ensureRunnerRegistry() {
+  if (runnerRegistry) return runnerRegistry
 
-  if (appSettings.script.interpreterName === 'python') {
-    runnerHost = new PythonRunnerHost(() => spawn(
-      appSettings.script.interpreterPath,
-      [getPythonRunnerPath(), appPaths.scriptsDir]
-    ))
-    return runnerHost
-  }
+  runnerRegistry = new RunnerHostRegistry(() => {
+    if (appSettings.script.interpreterName === 'python') {
+      return new PythonRunnerHost(() => spawn(
+        appSettings.script.interpreterPath,
+        [getPythonRunnerPath(), appPaths.scriptsDir]
+      ))
+    }
 
-  // Both main.cjs and script-runner.cjs are bundled by Forge into the same
-  // directory (.vite/build/ in dev, app.asar/.vite/build/ in prod), so __dirname
-  // is the right anchor in either mode.
-  const runnerPath = path.join(__dirname, 'script-runner.cjs')
+    // Both main.cjs and script-runner.cjs are bundled by Forge into the same
+    // directory (.vite/build/ in dev, app.asar/.vite/build/ in prod), so __dirname
+    // is the right anchor in either mode.
+    const runnerPath = path.join(__dirname, 'script-runner.cjs')
 
-  runnerHost = new ScriptRunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
-    serviceName: 'scriptflow-runner',
-    stdio: 'pipe'
-  }))
+    return new ScriptRunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
+      serviceName: 'scriptflow-runner',
+      stdio: 'pipe'
+    }))
+  })
 
-  return runnerHost
+  return runnerRegistry
 }
 
 function registerIpcHandlers() {
@@ -123,16 +125,17 @@ function registerIpcHandlers() {
     return { fileName: path.basename(filePath), data }
   })
 
-  ipcMain.handle('script:execute', async (_evt, scriptName, inputParams) => {
-    return ensureRunnerHost().executeScript(scriptName, inputParams)
+  ipcMain.handle('script:execute', async (_evt, scriptName, inputParams, entryId) => {
+    return ensureRunnerRegistry().get(entryId).executeScript(scriptName, inputParams)
   })
 
-  ipcMain.handle('socket:create', async (_evt, socketId, host, port) => {
-    return ensureRunnerHost().createSocket(socketId, host, port)
+  ipcMain.handle('socket:create', async (_evt, socketId, json, entryId) => {
+    const { host, port } = JSON.parse(json)
+    return ensureRunnerRegistry().get(entryId).createSocket(socketId, host, port)
   })
 
-  ipcMain.handle('socket:destroy', async (_evt, socketId) => {
-    return ensureRunnerHost().destroySocket(socketId)
+  ipcMain.handle('socket:destroy', async (_evt, socketId, entryId) => {
+    return ensureRunnerRegistry().get(entryId).destroySocket(socketId)
   })
 }
 
@@ -180,9 +183,9 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', (event) => {
-  if (!runnerHost) return
+  if (!runnerRegistry) return
   event.preventDefault()
-  const host = runnerHost
-  runnerHost = null
-  host.shutdown().then(() => app.quit())
+  const registry = runnerRegistry
+  runnerRegistry = null
+  registry.shutdownAll().then(() => app.quit())
 })
