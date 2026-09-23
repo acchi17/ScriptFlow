@@ -17,7 +17,10 @@ const DELIMITER = '\n'
  *   a strict request/response order.
  *
  * 'close'/'error' from the underlying socket are re-emitted so callers can
- * react to disconnects.
+ * react to disconnects. Once the underlying socket is destroyed, this
+ * instance stays alive but write()/request() throw/reject instead of
+ * touching the dead socket, so holders don't need to null out their
+ * reference.
  */
 export default class SocketComm extends EventEmitter {
   constructor(socket) {
@@ -48,11 +51,18 @@ export default class SocketComm extends EventEmitter {
   }
 
   write(data) {
+    if (this._socket.destroyed) {
+      throw new Error(`${this.constructor.name}: socket is closed`)
+    }
     this._socket.write(`${data}${DELIMITER}`)
   }
 
   request(data) {
     return new Promise((resolve, reject) => {
+      if (this._socket.destroyed) {
+        reject(new Error(`${this.constructor.name}: socket is closed`))
+        return
+      }
       let finished = false
       const finish = (fn, value) => {
         if (finished) return

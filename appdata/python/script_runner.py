@@ -72,7 +72,7 @@ def _load_and_call(script_path, input_params, socket_comm):
     return result or {}
 
 
-def _handle_execute(msg):
+def _handle_execute_script(msg):
     script_name = msg.get('scriptName')
     input_params = msg.get('inputParams') or {}
     script_path = os.path.join(scripts_dir, f'{script_name}.py')
@@ -84,7 +84,7 @@ def _handle_execute(msg):
         post({'type': 'error', 'id': msg.get('id'), 'errmsg': str(error)})
 
 
-def _handle_create_socket(msg):
+def _handle_create_script_comm(msg):
     global script_socket, script_socket_comm
     _clear_script_socket()
 
@@ -105,7 +105,7 @@ def _handle_create_socket(msg):
     post({'type': 'result', 'id': msg.get('id'), 'result': result})
 
 
-def _handle_destroy_socket(msg):
+def _handle_destroy_script_comm(msg):
     _clear_script_socket()
     post({'type': 'result', 'id': msg.get('id'), 'result': True})
 
@@ -120,11 +120,11 @@ def on_message(message):
 
     msg_type = msg.get('type')
     if msg_type == 'execute':
-        _handle_execute(msg)
+        _handle_execute_script(msg)
     elif msg_type == 'createSocket':
-        _handle_create_socket(msg)
+        _handle_create_script_comm(msg)
     elif msg_type == 'destroySocket':
-        _handle_destroy_socket(msg)
+        _handle_destroy_script_comm(msg)
     elif msg_type == 'shutdown':
         _clear_script_socket()
         raise ShutdownRequested()

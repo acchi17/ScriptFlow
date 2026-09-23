@@ -14,7 +14,7 @@ function post(message) {
   processSocketComm.write(JSON.stringify(message))
 }
 
-async function handleExecute({ id, scriptName, inputParams }) {
+async function handleExecuteScript({ id, scriptName, inputParams }) {
   try {
     if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
       throw new Error(`Invalid script name: ${scriptName}`)
@@ -32,7 +32,7 @@ async function handleExecute({ id, scriptName, inputParams }) {
   }
 }
 
-function handleCreateSocket({ id, host, port }) {
+function handleCreateScriptComm({ id, host, port }) {
   if (scriptSocket) {
     try { scriptSocket.destroy() } catch { /* noop */ }
   }
@@ -48,7 +48,6 @@ function handleCreateSocket({ id, host, port }) {
   const clearIfCurrent = () => {
     if (scriptSocket === socket) {
       scriptSocket = null
-      scriptSocketComm = null
     }
   }
   const onConnect = () => {
@@ -75,11 +74,10 @@ function handleCreateSocket({ id, host, port }) {
   }
 }
 
-function handleDestroySocket({ id }) {
+function handleDestroyScriptComm({ id }) {
   if (scriptSocket) {
     const current = scriptSocket
     scriptSocket = null
-    scriptSocketComm = null
     try { current.destroy() } catch { /* noop */ }
   }
   post({ type: 'result', id, result: true })
@@ -92,13 +90,15 @@ function onMessage(message) {
   } catch {
     return
   }
-  if (!parsed || typeof parsed !== 'object') return
+  if (!parsed || typeof parsed !== 'object')
+    return
+
   if (parsed.type === 'execute') {
-    handleExecute(parsed)
+    handleExecuteScript(parsed)
   } else if (parsed.type === 'createSocket') {
-    handleCreateSocket(parsed)
+    handleCreateScriptComm(parsed)
   } else if (parsed.type === 'destroySocket') {
-    handleDestroySocket(parsed)
+    handleDestroyScriptComm(parsed)
   } else if (parsed.type === 'shutdown') {
     if (scriptSocket) {
       try { scriptSocket.destroy() } catch { /* noop */ }
