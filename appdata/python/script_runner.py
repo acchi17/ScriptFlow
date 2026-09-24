@@ -34,19 +34,24 @@ scripts_dir = ''
 class ShutdownRequested(Exception):
     pass
 
-def _clear_script_socket():
-    global script_socket, script_socket_comm
-    if script_socket is not None:
-        try:
-            script_socket.close()
-        except OSError:
-            pass
-    script_socket = None
-    script_socket_comm = None
+def on_message(message):
+    try:
+        msg = json.loads(message)
+    except json.JSONDecodeError:
+        return
+    if not isinstance(msg, dict):
+        return
 
-
-def post(message):
-    process_socket_comm.write(json.dumps(message))
+    msg_type = msg.get('type')
+    if msg_type == 'execute':
+        _handle_execute_script(msg)
+    elif msg_type == 'createSocket':
+        _handle_create_script_comm(msg)
+    elif msg_type == 'destroySocket':
+        _handle_destroy_script_comm(msg)
+    elif msg_type == 'shutdown':
+        _clear_script_comm()
+        raise ShutdownRequested()
 
 
 def _load_and_call(script_path, input_params, socket_comm):
@@ -86,7 +91,7 @@ def _handle_execute_script(msg):
 
 def _handle_create_script_comm(msg):
     global script_socket, script_socket_comm
-    _clear_script_socket()
+    _clear_script_comm()
 
     new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     new_sock.settimeout(10)
@@ -106,28 +111,23 @@ def _handle_create_script_comm(msg):
 
 
 def _handle_destroy_script_comm(msg):
-    _clear_script_socket()
+    _clear_script_comm()
     post({'type': 'result', 'id': msg.get('id'), 'result': True})
 
 
-def on_message(message):
-    try:
-        msg = json.loads(message)
-    except json.JSONDecodeError:
-        return
-    if not isinstance(msg, dict):
-        return
+def post(message):
+    process_socket_comm.write(json.dumps(message))
 
-    msg_type = msg.get('type')
-    if msg_type == 'execute':
-        _handle_execute_script(msg)
-    elif msg_type == 'createSocket':
-        _handle_create_script_comm(msg)
-    elif msg_type == 'destroySocket':
-        _handle_destroy_script_comm(msg)
-    elif msg_type == 'shutdown':
-        _clear_script_socket()
-        raise ShutdownRequested()
+
+def _clear_script_comm():
+    global script_socket, script_socket_comm
+    if script_socket is not None:
+        try:
+            script_socket.close()
+        except OSError:
+            pass
+    script_socket = None
+    script_socket_comm = None
 
 
 def main():

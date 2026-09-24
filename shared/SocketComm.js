@@ -28,10 +28,12 @@ export default class SocketComm extends EventEmitter {
     this._socket = socket
     this._buffer = ''
     this._messageListeners = []
-    this._socket.setNoDelay(true)
-    this._socket.on('data', (chunk) => this._onData(chunk))
-    this._socket.on('close', (hadError) => this.emit('close', hadError))
-    this._socket.on('error', (err) => this.emit('error', err))
+    if (this._socket && !this._socket.destroyed) {
+      this._socket.setNoDelay(true)
+      this._socket.on('data', (chunk) => this._onData(chunk))
+      this._socket.on('close', (hadError) => this.emit('close', hadError))
+      this._socket.on('error', (err) => this.emit('error', err))
+    }
   }
 
   _onData(chunk) {
@@ -51,7 +53,7 @@ export default class SocketComm extends EventEmitter {
   }
 
   write(data) {
-    if (this._socket.destroyed) {
+    if (!this._socket || this._socket.destroyed) {
       throw new Error(`${this.constructor.name}: socket is closed`)
     }
     this._socket.write(`${data}${DELIMITER}`)
@@ -59,7 +61,7 @@ export default class SocketComm extends EventEmitter {
 
   request(data) {
     return new Promise((resolve, reject) => {
-      if (this._socket.destroyed) {
+      if (!this._socket || this._socket.destroyed) {
         reject(new Error(`${this.constructor.name}: socket is closed`))
         return
       }
@@ -82,5 +84,10 @@ export default class SocketComm extends EventEmitter {
       this._socket.once('close', onClose)
       this.write(data)
     })
+  }
+
+  destroy() {
+    if (!this._socket || this._socket.destroyed) return
+    try { this._socket.destroy() } catch { /* noop */ }
   }
 }
