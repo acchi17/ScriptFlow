@@ -1,4 +1,4 @@
-def execute(input_params):
+def execute(input_params, socket_comm):
     result = {'success': False}
     try:
         result['Result'] = input_params['NumberA'] + input_params['NumberB']

@@ -3,24 +3,11 @@ import { EventEmitter } from 'node:events'
 const DELIMITER = '\n'
 
 /**
- * Wraps a connected net.Socket, framing messages on `DELIMITER` so callers
- * always deal in complete messages regardless of how TCP chunks the
- * underlying bytes. Used both as the control channel between a
- * ScriptRunnerHost and its child process, and (constructed by
- * shared/script-runner.js) as the object handed to a user script's
- * execute() for talking to an external host.
- *
  * - request(data): writes data and resolves with the next complete message —
  *   a single request/response round trip.
  * - write(data) / onMessage(callback): a continuous, independent pair used
  *   by control channels that exchange commands in either direction without
  *   a strict request/response order.
- *
- * 'close'/'error' from the underlying socket are re-emitted so callers can
- * react to disconnects. Once the underlying socket is destroyed, this
- * instance stays alive but write()/request() throw/reject instead of
- * touching the dead socket, so holders don't need to null out their
- * reference.
  */
 export default class SocketComm extends EventEmitter {
   constructor(socket) {
@@ -28,12 +15,16 @@ export default class SocketComm extends EventEmitter {
     this._socket = socket
     this._buffer = ''
     this._messageListeners = []
-    if (this._socket && !this._socket.destroyed) {
+    if (!this._isClosed(this._socket)) {
       this._socket.setNoDelay(true)
       this._socket.on('data', (chunk) => this._onData(chunk))
       this._socket.on('close', (hadError) => this.emit('close', hadError))
       this._socket.on('error', (err) => this.emit('error', err))
     }
+  }
+
+  _isClosed(socket) {
+    return !socket || socket.destroyed
   }
 
   _onData(chunk) {
@@ -53,7 +44,7 @@ export default class SocketComm extends EventEmitter {
   }
 
   write(data) {
-    if (!this._socket || this._socket.destroyed) {
+    if (this._isClosed(this._socket)) {
       throw new Error(`${this.constructor.name}: socket is closed`)
     }
     this._socket.write(`${data}${DELIMITER}`)
@@ -61,7 +52,7 @@ export default class SocketComm extends EventEmitter {
 
   request(data) {
     return new Promise((resolve, reject) => {
-      if (!this._socket || this._socket.destroyed) {
+      if (this._isClosed(this._socket)) {
         reject(new Error(`${this.constructor.name}: socket is closed`))
         return
       }
@@ -82,12 +73,16 @@ export default class SocketComm extends EventEmitter {
       this._messageListeners.push(onMessage)
       this._socket.once('error', onError)
       this._socket.once('close', onClose)
-      this.write(data)
+      try {
+        this.write(data)
+      } catch (err) {
+        finish(reject, err)
+      }
     })
   }
 
   destroy() {
-    if (!this._socket || this._socket.destroyed) return
+    if (this._isClosed(this._socket)) return
     try { this._socket.destroy() } catch { /* noop */ }
   }
 }

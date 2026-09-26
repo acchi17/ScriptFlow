@@ -1,21 +1,3 @@
-"""
-Python-side mirror of shared/script-runner.js: a persistent worker process
-managed by ScriptRunnerHost's Python channel. Connects back to the parent's
-control channel over a TCP socket (wrapped by SocketComm) instead of the
-former NDJSON stdin/stdout protocol, so stdout is free for the user script's
-print().
-
-  in:  {"type": "execute", "id": <int>, "scriptName": <str>, "inputParams": {...}, "socketId": <str|None>}
-       {"type": "createSocket", "id": <int>, "socketId": <str>, "host": <str>, "port": <int>}
-       {"type": "destroySocket", "id": <int>, "socketId": <str>}
-       {"type": "shutdown"}
-  out: {"type": "result", "id": <int>, "result": {...}}
-       {"type": "error", "id": <int>, "errmsg": <str>}
-
-argv[1] is the control-channel port, argv[2] is the scripts directory
-(mirrors script-runner.js's argv[2]/argv[3], offset by one since Python's
-argv[0] is the script path itself rather than a separate interpreter slot).
-"""
 import sys
 import json
 import os
@@ -25,110 +7,95 @@ import asyncio
 import inspect
 from socket_comm import SocketComm
 
-script_socket = None
-script_socket_comm = None
-process_socket_comm = None
 scripts_dir = ''
-
+process_socket_comm = None
+script_socket_comm = None
 
 class ShutdownRequested(Exception):
     pass
 
 def on_message(message):
     try:
-        msg = json.loads(message)
+        parsed = json.loads(message)
     except json.JSONDecodeError:
         return
-    if not isinstance(msg, dict):
+    if not isinstance(parsed, dict):
         return
 
-    msg_type = msg.get('type')
+    msg_type = parsed.get('type')
     if msg_type == 'execute':
-        _handle_execute_script(msg)
+        handle_execute_script(parsed)
     elif msg_type == 'createSocket':
-        _handle_create_script_comm(msg)
+        handle_create_script_comm(parsed)
     elif msg_type == 'destroySocket':
-        _handle_destroy_script_comm(msg)
+        handle_destroy_script_comm(parsed)
     elif msg_type == 'shutdown':
-        _clear_script_comm()
+        clear_script_comm()
         raise ShutdownRequested()
 
-
-def _load_and_call(script_path, input_params, socket_comm):
-    if not os.path.isfile(script_path):
-        raise FileNotFoundError(f'Python script not found: {script_path}')
-
+def load_module(script_path):
     spec = importlib.util.spec_from_file_location('user_script', script_path)
+    if spec is None:
+        raise ImportError(f'Python script not found: {script_path}')
+
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
-
     execute = getattr(module, 'execute', None)
     if not callable(execute):
         raise AttributeError(f'Script "{script_path}" does not define an execute function')
+    return module
 
-    # Existing scripts only declare execute(input_params); only pass socket_comm
-    # to scripts that actually accept a second argument.
-    if len(inspect.signature(execute).parameters) >= 2:
-        result = execute(input_params, socket_comm)
-    else:
-        result = execute(input_params)
-    if inspect.iscoroutine(result):
-        result = asyncio.run(result)
-    return result or {}
-
-
-def _handle_execute_script(msg):
+def handle_execute_script(msg):
+    id_ = msg.get('id')
     script_name = msg.get('scriptName')
     input_params = msg.get('inputParams') or {}
     script_path = os.path.join(scripts_dir, f'{script_name}.py')
 
     try:
-        result = _load_and_call(script_path, input_params, script_socket_comm)
-        post({'type': 'result', 'id': msg.get('id'), 'result': result})
+        module = load_module(script_path)
+        result = module.execute(input_params, script_socket_comm)
+        # Async execution is currently not supported
+        # if inspect.iscoroutine(result):
+        #     result = asyncio.run(result)
+        post({'type': 'result', 'id': id_, 'result': result})
     except Exception as error:
-        post({'type': 'error', 'id': msg.get('id'), 'errmsg': str(error)})
+        post({'type': 'error', 'id': id_, 'errmsg': str(error)})
 
-
-def _handle_create_script_comm(msg):
-    global script_socket, script_socket_comm
-    _clear_script_comm()
+def handle_create_script_comm(msg):
+    global script_socket_comm
+    id_ = msg.get('id')
+    host = msg.get('host')
+    port = msg.get('port')
+    clear_script_comm()
 
     new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     new_sock.settimeout(10)
     try:
-        new_sock.connect((msg.get('host'), msg.get('port')))
-        script_socket = new_sock
-        script_socket_comm = SocketComm(new_sock)
+        new_sock.connect((host, port))
+        new_sock.settimeout(None)
         result = True
     except OSError:
         try:
             new_sock.close()
         except OSError:
             pass
-        result = None
+        result = False
+    script_socket_comm = SocketComm(new_sock)
+    post({'type': 'result', 'id': id_, 'result': result})
 
-    post({'type': 'result', 'id': msg.get('id'), 'result': result})
-
-
-def _handle_destroy_script_comm(msg):
-    _clear_script_comm()
-    post({'type': 'result', 'id': msg.get('id'), 'result': True})
-
+def handle_destroy_script_comm(msg):
+    id_ = msg.get('id')
+    clear_script_comm()
+    post({'type': 'result', 'id': id_, 'result': True})
 
 def post(message):
     process_socket_comm.write(json.dumps(message))
 
-
-def _clear_script_comm():
-    global script_socket, script_socket_comm
-    if script_socket is not None:
-        try:
-            script_socket.close()
-        except OSError:
-            pass
-    script_socket = None
+def clear_script_comm():
+    global script_socket_comm
+    if script_socket_comm is not None:
+        script_socket_comm.destroy()
     script_socket_comm = None
-
 
 def main():
     global scripts_dir, process_socket_comm
@@ -145,7 +112,6 @@ def main():
         pass
     except Exception:
         sys.exit(1)
-
 
 if __name__ == '__main__':
     main()

@@ -3,7 +3,6 @@ import net from 'node:net'
 import { pathToFileURL } from 'node:url'
 import SocketComm from './SocketComm.js'
 
-const SCRIPT_NAME_PATTERN = /^[A-Za-z0-9_-]+$/
 const port = Number(process.argv[2])
 const scriptsDir = process.argv[3] || ''
 let scriptSocketComm = null
@@ -32,14 +31,11 @@ function onMessage(message) {
 
 async function handleExecuteScript({ id, scriptName, inputParams }) {
   try {
-    if (!SCRIPT_NAME_PATTERN.test(scriptName)) {
-      throw new Error(`Invalid script name: ${scriptName}`)
-    }
-    const filePath = path.join(scriptsDir, `${scriptName}.mjs`)
-    const moduleUrl = pathToFileURL(filePath).href
+    const scriptPath = path.join(scriptsDir, `${scriptName}.mjs`)
+    const moduleUrl = pathToFileURL(scriptPath).href
     const mod = await import(moduleUrl)
     if (typeof mod.execute !== 'function') {
-      throw new Error(`Script "${scriptName}" does not export an execute function`)
+      throw new Error(`Script "${scriptPath}" does not export an execute function`)
     }
     const result = await mod.execute(inputParams, scriptSocketComm)
     post({ type: 'result', id, result })
@@ -61,17 +57,28 @@ function handleCreateScriptComm({ id, host, port }) {
   }
   const onConnect = () => {
     socket.removeListener('error', onError)
+    socket.removeListener('timeout', onTimeout)
+    socket.setTimeout(0)
     finish(true)
   }
   const onError = () => {
     socket.removeListener('connect', onConnect)
+    socket.removeListener('timeout', onTimeout)
+    try { socket.destroy() } catch { /* noop */ }
+    finish(false)
+  }
+  const onTimeout = () => {
+    socket.removeListener('connect', onConnect)
+    socket.removeListener('error', onError)
     try { socket.destroy() } catch { /* noop */ }
     finish(false)
   }
 
   try {
+    socket.setTimeout(10000)
     socket.once('connect', onConnect)
     socket.once('error', onError)
+    socket.once('timeout', onTimeout)
     socket.connect(port, host)
   } catch {
     try { socket.destroy() } catch { /* noop */ }
@@ -90,7 +97,7 @@ function post(message) {
 
 function clearScriptComm() {
   if (scriptSocketComm) {
-    try { scriptSocketComm.destroy() } catch { /* noop */ }
+    scriptSocketComm.destroy()
   }
   scriptSocketComm = null
 }
