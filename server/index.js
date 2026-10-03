@@ -1,12 +1,11 @@
 import path from 'node:path'
 import os from 'node:os'
-import { fork, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import express from 'express'
 import open from 'open'
 import { createAppDataPaths, readAppSettings } from '../shared/appDataPaths.js'
 import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
-import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 import RunnerHostRegistry from '../shared/RunnerHostRegistry.js'
 import createApiRouter from './api.js'
 
@@ -21,15 +20,14 @@ const appPaths = createAppDataPaths({ rootDir: ROOT_DIR, seedDir: APPDATA_DIR })
 appPaths.seed()
 const appSettings = readAppSettings(appPaths.settingsDir)
 
-const runnerRegistry = new RunnerHostRegistry(() => appSettings.script.interpreterName === 'python'
-  ? new PythonRunnerHost(() => spawn(
-    appSettings.script.interpreterPath,
-    [path.join(APPDATA_DIR, 'python', 'script_runner.py'), appPaths.scriptsDir]
-  ))
-  : new ScriptRunnerHost(() => fork(
-    path.join(ROOT_DIR, 'shared', 'script-runner.js'),
-    [appPaths.scriptsDir]
-  )))
+const runnerRegistry = new RunnerHostRegistry(() => new ScriptRunnerHost((port) => {
+  const isPython = appSettings.script.interpreterName === 'python'
+  const command = isPython ? appSettings.script.interpreterPath : process.execPath
+  const runnerPath = isPython
+    ? path.join(APPDATA_DIR, 'python', 'script_runner.py')
+    : path.join(ROOT_DIR, 'shared', 'script-runner.js')
+  return spawn(command, [runnerPath, String(port), appPaths.scriptsDir], { windowsHide: true })
+}))
 
 const app = express()
 app.use(express.json())

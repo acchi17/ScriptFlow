@@ -1,11 +1,11 @@
 /**
- * Pools ScriptRunnerHost/PythonRunnerHost instances keyed by entryId (the
+ * Pools ScriptRunnerHost instances keyed by entryId (the
  * root container's entry ID), so each recipe gets its own script-runner
  * child process instead of sharing one process app-wide. Shared between the
  * Electron main process and the Web server, mirroring how RunnerHost itself
  * is shared.
  *
- * @param {() => import('./ScriptRunnerHost.js').default | import('./PythonRunnerHost.js').default} createHostFn
+ * @param {() => import('./ScriptRunnerHost.js').default} createHostFn
  *   Creates a single RunnerHost instance. Does not take entryId: which
  *   interpreter to use is an app-wide setting, not per-entry.
  */

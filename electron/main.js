@@ -3,10 +3,9 @@
 // runtime file lookup) is needed for them.
 import { createAppDataPaths, readAppSettings, SCRIPT_NAME_PATTERN, DEFS_FILENAME } from '../shared/appDataPaths.js'
 import ScriptRunnerHost from '../shared/ScriptRunnerHost.js'
-import PythonRunnerHost from '../shared/PythonRunnerHost.js'
 import RunnerHostRegistry from '../shared/RunnerHostRegistry.js'
 
-const { app, BrowserWindow, ipcMain, utilityProcess, Menu, dialog } = require('electron')
+const { app, BrowserWindow, ipcMain, Menu, dialog } = require('electron')
 const path = require('node:path')
 const fs = require('node:fs')
 const { spawn } = require('node:child_process')
@@ -44,24 +43,17 @@ function getPythonRunnerPath() {
 function ensureRunnerRegistry() {
   if (runnerRegistry) return runnerRegistry
 
-  runnerRegistry = new RunnerHostRegistry(() => {
-    if (appSettings.script.interpreterName === 'python') {
-      return new PythonRunnerHost(() => spawn(
-        appSettings.script.interpreterPath,
-        [getPythonRunnerPath(), appPaths.scriptsDir]
-      ))
-    }
-
+  runnerRegistry = new RunnerHostRegistry(() => new ScriptRunnerHost((port) => {
+    const isPython = appSettings.script.interpreterName === 'python'
     // Both main.cjs and script-runner.cjs are bundled by Forge into the same
     // directory (.vite/build/ in dev, app.asar/.vite/build/ in prod), so __dirname
     // is the right anchor in either mode.
-    const runnerPath = path.join(__dirname, 'script-runner.cjs')
-
-    return new ScriptRunnerHost(() => utilityProcess.fork(runnerPath, [appPaths.scriptsDir], {
-      serviceName: 'scriptflow-runner',
-      stdio: 'pipe'
-    }))
-  })
+    const command = isPython ? appSettings.script.interpreterPath : process.execPath
+    const runnerPath = isPython ? getPythonRunnerPath() : path.join(__dirname, 'script-runner.cjs')
+    // In Electron, process.execPath is the app itself; ELECTRON_RUN_AS_NODE makes it run as plain Node.
+    const env = isPython ? process.env : { ...process.env, ELECTRON_RUN_AS_NODE: '1' }
+    return spawn(command, [runnerPath, String(port), appPaths.scriptsDir], { env, windowsHide: true })
+  }))
 
   return runnerRegistry
 }
