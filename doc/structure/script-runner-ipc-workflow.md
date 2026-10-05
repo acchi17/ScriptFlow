@@ -1,24 +1,29 @@
 # Script Runner: Process Creation & IPC Workflow
 
 Explains how a script execution request travels from the host process (Web
-server or Electron main) into a child process and back. There are two
-independent, parallel implementations of this, selected once at host
-startup by the `interpreterName` field in `appdata/settings/AppSettings.json`
+server or Electron main) into a child process and back. Both interpreters
+are driven by the same `ScriptRunnerHost` class (`shared/ScriptRunnerHost.js`);
+only the child process it spawns differs, selected once at host startup by
+the `interpreterName` field in `appdata/settings/AppSettings.json`
 (`"javascript"`, the default, or `"python"`) — never both at once, since the
 interpreter is a single app-wide setting:
 
-- **JavaScript**: `ScriptRunnerHost` forks `shared/script-runner.js` and talks to
-  it over Node's native child_process IPC (`postMessage`/`send`, `message`
-  event). This is the original mechanism and is unchanged by the addition of
-  Python support.
-- **Python**: `PythonRunnerHost` (`shared/PythonRunnerHost.js`) spawns
-  `appdata/python/script_runner.py` as a plain subprocess and talks to it over
-  newline-delimited JSON (NDJSON) on stdin/stdout, since a spawned Python
-  process can't join Node's IPC channel. See "Python execution" below.
+- **JavaScript**: `ScriptRunnerHost` forks `shared/script-runner.js`.
+- **Python**: `ScriptRunnerHost` spawns `appdata/python/script_runner.py` as
+  a plain subprocess.
 
-Both classes expose the same `executeScript(scriptName, inputParams)` /
-`shutdown()` shape, so the rest of the host process (`ipcMain.handle` /
-Express routes) doesn't need to know which one is active.
+Either way, `ScriptRunnerHost` talks to the child over a TCP loopback socket
+it listens on itself (see "1. Lazy process creation" and "2. `ScriptRunnerHost`'s
+control channel to the child process" below). Using a plain socket for both
+lets JavaScript and Python share one wire protocol (`shared/SocketComm.js`
+on the Node side, `appdata/python/socket_comm.py` on the Python side, both
+framing one JSON object per line). See "5. Python execution" below for
+what's specific to the Python worker.
+
+Because it's the same class either way, the rest of the host process
+(`ipcMain.handle` / Express routes) doesn't need to know which interpreter is
+active — it just calls `executeScript(scriptName, inputParams)` /
+`shutdown()`.
 
 ## Participants
 
@@ -76,6 +81,63 @@ _ensureProcess() {
 The scripts directory (`appPaths.scriptsDir`) is passed as a CLI argument
 (`argv[2]`), so the child knows where to load scripts from without any IPC
 round trip.
+
+## 2. `ScriptRunnerHost`'s control channel to the child process
+
+`ScriptRunnerHost` and its child (`script-runner.js` for JavaScript,
+`script_runner.py` for Python) talk over a single TCP socket instead of the
+launching mechanism's own IPC primitive (`process.send`/`parentPort`,
+stdin/stdout). The host is the TCP *server*; the child is the *client* that
+dials back in, which is necessary because the port has to exist before the
+child can be spawned with it:
+
+```mermaid
+sequenceDiagram
+    participant RH as ScriptRunnerHost
+    participant OS as OS (127.0.0.1)
+    participant Child as script-runner.js / script_runner.py
+
+    RH->>OS: net.createServer().listen(0, '127.0.0.1')
+    OS-->>RH: OS-assigned port
+    RH->>Child: spawn/fork with argv = [port, scriptsDir, ...]
+    Child->>OS: connect to 127.0.0.1:port
+    OS-->>RH: 'connection' event
+    RH->>RH: server.close() - stop listening, wrap the accepted socket in SocketComm
+    Note over RH,Child: control channel established -<br/>newline-delimited JSON, either direction
+    RH->>Child: socketComm.write(...) - e.g. type execute
+    Child-->>RH: socketComm.write(...) - e.g. type result
+```
+
+Key points:
+
+- **Exactly one connection**: `server.once('connection', ...)` accepts only
+  the child's connection, then `server.close()` stops listening. From then
+  on the channel *is* that one accepted socket, not the server.
+- **Wire format implemented twice, identically**: `shared/SocketComm.js`
+  (used by `ScriptRunnerHost` itself, and reused by `script-runner.js` for
+  its own end of the socket) and `appdata/python/socket_comm.py` (used by
+  `script_runner.py`) both frame messages as one JSON object per line.
+  `write()` appends `\n`; the reader buffers incoming bytes and only invokes
+  `onMessage()`/`on_message()` once a full line has arrived, so a single
+  `data` event or `recv()` chunk can contain zero, one, or several complete
+  messages.
+- **Two usage styles on `SocketComm`**: `write()`/`onMessage()` is a
+  continuous, uncorrelated pair — the control channel here uses this,
+  correlating requests/responses itself via the `id` field described in
+  section 2. `request(data)` is a strict one-shot round trip used elsewhere
+  (the socket handed to a user script's `execute()` via `createSocket`), not
+  on this host/child control channel.
+- **argv contract**: both children see the port then the scripts dir, just
+  at different indices, because each runtime reserves a different number of
+  leading argv slots before the arguments passed by `spawnFn` begin:
+  Node's `process.argv[0]` is the node executable and `argv[1]` is the
+  script path, so the passed-in arguments start at `argv[2]`.
+  Python's `sys.argv[0]` is the script path, so they start one index earlier, at `argv[1]`.
+
+  | Child | argv: port | argv: scripts dir |
+  |---|---|---|
+  | `script-runner.js` (JS) | `argv[2]` | `argv[3]` |
+  | `script_runner.py` (Python) | `sys.argv[1]` | `sys.argv[2]` |
 
 ## 2. Sequence: an `executeScript` call end to end
 
@@ -147,10 +209,12 @@ function onMessage(msg) {
 }
 ```
 
-`handleExecute` validates the script name against `SCRIPT_NAME_PATTERN`
-(prevents path traversal), dynamically `import()`s the `.mjs` file from the
-scripts directory, calls its exported `execute(inputParams)`, and reports the
-result or error back over IPC. Because scripts are loaded via dynamic
+`handleExecute` dynamically `import()`s the `.mjs` file from the scripts
+directory (the script name is already validated against
+`SCRIPT_NAME_PATTERN` by `ScriptRunnerHost.executeScript` before the
+`execute` message is sent, preventing path traversal), calls its exported
+`execute(inputParams)`, and reports the result or error back over IPC.
+Because scripts are loaded via dynamic
 `import()` in an isolated process, a crash or infinite loop in a user script
 does not take down the host process.
 

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 
 const DELIMITER = '\n'
+const DEFAULT_END_TIMEOUT_MS = 2000
 
 /**
  * - request(data): writes data and resolves with the next complete message —
@@ -8,6 +9,12 @@ const DELIMITER = '\n'
  * - write(data) / onMessage(callback): a continuous, independent pair used
  *   by control channels that exchange commands in either direction without
  *   a strict request/response order.
+ * - end() / destroy(): end() flushes pending writes and sends FIN, resolving
+ *   once the socket has fully closed (i.e. the peer has closed too) — use it
+ *   before exiting on a channel whose peer should see a clean close. Rejects
+ *   if not closed within timeoutMs (the socket is left as is; call destroy()
+ *   to force it down). destroy() tears down immediately
+ *   with nothing to wait for.
  */
 export default class SocketComm extends EventEmitter {
   constructor(socket) {
@@ -44,7 +51,7 @@ export default class SocketComm extends EventEmitter {
   }
 
   write(data) {
-    if (this._isClosed(this._socket)) {
+    if (this._socket?.writableEnded || this._isClosed(this._socket)) {
       throw new Error(`${this.constructor.name}: socket is closed`)
     }
     this._socket.write(`${data}${DELIMITER}`)
@@ -78,6 +85,23 @@ export default class SocketComm extends EventEmitter {
       } catch (err) {
         finish(reject, err)
       }
+    })
+  }
+
+  end(timeoutMs = DEFAULT_END_TIMEOUT_MS) {
+    return new Promise((resolve, reject) => {
+      if (this._isClosed(this._socket)) {
+        resolve()
+        return
+      }
+      const timer = setTimeout(() => {
+        reject(new Error(`${this.constructor.name}: end() timed out after ${timeoutMs}ms`))
+      }, timeoutMs)
+      this._socket.once('close', () => {
+        clearTimeout(timer)
+        resolve()
+      })
+      this._socket.end()
     })
   }
 

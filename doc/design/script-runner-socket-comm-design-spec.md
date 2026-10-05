@@ -1,6 +1,6 @@
 # ScriptRunnerHost/PythonRunnerHost 制御チャネルのソケット化
 
-> Status: 設計合意、実装は別issue(未実装)。作成日 2026-09-20。
+> Status: 設計合意、実装完了(実装順序1〜8)。作成日 2026-09-20。
 > 関連ドキュメント: [python-runner-ipc-comparison.md](python-runner-ipc-comparison.md)(旧検討・本ドキュメントで置き換え)、[recipe-process-separation-design-spec.md](recipe-process-separation-design-spec.md)(`RunnerHostRegistry`は変更なしで前提として利用)、[socket-comm-client-config-design-spec.md](socket-comm-client-config-design-spec.md)(`ClientConfig`設計は本ドキュメントの対象外だが、実装時に`command_delimiter`との整合を確認する)
 
 ## 背景・動機
@@ -126,7 +126,9 @@ Node側(`ScriptRunnerHost`)が`net.createServer()`で`127.0.0.1`に`listen(0)`�
 
 ### 6. `electron/main.js` / `server/index.js`
 
-- `utilityProcess.fork`によるJSランナー起動をやめ、`child_process.spawn(process.execPath, [runnerScriptPath, scriptsDir, String(port)])`のような形に統一する(Pythonランナーの起動方法と対称になる)。
+- `utilityProcess.fork`によるJSランナー起動をやめ、`child_process.spawn(process.execPath, [runnerScriptPath, String(port), scriptsDir])`のような形に統一する(Pythonランナーの起動方法と対称になる)。起動引数の順序は、実装済みの`shared/script-runner.js`/`appdata/python/script_runner.py`に合わせて**port、scriptsDirの順**とする(Python側も`[script_runner.py, String(port), scriptsDir]`)。
+- **Electron版の追加指定**: Electronでは`process.execPath`がElectron本体を指すため、`env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' }`を渡してNodeとして起動させる(これが無いとアプリ本体がもう1つ起動する)。`env`は子プロセスに渡すコピーであり、親の`process.env`は書き換えない(戻す処理は不要)。あわせて`windowsHide: true`を指定し、Windowsでコンソール窓が出ないようにする(Pythonランナーの`spawn`にも同様に指定する)。`utilityProcess.fork`は、`ChildProcess`と型が異なり(`exit`が`code`のみ、`error`イベント無し)`ScriptRunnerHost`の監視処理に差が出ること、Pythonと起動方法が揃わないことから採用しない。
+- `server/index.js`も同様に、削除済みの`PythonRunnerHost`のimportをやめ、JSランナーの`fork`を`child_process.spawn(process.execPath, [runnerScriptPath, String(port), scriptsDir])`に統一し、`spawnFn(port)`形に更新する(`ScriptRunnerHost`統合により変更が必要)。制御チャネルがソケットになり`fork`のIPCチャネルが不要になること、`execArgv`の継承など`fork`固有の挙動差を残さず、Electron版・Pythonランナーと起動方法を揃えることが理由。Web版は素のNodeで動くため、`process.execPath`はそのままNode本体を指す。
 - `RunnerHostRegistry`の`createHostFn`は、返す型が常に`ScriptRunnerHost`になる点、および`spawnFn`が`port`引数を受け取るようになる点以外は現状の「interpreterName判定でspawn方法を選ぶ」構造を維持する。
 
 ## 影響範囲まとめ
@@ -140,7 +142,8 @@ Node側(`ScriptRunnerHost`)が`net.createServer()`で`127.0.0.1`に`listen(0)`�
 | `appdata/python/script_runner.py` | `socket.create_connection(port)`+`SocketComm`で接続するよう変更、stdoutリダイレクト廃止、切断時は即終了 |
 | `appdata/python/socket_comm.py` | フレーミング、`on_message`+`receive_loop()`、`write`、`setNoDelay`相当を追加。`request()`はフレーミング済みの1メッセージを返すよう修正 |
 | `electron/main.js` | `utilityProcess.fork`をやめてJSランナーもspawnに統一、`RunnerHostRegistry`の`createHostFn`を`spawnFn(port)`形に更新 |
-| `server/index.js` / `server/api.js` | 変更なし(`RunnerHostRegistry`経由の呼び出しは[recipe-process-separation-design-spec.md](recipe-process-separation-design-spec.md)実装済みのまま) |
+| `server/index.js` | `PythonRunnerHost`のimport削除、JSランナーの`fork`を`spawn`に統一、`createHostFn`を`spawnFn(port)`形に更新(`electron/main.js`と同様) |
+| `server/api.js` | 変更なし(`RunnerHostRegistry`経由の呼び出しは[recipe-process-separation-design-spec.md](recipe-process-separation-design-spec.md)実装済みのまま) |
 | `shared/__tests__/PythonRunnerHost.test.js` | `shared/__tests__/ScriptRunnerHost.test.js`に統合(実際に`appdata/python/script_runner.py`をspawnする既存の統合テストを、統合後の`ScriptRunnerHost`向けの呼び出し形(`spawnFn(port)`)に書き換えて移行) |
 
 ## 実装順序
@@ -152,11 +155,11 @@ Node側(`ScriptRunnerHost`)が`net.createServer()`で`127.0.0.1`に`listen(0)`�
 3. ✅ **完了** — **`shared/ScriptRunnerHost.js`**: `PythonRunnerHost`のロジックを統合し、`listen(127.0.0.1固定)`→spawn→accept→`SocketComm`ラップ、`spawnFn(port)`対応に変更する。1の拡張を前提とする。
 4. ✅ **完了** — **`shared/script-runner.js`**: `parentPort`/`process.send`を`net.connect(port)`+`SocketComm`に置き換えた。起動引数は`argv[2]`にport、`argv[3]`にscriptsDir(当初案の順序から入れ替え)。送信は`post()`(`socketComm.write`のラッパー)、受信は`onMessage`で`JSON.parse`してから既存のディスパッチ(`execute`/`createSocket`/`destroySocket`/`shutdown`)にそのまま渡す。制御ソケットの`close`/`error`検知時は`process.exit(1)`で即終了する。なお`handleCreateSocket`/`handleDestroySocket`は当初案の「ロジックは変更しない」から一部変更されている: 外部ソケット用の`SocketComm`を`handleExecute`が呼ばれる都度`new`していると、常駐する外部ソケットに対してリスナー(`data`/`close`/`error`)が際限なく積み上がる問題があったため、`handleCreateSocket`の接続成功時に1回だけ生成して`scriptSocketComm`に保持し、`handleExecute`はそれを使い回す形に修正した。
 5. ✅ **完了** — **`appdata/python/script_runner.py`**: `stdin`ループを`socket.create_connection`+`receive_loop()`に置き換え、stdoutリダイレクトを廃止した。`shutdown`受信時は`ShutdownRequested`例外を(`shared/script-runner.js`の`onMessage`と同名の)`on_message`コールバックから送出し、`receive_loop()`の呼び出し元(`main()`)がそれを`except`で捕捉して正常終了する。ユーザースクリプト用外部ソケットの`SocketComm`は`_handle_create_socket`成功時に1回だけ生成して`script_socket_comm`に保持し、`_handle_execute`はそれを使い回す(`_handle_destroy_socket`/`shutdown`/次の`createSocket`で`None`に戻す)。応答送信は`process_socket_comm.write(...)`に置き換えた。
-6. ⬜ **未着手** — **`electron/main.js`**: JSランナー起動を`utilityProcess.fork`から`spawn`に統一し、`RunnerHostRegistry`の`createHostFn`を`spawnFn(port)`形に更新する。3・4・5がすべて揃ってから着手する(spawnコマンド/引数が両ランナーで確定している必要があるため)。
-7. ✅ **完了(前倒し)** — **`shared/PythonRunnerHost.js`の削除**: 当初は6の後に予定していたが、3と同時に削除済み。このため5〜6が完了するまでは`electron/main.js`/`server/index.js`が削除済みの`PythonRunnerHost.js`を`import`し続けており、起動不可の状態になっている。
-8. ⬜ **未着手** — **`shared/__tests__/PythonRunnerHost.test.js` → `shared/__tests__/ScriptRunnerHost.test.js`への統合**: 実プロセスをspawnする統合テストのため、1〜7がすべて完了した最後に、新しい`spawnFn(port)`呼び出し形へ書き換えて移行する。`PythonRunnerHost.js`削除により現時点で`npm test`は失敗する。
+6. ✅ **完了** — **`electron/main.js` / `server/index.js`**: JSランナー起動を`utilityProcess.fork`/`fork`から`spawn`に統一し、`RunnerHostRegistry`の`createHostFn`を`spawnFn(port)`形に更新した(引数順は`[runner, port, scriptsDir]`)。`createHostFn`は常に`ScriptRunnerHost`を返し、`interpreterName`による分岐はspawnのcommand/runnerPath/envの切り替えのみで、`spawn`呼び出しは1箇所にまとめた。Electron版のJSランナーのみ`ELECTRON_RUN_AS_NODE: '1'`を付与し、両ランナーに`windowsHide: true`を指定した。`shared/RunnerHostRegistry.js`のJSDocから`PythonRunnerHost`への言及も削除した。なお実機での起動確認は未実施(lintのみ確認)。
+7. ✅ **完了(前倒し)** — **`shared/PythonRunnerHost.js`の削除**: 当初は6の後に予定していたが、3と同時に削除済み。このため6が完了するまでは`electron/main.js`/`server/index.js`が削除済みの`PythonRunnerHost.js`を`import`し続けており起動不可の状態だったが、6の完了で解消した。
+8. ✅ **完了** — **`shared/__tests__/PythonRunnerHost.test.js` → `shared/__tests__/ScriptRunnerHost.test.js`への統合**: 既存の3ケース(正常実行・存在しないスクリプト・不正なスクリプト名)を`spawnFn(port)`呼び出し形(`spawn('python', [runner, String(port), scriptsDir])`)に書き換えて移行し、旧テストファイルを削除した。`npm test`は全件通過。
 
-`server/index.js`/`server/api.js`は変更なしのため対象外。
+`server/api.js`は変更なしのため対象外。
 
 ## 検討した代替案(不採用)
 

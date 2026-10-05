@@ -6,6 +6,7 @@ import SocketComm from './SocketComm.js'
 const port = Number(process.argv[2])
 const scriptsDir = process.argv[3] || ''
 let scriptSocketComm = null
+let shuttingDown = false
 
 function onMessage(message) {
   let parsed
@@ -24,8 +25,9 @@ function onMessage(message) {
   } else if (parsed.type === 'destroySocket') {
     handleDestroyScriptComm(parsed)
   } else if (parsed.type === 'shutdown') {
-    clearScriptComm()
-    process.exit(0)
+    shuttingDown = true
+    Promise.all([clearScriptComm(), processSocketComm.end().catch(() => {})])
+      .finally(() => process.exit(0))
   }
 }
 
@@ -44,8 +46,8 @@ async function handleExecuteScript({ id, scriptName, inputParams }) {
   }
 }
 
-function handleCreateScriptComm({ id, host, port }) {
-  clearScriptComm()
+async function handleCreateScriptComm({ id, host, port }) {
+  await clearScriptComm()
   const socket = new net.Socket()
   let finished = false
   
@@ -53,6 +55,7 @@ function handleCreateScriptComm({ id, host, port }) {
     if (finished) return
     finished = true
     scriptSocketComm = new SocketComm(socket)
+    scriptSocketComm.on('error', () => {}) // without a listener, EventEmitter throws on 'error'
     post({ type: 'result', id, result })
   }
   const onConnect = () => {
@@ -86,8 +89,8 @@ function handleCreateScriptComm({ id, host, port }) {
   }
 }
 
-function handleDestroyScriptComm({ id }) {
-  clearScriptComm()
+async function handleDestroyScriptComm({ id }) {
+  await clearScriptComm()
   post({ type: 'result', id, result: true })
 }
 
@@ -95,15 +98,16 @@ function post(message) {
   processSocketComm.write(JSON.stringify(message))
 }
 
-function clearScriptComm() {
-  if (scriptSocketComm) {
-    scriptSocketComm.destroy()
-  }
+async function clearScriptComm() {
+  const comm = scriptSocketComm
   scriptSocketComm = null
+  if (!comm) return
+  await comm.end().catch(() => comm.destroy())
 }
 
 const socket = net.connect(port, '127.0.0.1')
 const processSocketComm = new SocketComm(socket)
 processSocketComm.onMessage(onMessage)
-processSocketComm.on('close', () => process.exit(1))
-processSocketComm.on('error', () => process.exit(1))
+const onControlChannelLost = () => { if (!shuttingDown) process.exit(1) }
+processSocketComm.on('close', onControlChannelLost)
+processSocketComm.on('error', onControlChannelLost)

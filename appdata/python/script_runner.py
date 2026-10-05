@@ -112,6 +112,8 @@ def main():
         pass
     except Exception:
         sys.exit(1)
+    finally:
+        process_socket_comm.destroy()
 
 if __name__ == '__main__':
     main()
