@@ -5,6 +5,7 @@ import socket
 import importlib.util
 import asyncio
 import inspect
+import traceback
 from socket_comm import SocketComm
 
 scripts_dir = ''
@@ -111,6 +112,7 @@ def main():
     except ShutdownRequested:
         pass
     except Exception:
+        traceback.print_exc()  # log the cause before exiting
         sys.exit(1)
     finally:
         process_socket_comm.destroy()

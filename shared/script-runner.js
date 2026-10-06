@@ -5,6 +5,7 @@ import SocketComm from './SocketComm.js'
 
 const port = Number(process.argv[2])
 const scriptsDir = process.argv[3] || ''
+const END_TIMEOUT_MS = 2000
 let scriptSocketComm = null
 let shuttingDown = false
 
@@ -26,7 +27,7 @@ function onMessage(message) {
     handleDestroyScriptComm(parsed)
   } else if (parsed.type === 'shutdown') {
     shuttingDown = true
-    Promise.all([clearScriptComm(), processSocketComm.end().catch(() => {})])
+    Promise.all([clearScriptComm(), processSocketComm.end(END_TIMEOUT_MS).catch(() => {})])
       .finally(() => process.exit(0))
   }
 }
@@ -55,7 +56,13 @@ async function handleCreateScriptComm({ id, host, port }) {
     if (finished) return
     finished = true
     scriptSocketComm = new SocketComm(socket)
-    scriptSocketComm.on('error', () => {}) // without a listener, EventEmitter throws on 'error'
+    // Without a listener, EventEmitter throws the error and the process crashes.
+    scriptSocketComm.on('error', (err) => {
+      console.error(`script socket error:${err.message}`)
+    })
+    scriptSocketComm.on('close', (hadError) => {
+      console.log(`script socket closed:hadError=${hadError}`)
+    })
     post({ type: 'result', id, result })
   }
   const onConnect = () => {
@@ -95,15 +102,28 @@ async function handleDestroyScriptComm({ id }) {
 }
 
 function post(message) {
-  processSocketComm.write(JSON.stringify(message))
+  const data = JSON.stringify(message)
+  try {
+    processSocketComm.write(data)
+  } catch { /* noop */ }
 }
 
 async function clearScriptComm() {
   const comm = scriptSocketComm
   scriptSocketComm = null
   if (!comm) return
-  await comm.end().catch(() => comm.destroy())
+  await comm.end(END_TIMEOUT_MS).catch(() => comm.destroy())
 }
+
+// Log the cause before exiting
+process.on('uncaughtException', (err) => {
+  console.error('uncaught exception:', err)
+  process.exit(1)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('unhandled rejection:', reason)
+  process.exit(1)
+})
 
 const socket = net.connect(port, '127.0.0.1')
 const processSocketComm = new SocketComm(socket)

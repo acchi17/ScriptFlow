@@ -1,7 +1,6 @@
 import { EventEmitter } from 'node:events'
 
 const DELIMITER = '\n'
-const DEFAULT_END_TIMEOUT_MS = 2000
 
 /**
  * - request(data): writes data and resolves with the next complete message —
@@ -13,7 +12,7 @@ const DEFAULT_END_TIMEOUT_MS = 2000
  *   once the socket has fully closed (i.e. the peer has closed too) — use it
  *   before exiting on a channel whose peer should see a clean close. Rejects
  *   if not closed within timeoutMs (the socket is left as is; call destroy()
- *   to force it down). destroy() tears down immediately
+ *   to force it down). timeoutMs = 0 waits indefinitely. destroy() tears down immediately
  *   with nothing to wait for.
  */
 export default class SocketComm extends EventEmitter {
@@ -88,15 +87,17 @@ export default class SocketComm extends EventEmitter {
     })
   }
 
-  end(timeoutMs = DEFAULT_END_TIMEOUT_MS) {
+  end(timeoutMs = 0) {
     return new Promise((resolve, reject) => {
       if (this._isClosed(this._socket)) {
         resolve()
         return
       }
-      const timer = setTimeout(() => {
-        reject(new Error(`${this.constructor.name}: end() timed out after ${timeoutMs}ms`))
-      }, timeoutMs)
+      const timer = timeoutMs > 0
+        ? setTimeout(() => {
+          reject(new Error(`${this.constructor.name}: end() timed out after ${timeoutMs}ms`))
+        }, timeoutMs)
+        : null
       this._socket.once('close', () => {
         clearTimeout(timer)
         resolve()

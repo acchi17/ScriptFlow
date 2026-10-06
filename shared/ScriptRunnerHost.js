@@ -152,12 +152,12 @@ export default class ScriptRunnerHost {
     await this._ensureConnection()
     const id = ++this._counter
     return new Promise((resolve) => {
-      this._pending.set(id, { resolve, reject: resolve })
+      this._pending.set(id, { resolve, reject: () => resolve(false) })
       this._post({ type: 'createSocket', id, socketId, host, port })
       setTimeout(() => {
         if (this._pending.has(id)) {
-          this._pending.get(id).resolve(null)
           this._pending.delete(id)
+          resolve(false)
         }
       }, 10000)
     })
@@ -167,7 +167,7 @@ export default class ScriptRunnerHost {
     await this._ensureConnection()
     const id = ++this._counter
     return new Promise((resolve) => {
-      this._pending.set(id, { resolve, reject: resolve })
+      this._pending.set(id, { resolve, reject: () => resolve(false) })
       this._post({ type: 'destroySocket', id, socketId })
       setTimeout(() => {
         if (this._pending.has(id)) {
