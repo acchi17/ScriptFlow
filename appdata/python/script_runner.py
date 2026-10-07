@@ -8,6 +8,7 @@ import inspect
 import traceback
 from socket_comm import SocketComm
 
+END_TIMEOUT_S = 2
 scripts_dir = ''
 process_socket_comm = None
 script_socket_comm = None
@@ -75,10 +76,10 @@ def handle_create_script_comm(msg):
         new_sock.connect((host, port))
         new_sock.settimeout(None)
         result = True
-    except OSError:
+    except Exception:
         try:
             new_sock.close()
-        except OSError:
+        except Exception:
             pass
         result = False
     script_socket_comm = SocketComm(new_sock)
@@ -90,12 +91,16 @@ def handle_destroy_script_comm(msg):
     post({'type': 'result', 'id': id_, 'result': True})
 
 def post(message):
-    process_socket_comm.write(json.dumps(message))
+    data = json.dumps(message)
+    try:
+        process_socket_comm.write(data)
+    except Exception:
+        pass
 
 def clear_script_comm():
     global script_socket_comm
     if script_socket_comm is not None:
-        script_socket_comm.destroy()
+        script_socket_comm.end(END_TIMEOUT_S)
     script_socket_comm = None
 
 def main():
@@ -115,7 +120,7 @@ def main():
         traceback.print_exc()  # log the cause before exiting
         sys.exit(1)
     finally:
-        process_socket_comm.destroy()
+        process_socket_comm.end(END_TIMEOUT_S)
 
 if __name__ == '__main__':
     main()

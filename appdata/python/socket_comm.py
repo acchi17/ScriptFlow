@@ -12,6 +12,11 @@ class SocketComm:
       a strict request/response order. on_message callbacks fire whenever a
       read (receive_loop() or a concurrent request()) delivers data, not only
       while receive_loop() is running.
+    - end(timeout): sends FIN, then discards incoming data until the peer has
+      closed too, and always closes the socket on return -- use it before
+      exiting on a channel whose peer should see a clean close. timeout
+      (seconds) bounds each wait; on timeout the socket is closed anyway.
+      timeout = 0 waits indefinitely.
     """
 
     def __init__(self, sock):
@@ -73,10 +78,18 @@ class SocketComm:
                 raise ConnectionError('Socket closed by peer')
             self._on_data(chunk)
 
-    def destroy(self):
+    def end(self, timeout=0):
         if self._is_closed(self._sock):
             return
         try:
-            self._sock.close()
+            self._sock.shutdown(socket.SHUT_WR)
+            self._sock.settimeout(timeout if timeout > 0 else None)
+            while self._sock.recv(RECV_CHUNK_SIZE):
+                pass
         except Exception:
             pass
+        finally:
+            try:
+                self._sock.close()
+            except Exception:
+                pass

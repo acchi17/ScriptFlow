@@ -60,9 +60,6 @@ async function handleCreateScriptComm({ id, host, port }) {
     scriptSocketComm.on('error', (err) => {
       console.error(`script socket error:${err.message}`)
     })
-    scriptSocketComm.on('close', (hadError) => {
-      console.log(`script socket closed:hadError=${hadError}`)
-    })
     post({ type: 'result', id, result })
   }
   const onConnect = () => {
@@ -84,11 +81,11 @@ async function handleCreateScriptComm({ id, host, port }) {
     finish(false)
   }
 
+  socket.setTimeout(10000)
+  socket.once('connect', onConnect)
+  socket.once('error', onError)
+  socket.once('timeout', onTimeout)
   try {
-    socket.setTimeout(10000)
-    socket.once('connect', onConnect)
-    socket.once('error', onError)
-    socket.once('timeout', onTimeout)
     socket.connect(port, host)
   } catch {
     try { socket.destroy() } catch { /* noop */ }
