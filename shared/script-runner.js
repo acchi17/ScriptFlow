@@ -3,11 +3,12 @@ import net from 'node:net'
 import { pathToFileURL } from 'node:url'
 import SocketComm from './SocketComm.js'
 
-const port = Number(process.argv[2])
+const processPort = Number(process.argv[2])
 const scriptsDir = process.argv[3] || ''
 const END_TIMEOUT_MS = 2000
 let scriptSocketComm = null
 let shuttingDown = false
+let queue = Promise.resolve()
 
 function onMessage(message) {
   let parsed
@@ -20,15 +21,13 @@ function onMessage(message) {
     return
 
   if (parsed.type === 'execute') {
-    handleExecuteScript(parsed)
+    enqueue(handleExecuteScript, parsed)
   } else if (parsed.type === 'createSocket') {
-    handleCreateScriptComm(parsed)
+    enqueue(handleCreateScriptComm, parsed)
   } else if (parsed.type === 'destroySocket') {
-    handleDestroyScriptComm(parsed)
+    enqueue(handleDestroyScriptComm, parsed)
   } else if (parsed.type === 'shutdown') {
-    shuttingDown = true
-    Promise.all([clearScriptComm(), processSocketComm.end(END_TIMEOUT_MS).catch(() => {})])
-      .finally(() => process.exit(0))
+    handleShutdown()
   }
 }
 
@@ -98,6 +97,19 @@ async function handleDestroyScriptComm({ id }) {
   post({ type: 'result', id, result: true })
 }
 
+function handleShutdown() {
+  shuttingDown = true
+  Promise.all([clearScriptComm(), processSocketComm.end(END_TIMEOUT_MS)
+    .catch(() => { /* noop */ })])
+    .finally(() => process.exit(0))
+}
+
+function enqueue(handler, message) {
+  queue = queue
+    .then(() => shuttingDown || handler(message))
+    .catch((err) => { console.error(`Unexpected error(${message.type}):`, err) })
+}
+
 function post(message) {
   const data = JSON.stringify(message)
   try {
@@ -122,7 +134,7 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-const socket = net.connect(port, '127.0.0.1')
+const socket = net.connect(processPort, '127.0.0.1')
 const processSocketComm = new SocketComm(socket)
 processSocketComm.onMessage(onMessage)
 const onControlChannelLost = () => { if (!shuttingDown) process.exit(1) }
