@@ -127,7 +127,9 @@ export default class ScriptRunnerHost {
   }
 
   _post(message) {
-    this._socketComm.write(JSON.stringify(message))
+    try {
+      this._socketComm.write(JSON.stringify(message))
+    } catch { /* noop */ }
   }
 
   async executeScript(scriptName, inputParams) {
@@ -141,8 +143,8 @@ export default class ScriptRunnerHost {
       this._post({ type: 'execute', id, scriptName, inputParams })
       setTimeout(() => {
         if (this._pending.has(id)) {
-          this._pending.get(id).reject(new Error(`Script execution timed out: ${scriptName}`))
           this._pending.delete(id)
+          reject(new Error(`Script execution timed out: ${scriptName}`))
         }
       }, 10000)
     })
