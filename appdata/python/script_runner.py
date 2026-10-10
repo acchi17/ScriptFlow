@@ -6,12 +6,20 @@ import importlib.util
 import asyncio
 import inspect
 import traceback
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from socket_comm import SocketComm
 
 END_TIMEOUT_S = 2
 scripts_dir = ''
 process_socket_comm = None
 script_socket_comm = None
+# A single worker runs execute/createSocket/destroySocket one at a time in FIFO
+# order, so the main thread stays in receive_loop() and can handle shutdown
+# while a script is still running.
+executor = ThreadPoolExecutor(max_workers=1)
+shutting_down = threading.Event()
+post_lock = threading.Lock()
 
 class ShutdownRequested(Exception):
     pass
@@ -26,14 +34,13 @@ def on_message(message):
 
     msg_type = parsed.get('type')
     if msg_type == 'execute':
-        handle_execute_script(parsed)
+        enqueue(handle_execute_script, parsed)
     elif msg_type == 'createSocket':
-        handle_create_script_comm(parsed)
+        enqueue(handle_create_script_comm, parsed)
     elif msg_type == 'destroySocket':
-        handle_destroy_script_comm(parsed)
+        enqueue(handle_destroy_script_comm, parsed)
     elif msg_type == 'shutdown':
-        clear_script_comm()
-        raise ShutdownRequested()
+        handle_shutdown()
 
 def load_module(script_path):
     spec = importlib.util.spec_from_file_location('user_script', script_path)
@@ -90,12 +97,32 @@ def handle_destroy_script_comm(msg):
     clear_script_comm()
     post({'type': 'result', 'id': id_, 'result': True})
 
+def handle_shutdown():
+    shutting_down.set()
+    executor.shutdown(wait=False, cancel_futures=True)  # drop queued jobs
+    raise ShutdownRequested()  # leave receive_loop(); main() closes the sockets
+
+def enqueue(handler, msg):
+    def run():
+        if shutting_down.is_set():
+            return
+        try:
+            handler(msg)
+        except Exception:
+            print(f'Unexpected error({msg.get("type")}):', file=sys.stderr)
+            traceback.print_exc()
+    try:
+        executor.submit(run)
+    except RuntimeError:
+        pass  # executor already shut down
+
 def post(message):
     data = json.dumps(message)
-    try:
-        process_socket_comm.write(data)
-    except Exception:
-        pass
+    with post_lock:  # both the worker and the main thread may write
+        try:
+            process_socket_comm.write(data)
+        except Exception:
+            pass
 
 def clear_script_comm():
     global script_socket_comm
@@ -112,15 +139,23 @@ def main():
     process_socket_comm = SocketComm(sock)
     process_socket_comm.on_message(on_message)
 
+    exit_code = 0
     try:
         process_socket_comm.receive_loop()
     except ShutdownRequested:
         pass
     except Exception:
         traceback.print_exc()  # log the cause before exiting
-        sys.exit(1)
+        exit_code = 1
     finally:
+        shutting_down.set()
+        clear_script_comm()
         process_socket_comm.end(END_TIMEOUT_S)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        # os._exit() instead of sys.exit(): a script still running on the
+        # worker thread can't be stopped, and sys.exit() would wait for it.
+        os._exit(exit_code)
 
 if __name__ == '__main__':
     main()
