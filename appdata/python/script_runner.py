@@ -149,11 +149,8 @@ def main():
         exit_code = 1
     finally:
         shutting_down.set()
-        # Close both sockets in parallel, like Promise.all in script-runner.js
-        clear_thread = threading.Thread(target=clear_script_comm, daemon=True)
-        clear_thread.start()
+        clear_script_comm()
         process_socket_comm.end(END_TIMEOUT_S)
-        clear_thread.join(END_TIMEOUT_S)
         sys.stdout.flush()
         sys.stderr.flush()
         # os._exit() instead of sys.exit(): a script still running on the
