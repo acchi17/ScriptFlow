@@ -32,7 +32,7 @@ jobs:
 
       - name: Extract base branch from issue title
         id: extract_branch
-        if: github.event_name == 'issues'
+        if: github.event_name == 'issues' || github.event_name == 'issue_comment'
         env:
           ISSUE_TITLE: ${{ github.event.issue.title }}
         run: |
