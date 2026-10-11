@@ -1,8 +1,7 @@
 /**
- * Add block implementation
- * it returns the result of adding a and b from the input argument
- * @param {Object} inputParams - Input parameters object with 'a' and 'b' properties
- * @returns {Object} Execution result with 'result' field
+ * It returns the result of adding two values from the input argument
+ * @param {Object} inputParams - Input parameters object
+ * @returns {Object} Execution result object
  */
 export async function execute(inputParams) {
   let result = {};

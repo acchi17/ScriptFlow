@@ -1,6 +1,5 @@
 /**
- * Log block implementation
- * it returns the logarithm of the input value using the base
+ * It returns the result of comparing two values with the given operator
  * @param {Object} inputParams - Input parameters object
  * @returns {Object} Execution result object
  */

@@ -1,8 +1,7 @@
 /**
- * Block implementation
- * it returns the cosine of the input angle in radians
- * @param {Object} inputParams - Input parameters object with 'Radians' property
- * @returns {Object} Execution result with 'Result' field
+ * It returns the cosine of the input angle in radians
+ * @param {Object} inputParams - Input parameters object
+ * @returns {Object} Execution result object
  */
 export async function execute(inputParams) {
   let result = {};

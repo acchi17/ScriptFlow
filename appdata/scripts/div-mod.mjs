@@ -1,8 +1,7 @@
 /**
- * DivMod block implementation
- * it returns the quotient and remainder of dividing a by b from the input argument
- * @param {Object} inputParams - Input parameters object with 'NumberA' and 'NumberB' properties
- * @returns {Object} Execution result with 'Result' (quotient) and 'Mod' (remainder) fields
+ * It returns the quotient and remainder of dividing a by b from the input argument
+ * @param {Object} inputParams - Input parameters object
+ * @returns {Object} Execution result object
  */
 export async function execute(inputParams) {
   let result = {};

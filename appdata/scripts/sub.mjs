@@ -1,8 +1,7 @@
 /**
- * Sub block implementation
- * it returns the result of subtracting b from a from the input argument
- * @param {Object} inputParams - Input parameters object with 'NumberA' and 'NumberB' properties
- * @returns {Object} Execution result with 'Result' field
+ * It returns the result of subtracting b from a from the input argument
+ * @param {Object} inputParams - Input parameters object
+ * @returns {Object} Execution result object
  */
 export async function execute(inputParams) {
   let result = {};

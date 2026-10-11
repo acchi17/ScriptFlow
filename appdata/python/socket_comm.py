@@ -1,4 +1,5 @@
 import socket
+import threading
 
 DELIMITER = '\n'
 RECV_CHUNK_SIZE = 4096
@@ -23,6 +24,8 @@ class SocketComm:
         self._sock = sock
         self._buffer = ''
         self._message_listeners = []
+        self._write_lock = threading.Lock()
+        self._ended = False
         if not self._is_closed(sock):
             self._sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
 
@@ -43,9 +46,10 @@ class SocketComm:
         self._message_listeners.append(callback)
 
     def write(self, data):
-        if self._is_closed(self._sock):
-            raise OSError(f'{self.__class__.__name__}: socket is closed')
-        self._sock.sendall(f'{data}{DELIMITER}'.encode())
+        with self._write_lock:
+            if self._ended or self._is_closed(self._sock):
+                raise OSError(f'{self.__class__.__name__}: socket is closed')
+            self._sock.sendall(f'{data}{DELIMITER}'.encode())
 
     def request(self, data):
         if self._is_closed(self._sock):
@@ -79,10 +83,15 @@ class SocketComm:
             self._on_data(chunk)
 
     def end(self, timeout=0):
-        if self._is_closed(self._sock):
-            return
+        with self._write_lock:
+            if self._ended or self._is_closed(self._sock):
+                return
+            self._ended = True
+            try:
+                self._sock.shutdown(socket.SHUT_WR)
+            except Exception:
+                pass
         try:
-            self._sock.shutdown(socket.SHUT_WR)
             self._sock.settimeout(timeout if timeout > 0 else None)
             while self._sock.recv(RECV_CHUNK_SIZE):
                 pass

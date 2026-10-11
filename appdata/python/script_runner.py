@@ -14,20 +14,21 @@ END_TIMEOUT_S = 2
 scripts_dir = ''
 process_socket_comm = None
 script_socket_comm = None
-# A single worker runs execute/createSocket/destroySocket one at a time in FIFO
-# order, so the main thread stays in receive_loop() and can handle shutdown
-# while a script is still running.
-executor = ThreadPoolExecutor(max_workers=1)
 shutting_down = threading.Event()
-post_lock = threading.Lock()
+executor = ThreadPoolExecutor(max_workers=1)
 
 class ShutdownRequested(Exception):
     pass
 
+def error_log(exception):
+    print(f'{type(exception).__name__}: {exception}', file=sys.stderr)
+    traceback.print_exception(type(exception), exception, exception.__traceback__)
+
 def on_message(message):
     try:
         parsed = json.loads(message)
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as e:
+        error_log(e)
         return
     if not isinstance(parsed, dict):
         return
@@ -54,10 +55,10 @@ def load_module(script_path):
         raise AttributeError(f'Script "{script_path}" does not define an execute function')
     return module
 
-def handle_execute_script(msg):
-    id_ = msg.get('id')
-    script_name = msg.get('scriptName')
-    input_params = msg.get('inputParams') or {}
+def handle_execute_script(message):
+    id_ = message.get('id')
+    script_name = message.get('scriptName')
+    input_params = message.get('inputParams') or {}
     script_path = os.path.join(scripts_dir, f'{script_name}.py')
 
     try:
@@ -67,14 +68,15 @@ def handle_execute_script(msg):
         # if inspect.iscoroutine(result):
         #     result = asyncio.run(result)
         post({'type': 'result', 'id': id_, 'result': result})
-    except Exception as error:
-        post({'type': 'error', 'id': id_, 'errmsg': str(error)})
+    except Exception as e:
+        error_log(e)
+        post({'type': 'error', 'id': id_, 'errmsg': str(e)})
 
-def handle_create_script_comm(msg):
+def handle_create_script_comm(message):
     global script_socket_comm
-    id_ = msg.get('id')
-    host = msg.get('host')
-    port = msg.get('port')
+    id_ = message.get('id')
+    host = message.get('host')
+    port = message.get('port')
     clear_script_comm()
 
     new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,7 +85,9 @@ def handle_create_script_comm(msg):
         new_sock.connect((host, port))
         new_sock.settimeout(None)
         result = True
-    except Exception:
+    except Exception as e:
+        print(f'connection error({host}:{port})', file=sys.stderr)
+        error_log(e)
         try:
             new_sock.close()
         except Exception:
@@ -92,37 +96,37 @@ def handle_create_script_comm(msg):
     script_socket_comm = SocketComm(new_sock)
     post({'type': 'result', 'id': id_, 'result': result})
 
-def handle_destroy_script_comm(msg):
-    id_ = msg.get('id')
+def handle_destroy_script_comm(message):
+    id_ = message.get('id')
     clear_script_comm()
     post({'type': 'result', 'id': id_, 'result': True})
 
 def handle_shutdown():
     shutting_down.set()
     executor.shutdown(wait=False, cancel_futures=True)  # drop queued jobs
-    raise ShutdownRequested()  # leave receive_loop(); main() closes the sockets
+    raise ShutdownRequested()
 
-def enqueue(handler, msg):
+def enqueue(handler, message):
     def run():
         if shutting_down.is_set():
             return
         try:
-            handler(msg)
-        except Exception:
-            print(f'Unexpected error({msg.get("type")}):', file=sys.stderr)
-            traceback.print_exc()
+            handler(message)
+        except Exception as e:
+            error_log(e)
     try:
         executor.submit(run)
-    except RuntimeError:
-        pass  # executor already shut down
+    except Exception as e:
+        error_log(e)
+        pass
 
 def post(message):
     data = json.dumps(message)
-    with post_lock:  # both the worker and the main thread may write
-        try:
-            process_socket_comm.write(data)
-        except Exception:
-            pass
+    try:
+        process_socket_comm.write(data)
+    except Exception as e:
+        error_log(e)
+        pass
 
 def clear_script_comm():
     global script_socket_comm
@@ -144,8 +148,8 @@ def main():
         process_socket_comm.receive_loop()
     except ShutdownRequested:
         pass
-    except Exception:
-        traceback.print_exc()  # log the cause before exiting
+    except Exception as e:
+        error_log(e)
         exit_code = 1
     finally:
         shutting_down.set()

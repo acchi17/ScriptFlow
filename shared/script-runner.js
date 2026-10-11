@@ -3,9 +3,9 @@ import net from 'node:net'
 import { pathToFileURL } from 'node:url'
 import SocketComm from './SocketComm.js'
 
+const END_TIMEOUT_MS = 2000
 const processPort = Number(process.argv[2])
 const scriptsDir = process.argv[3] || ''
-const END_TIMEOUT_MS = 2000
 let scriptSocketComm = null
 let shuttingDown = false
 let queue = Promise.resolve()
@@ -14,7 +14,8 @@ function onMessage(message) {
   let parsed
   try {
     parsed = JSON.parse(message)
-  } catch {
+  } catch (err) {
+    errorLog(err)
     return
   }
   if (!parsed || typeof parsed !== 'object')
@@ -41,8 +42,9 @@ async function handleExecuteScript({ id, scriptName, inputParams }) {
     }
     const result = await mod.execute(inputParams, scriptSocketComm)
     post({ type: 'result', id, result })
-  } catch (error) {
-    post({ type: 'error', id, errmsg: error.message })
+  } catch (err) {
+    errorLog(err)
+    post({ type: 'error', id, errmsg: err.message })
   }
 }
 
@@ -56,9 +58,7 @@ async function handleCreateScriptComm({ id, host, port }) {
     finished = true
     scriptSocketComm = new SocketComm(socket)
     // Without a listener, EventEmitter throws the error and the process crashes.
-    scriptSocketComm.on('error', (err) => {
-      console.error(`script socket error:${err.message}`)
-    })
+    scriptSocketComm.on('error', () => { /* noop */ })
     post({ type: 'result', id, result })
   }
   const onConnect = () => {
@@ -67,15 +67,19 @@ async function handleCreateScriptComm({ id, host, port }) {
     socket.setTimeout(0)
     finish(true)
   }
-  const onError = () => {
+  const onError = (err) => {
     socket.removeListener('connect', onConnect)
     socket.removeListener('timeout', onTimeout)
+    console.error(`connection error(${host}:${port})`)
+    console.error(err instanceof Error ? `${err.name}: ${err.message}` : err)
+    if (err instanceof Error) { console.error(err.stack) }
     try { socket.destroy() } catch { /* noop */ }
     finish(false)
   }
   const onTimeout = () => {
     socket.removeListener('connect', onConnect)
     socket.removeListener('error', onError)
+    console.error(`connection error(${host}:${port})`)
     try { socket.destroy() } catch { /* noop */ }
     finish(false)
   }
@@ -86,7 +90,10 @@ async function handleCreateScriptComm({ id, host, port }) {
   socket.once('timeout', onTimeout)
   try {
     socket.connect(port, host)
-  } catch {
+  } catch (err) {
+    console.error(`connection error(${host}:${port})`)
+    console.error(err instanceof Error ? `${err.name}: ${err.message}` : err)
+    if (err instanceof Error) { console.error(err.stack) }
     try { socket.destroy() } catch { /* noop */ }
     finish(false)
   }
@@ -107,14 +114,20 @@ function handleShutdown() {
 function enqueue(handler, message) {
   queue = queue
     .then(() => shuttingDown || handler(message))
-    .catch((err) => { console.error(`Unexpected error(${message.type}):`, err) })
+    .catch((err) => {
+      console.error(err instanceof Error ? `${err.name}: ${err.message}` : err)
+      if (err instanceof Error) { console.error(err.stack) }
+    })
 }
 
 function post(message) {
   const data = JSON.stringify(message)
   try {
     processSocketComm.write(data)
-  } catch { /* noop */ }
+  } catch (err) {
+    console.error(err instanceof Error ? `${err.name}: ${err.message}` : err)
+    if (err instanceof Error) { console.error(err.stack) }
+  }
 }
 
 async function clearScriptComm() {
@@ -122,6 +135,11 @@ async function clearScriptComm() {
   scriptSocketComm = null
   if (!comm) return
   await comm.end(END_TIMEOUT_MS).catch(() => comm.destroy())
+}
+
+function errorLog(error) {
+  console.error(error instanceof Error ? `${error.name}: ${error.message}` : error)
+  if (error instanceof Error) { console.error(error.stack) }
 }
 
 // Log the cause before exiting

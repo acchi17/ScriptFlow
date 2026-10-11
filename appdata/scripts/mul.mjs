@@ -1,8 +1,7 @@
 /**
- * Mul block implementation
- * it returns the result of multiplying a and b from the input argument
- * @param {Object} inputParams - Input parameters object with 'NumberA' and 'NumberB' properties
- * @returns {Object} Execution result with 'Result' field
+ * It returns the result of multiplying a and b from the input argument
+ * @param {Object} inputParams - Input parameters object
+ * @returns {Object} Execution result object
  */
 export async function execute(inputParams) {
   let result = {};
