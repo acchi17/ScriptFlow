@@ -1,7 +1,7 @@
 # レシピ単位の子プロセス分離
 
 > Status: 設計具体化・実装は別issue(未実装)。作成日 2026-09-19。
-> 前提ドキュメント: [main-area-multi-tab.md セクション7](main-area-multi-tab.md#7-将来の検討事項-レシピ単位の子プロセス分離)
+> 前提ドキュメント: [main-area-multi-tab.md セクション7](main-area-multi-tab.md#7-per-recipe-child-process-isolation-implemented-and-remaining-issues)
 
 ## 背景・動機
 
