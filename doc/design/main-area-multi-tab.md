@@ -1,8 +1,8 @@
-# MainAreaの複数タブ化
+# Multi-Tab Support for MainArea
 
 > Status: 要件定義・設計検討中(未実装)。作成日 2026-09-08。
 
-## 機能要件
+## Functional Requirements
 
 - MainAreaのタブを最大10個まで作成可能とする。
 - 各タブの右端にxボタンを配置する。
@@ -12,7 +12,7 @@
 - メニューエリアのLoadボタン押下によりレシピをロードすると、新規にタブ作成してそこにレシピをロードする。タブが10個作成されている場合、Loadボタンは無効化される。
 - メニューエリアのSaveボタンを押してレシピを保存する場合、選択されているタブのレシピを保存する。タブが選択されていない場合、Saveボタンは無効化される。
 
-## 前提: 現状のコード構造
+## Background: Current Code Structure
 
 - [MainArea.vue](../../client/components/MainArea.vue) の `.tab-bar` はタブ1個分のHTML(ラベル "Recipe" 固定)が書かれているだけで、タブの配列やアクティブタブという状態は存在しない。ルートエントリは**MainAreaの`setup()`で1回だけ** `entryManager.addEntry('container', 'root-container')` → `moveEntry(rootEntryId, null, 0)` → `setComm(rootEntryId)`(既定の通信設定を登録)の順で生成され(`MainArea.vue:33-35`)、その`rootEntryId`がpropとして単一の`RecipeItem`に渡される。
 - [RecipeItem.vue](../../client/components/RecipeItem.vue) は `entryId` を必須propとして受け取る形になっており、自分ではルートを生成しない。Run/Communication Settingボタン、`getHierarchyTick(props.entryId)`の監視はこのpropのrootIdに対して動作する。ただしClearボタンは `entryManager.clearEntries()` を引数なしで呼んでおり(`RecipeItem.vue:76`)、propのrootIdを使っていない。また`measureEntries()`は`entryManager.clearLayouts()`でレイアウト情報を全エントリ分クリアしてから自分のパネル内のエントリだけを再登録する。
@@ -28,7 +28,7 @@
   - ただし`RunnerHostRegistry.shutdown(entryId)`(1ルート分のプロセス終了)を呼ぶ経路は無く、現状呼ばれているのはアプリ/サーバ終了時の`shutdownAll()`のみ(`electron/main.js:177-183`、`server/index.js:56-58`)。レンダラからルート単位でプロセス終了を依頼するIPC/HTTP APIは存在しない。
 - `useSystemState.js` の `isExecuting` / `selectedEntryId` / `connectingSource` / `showLog` / `lastError` はいずれもモジュールレベルの単一 `ref` で、アプリ全体でただ1つ共有されている。`executingRootEntryId` も追加されているが、値が入るのは`executeEntry()`経由(`useEntryOperation.js:23`)のみで、Save/Load時の`setExecuting(true)`(`useEntryOperation.js:53,68`)ではnullのまま。現状この値を参照している箇所は無い。`ExecutionLogService` の実行履歴ツリーもインスタンス単一。
 
-## 設計検討
+## Design Considerations
 
 ### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化
 
@@ -87,7 +87,7 @@
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
 - **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabs`に保存・復元する)。
 
-## 7. レシピ単位の子プロセス分離(実装済み)と残課題
+## 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues
 
 当初は将来の検討事項としていたが、レシピ(ルート)単位の子プロセス分離は既に実装済みである。
 
