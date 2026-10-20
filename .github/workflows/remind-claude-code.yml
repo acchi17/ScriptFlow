@@ -1,0 +1,62 @@
+name: Claude Code Reminder
+on:
+  schedule:
+    - cron: "0 0 * * 1,4"   # 日本時間 月・木の9:00
+  workflow_dispatch:
+
+jobs:
+  find-targets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      matrix: ${{ steps.build.outputs.matrix }}
+      count: ${{ steps.build.outputs.count }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          list=$(gh issue list --label design-decisions --state open \
+            --author acchi17 --json number,title --limit 50 \
+            | jq -c '[ .[]
+                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]
+                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+          echo "matrix={\"include\":$list}" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
+
+  remind:
+    needs: find-targets
+    if: needs.find-targets.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.find-targets.outputs.matrix) }}
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ matrix.branch }}
+          prompt: |
+            design-draft/ 配下のすべての .md を読み、未決定・TBD・要検討・
+            Open Question など、結論が出ていない設計判断ポイントを洗い出してください。
+            結果を Issue #${{ matrix.issue }} にコメントとして投稿してください
+            (gh issue comment を使用)。条件:
+            - 冒頭で @acchi17 にメンションする
+            - 各ポイントについて、ファイル名・該当箇所、決めるべきこと、
+              選択肢とトレードオフ、おすすめ案を簡潔に書く
+            - 他の判断をブロックしているものを優先して並べる
+            - 未決事項がなければ何も投稿しない
+          claude_args: >-
+            --max-turns 15
+            --allowedTools "Read,Glob,Grep,Bash(gh issue comment:*)"
