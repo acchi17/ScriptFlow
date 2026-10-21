@@ -72,4 +72,3 @@ jobs:
           if [ -z "$(gh pr list --head "$HEAD_BRANCH" --json number --jq '.[0].number')" ]; then
             gh pr create --base "$BASE_BRANCH" --head "$HEAD_BRANCH" --fill
           fi
-
