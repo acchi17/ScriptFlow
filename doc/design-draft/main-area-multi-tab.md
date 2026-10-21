@@ -30,7 +30,7 @@
 
 ## Design Considerations
 
-### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化
+### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化 [undecided]
 
 現状 `EntryHandlerFacade.clearEntries()` / `RecipeSerializer.buildRecipe()` / `RecipeDeserializer.restoreRecipe()` はいずれも内部で`getRoot()`を呼び「暗黙に最初のルートを対象にする」実装であり、複数タブ(複数ルート)を扱うにはrootIdを明示的に渡せるようにする変更が必須になる。`EntryPersistanceService.saveRecipe()`/`loadRecipe()`・`useEntryOperation.saveRecipe()`/`loadRecipe()`もrootIdを受け取る口が無いため、同様に引数を通す必要がある。
 
@@ -42,13 +42,13 @@
 - `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`のものだけを保存するようフィルタする。`RecipeDeserializer`の`connectionCount`も同様にそのルートの接続のみを数える。
 - `MenuArea.vue:62`と`ExecutionLogView.vue:124`の`getRoot()`呼び出しも、アクティブタブのrootId(後述の`useTabs`)を参照する形に置き換える。ExecutionLogViewは「全タブのルートIDのいずれか」で判定するのが妥当(ログは全タブ共通のため。セクション4参照)。
 
-### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか
+### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [undecided]
 
 タブID・ラベル・対応する`rootEntryId`の一覧、およびどのタブがアクティブかという状態は現在どこにも存在しない。MenuArea(Load/Saveボタンの有効・無効判定に必要)とMainArea(タブバー描画に必要)の両方から参照される。
 
 **提案:** `useSystemState.js`と同じ「モジュールレベル`ref`を持つcomposable」パターンで新規に `useTabs.js` を作り、`tabs: ref([{ id, label, rootEntryId }])` と `activeTabId: ref(null)` を保持する。MenuAreaはこれを参照して「タブ数===10ならLoad無効」「activeTabId===nullならSave無効」を判定する。現在`MainArea.vue:33-35`にあるルート生成処理(`addEntry` → `moveEntry(id, null, 0)` → `setComm(id)`)は`useTabs`のタブ作成関数に移す。
 
-### 3. RecipeItemコンポーネントの複数タブ対応
+### 3. RecipeItemコンポーネントの複数タブ対応 [undecided]
 
 `RecipeItem.vue`は既に`entryId`(rootId)をpropで受け取る形になっており、ルート生成の責務は呼び出し元(現状MainArea)にある。したがって「インスタンス化するたびにルートが増える」問題は既に解消済みで、残る論点はタブ切替時のインスタンスの扱いのみ。
 
@@ -60,7 +60,7 @@
 
 また、`ConnectionView.vue:40`は`getConnections()`で全ルートの接続を描画対象にしているため、(b)でも非アクティブタブの接続が混入する。接続線は`getAllLayouts()`にレイアウトがあるエントリ同士しか描けないため実害は出にくいが、`getRootOf()`でアクティブタブのrootIdに属する接続のみに絞る修正を入れる。
 
-### 4. アプリ全体で共有されているグローバル状態の扱い
+### 4. アプリ全体で共有されているグローバル状態の扱い [undecided]
 
 `isExecuting`(実行中ロック)、`selectedEntryId`(選択状態)、`connectingSource`(パラメータ接続中状態)、`lastError`、`ExecutionLogService`の実行履歴は現状すべて「アプリ全体でただ1つ」。複数タブ化すると以下の挙動になる。
 - 実行中ロック: タブAで実行中の間、タブBのRun/Load/Saveボタンも無効化される(MainArea全体に`.executing`のdim overlayがかかるため、タブバーの切替・+/xボタンも操作不可になる)。
@@ -69,7 +69,7 @@
 
 **提案:** 今回の機能要件は「タブの作成・削除・Load/Save」に閉じたスコープなので、実行ロックやログのタブ単位分離は本機能のスコープ外とし、現状通り「アプリ全体で1つ」の挙動を維持することを提案する。スクリプト実行プロセスは既にルート単位で分離されている(前提参照)ため、将来タブごとの分離(タブAの実行中はタブBを操作可能にする、ログをタブ別にフィルタする等)が必要になった場合も、ボトルネックはUI側のロック/ログのみで、既存の`executingRootEntryId`をタブ単位ロックの起点にできる。その際は別の設計検討として切り出す。
 
-### 5. タブ削除時のソケット/ルート/子プロセス削除
+### 5. タブ削除時のソケット/ルート/子プロセス削除 [undecided]
 
 - **ルート**: `EntryHandlerFacade.removeEntry(entryId)`(`EntryHandlerFacade.js:323-347`)は対象がルート自身の場合に`hierarchyHandler.unsetRoot()`まで含めて処理し、配下エントリ・接続・パラメータ・`comms`コンポーネントも削除する(`__tests__/EntryHandlerFacade.test.js:113`で他ルートが残ることも検証済み)。ルートの削除自体は追加改修なしで可能。
 - **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターン(`RecipeDeserializer.js:48`)と同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
@@ -77,7 +77,7 @@
 
 **削除処理の順序(提案):** `deleteComm(rootId)` → ランナー終了依頼(`shutdownRunner(rootId)`) → `removeEntry(rootId)` → `useTabs`からタブを除去しアクティブタブを付け替え。ルート削除とソケット解放は既存パターンの流用で、設計判断が必要なのは子プロセス終了APIの追加のみ。
 
-### 6. その他の不明点(要確認)
+### 6. その他の不明点(要確認) [undecided]
 
 - **「通信ソケットを新規に作成」の意味**: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント)の登録のみで、接続先情報は無い。要件文言の「通信ソケットを新規に作成」は「タブ(ルート)ごとに独立した通信設定・ソケット管理単位(entryIdに紐づく)を用意する」という意味であり、タブ作成時に実際にTCP接続を試みるわけではないと解釈している。この理解で正しいか確認したい。
 - **タブ削除時の確認ダイアログ**: Loadボタン押下時は既存レシピの上書きを`window.confirm`で確認しているが、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様なので、確認ダイアログを出すべきか。
@@ -87,7 +87,7 @@
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
 - **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabs`に保存・復元する)。
 
-## 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues
+### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
 
 当初は将来の検討事項としていたが、レシピ(ルート)単位の子プロセス分離は既に実装済みである。
 
