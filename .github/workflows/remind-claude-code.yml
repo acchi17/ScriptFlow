@@ -48,15 +48,24 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           base_branch: ${{ matrix.branch }}
           prompt: |
-            design-draft/ 配下のすべての .md を読み、未決定・TBD・要検討・
-            Open Question など、結論が出ていない設計判断ポイントを洗い出してください。
-            結果を Issue #${{ matrix.issue }} にコメントとして投稿してください
-            (gh issue comment を使用)。条件:
-            - 冒頭で @acchi17 にメンションする
-            - 各ポイントについて、ファイル名・該当箇所、決めるべきこと、
-              選択肢とトレードオフ、おすすめ案を簡潔に書く
-            - 他の判断をブロックしているものを優先して並べる
-            - 未決事項がなければ何も投稿しない
+            Read every .md file under design-draft/ and identify all design decision
+            points that are still unresolved, such as items marked as undecided, TBD,
+            needs discussion, or Open Question.
+            Pick only the single most important one and post a reminder about it as a
+            comment on Issue #${{ matrix.issue }} (use gh issue comment).
+            How to pick (in priority order):
+            1. It blocks other decisions or implementation work (nothing can move
+               forward until it is decided)
+            2. It has a wide impact (affects multiple files or modules)
+            3. It would be costly to change later
+            Comment requirements:
+            - Mention @acchi17 at the beginning
+            - For the selected point, briefly describe the file name and location,
+              what needs to be decided, the options and their trade-offs, and your
+              recommendation
+            - Briefly explain why you picked this point (e.g. what it is blocking)
+            - At the end, note that this is "1 of N unresolved points"
+            - If there are no unresolved points, do not post anything
           claude_args: >-
             --max-turns 15
             --allowedTools "Read,Glob,Grep,Bash(gh issue comment:*)"
