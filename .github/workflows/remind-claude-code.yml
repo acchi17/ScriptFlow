@@ -19,7 +19,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
-          list=$(gh issue list --label design-decisions --state open \
+          list=$(gh issue list --label design-considerations --state open \
             --author acchi17 --json number,title --limit 50 \
             | jq -c '[ .[]
                 | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
@@ -49,8 +49,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           base_branch: ${{ matrix.branch }}
           prompt: |
-            Read every .md file under design-draft/ and identify all design decision
-            points that are still unresolved, such as items marked as undecided, TBD,
+            Read every .md file under doc/design-draft/ and identify all design considerations that are still unresolved, such as items marked as undecided, TBD,
             needs discussion, or Open Question.
             Pick only the single most important one and post a reminder about it as a
             comment on Issue #${{ matrix.issue }} (use gh issue comment).
