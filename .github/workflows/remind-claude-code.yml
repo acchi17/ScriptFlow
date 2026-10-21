@@ -1,0 +1,71 @@
+name: Claude Code Reminder
+on:
+  schedule:
+    - cron: "0 0 * * 1-5"   # 9:00 JST, weekdays (Mon-Fri)
+  workflow_dispatch:
+
+jobs:
+  find-targets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      targets: ${{ steps.build.outputs.targets }}
+      count: ${{ steps.build.outputs.count }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          list=$(gh issue list --label design-considerations --state open \
+            --author acchi17 --json number,title --limit 50 \
+            | jq -c '[ .[]
+                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]
+                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+          echo "targets=$list" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
+
+  remind:
+    needs: find-targets
+    if: needs.find-targets.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.find-targets.outputs.targets) }}
+    permissions:
+      contents: read
+      issues: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ matrix.branch }}
+          prompt: |
+            Read every .md file under doc/design-draft/ and identify all design considerations that are still unresolved, such as items marked as undecided, TBD,
+            needs discussion, or Open Question.
+            Pick only the single most important one and post a reminder about it as a
+            comment on Issue #${{ matrix.issue }} (use gh issue comment).
+            How to pick (in priority order):
+            1. It blocks other decisions or implementation work (nothing can move
+               forward until it is decided)
+            2. It has a wide impact (affects multiple files or modules)
+            3. It would be costly to change later
+            Comment requirements:
+            - Mention @acchi17 at the beginning
+            - For the selected point, briefly describe the file name and location,
+              what needs to be decided, the options and their trade-offs, and your
+              recommendation
+            - Briefly explain why you picked this point (e.g. what it is blocking)
+            - At the end, note that this is "1 of N unresolved points"
+            - If there are no unresolved points, do not post anything
+          claude_args: >-
+            --max-turns 15
+            --allowedTools "Read,Glob,Grep,Bash(gh issue comment:*)"
