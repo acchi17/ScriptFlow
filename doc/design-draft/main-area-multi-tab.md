@@ -30,17 +30,44 @@
 
 ## Design Considerations
 
-### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化 [undecided]
+### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化 [resolved]
 
 現状 `EntryHandlerFacade.clearEntries()` / `RecipeSerializer.buildRecipe()` / `RecipeDeserializer.restoreRecipe()` はいずれも内部で`getRoot()`を呼び「暗黙に最初のルートを対象にする」実装であり、複数タブ(複数ルート)を扱うにはrootIdを明示的に渡せるようにする変更が必須になる。`EntryPersistanceService.saveRecipe()`/`loadRecipe()`・`useEntryOperation.saveRecipe()`/`loadRecipe()`もrootIdを受け取る口が無いため、同様に引数を通す必要がある。
 
 また接続ストアがルート共通であるため、`buildRecipe()`が全ルートの接続を保存してしまう問題がある(タブ1つの現状では顕在化しない)。
 
-**提案:**
-- `clearEntries(rootId)` / `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` のようにrootId引数を追加する。`getRoot()`自体は「最初のルートを返す」実装のまま残し、呼び出し元(MenuArea/RecipeItem/タブ管理側)が「アクティブなタブのrootId」を明示的に渡す形にする。既存の単一タブ運用の呼び出し元(テストなど)への影響は最小限。
-- `RecipeItem`のClearボタンは既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す。
-- `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`のものだけを保存するようフィルタする。`RecipeDeserializer`の`connectionCount`も同様にそのルートの接続のみを数える。
-- `MenuArea.vue:62`と`ExecutionLogView.vue:124`の`getRoot()`呼び出しも、アクティブタブのrootId(セクション2の`useTabStore`の`activeTab.rootEntryId`)を参照する形に置き換える。ExecutionLogViewは「全タブのルートIDのいずれか」で判定するのが妥当(ログは全タブ共通のため。セクション4参照)。
+**検討した選択肢:**
+- (A) `clearEntries(rootId)` / `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` のように**必須**のrootId引数を追加し、呼び出し元が`useTabStore`の`activeTab.rootEntryId`を明示的に渡す
+- (A') (A)と同様だがrootIdを省略可能とし、省略時は`getRoot()`(最初のルート)にフォールバックする
+- (B) シグネチャは変えず、`getRoot()`がタブストアの設定する「アクティブなルート」を返すようにする
+
+**決定:** (A)を採用し、rootIdは**必須引数**とする。どのルートを操作するかが呼び出し側で明示され、テストしやすく、`EntryHierarchyHandler`の既存の複数ルート対応とも整合する。(A')は既存の呼び出し元・テストを変更せずに済むが、rootIdを渡し忘れた呼び出しが黙って最初のタブを操作してしまい、発見しにくいバグになるため不採用。(B)は差分が小さいが、ECSがUI状態(アクティブタブ)に依存し、操作対象が暗黙のグローバル状態で決まるため別タブを保存/クリアする事故を招きやすく不採用とした。
+
+**API変更:**
+
+| 層 | 変更前 | 変更後 |
+|---|---|---|
+| `EntryHandlerFacade` | `clearEntries()` | `clearEntries(rootId)` |
+| `RecipeSerializer` | `buildRecipe()` | `buildRecipe(rootId)` |
+| `RecipeDeserializer` | `restoreRecipe(data)` | `restoreRecipe(data, rootId)`(内部の`clearEntries()`・`deleteComm()`にも同じrootIdを渡す) |
+| `EntryPersistanceService` | `buildRecipe()` / `restoreRecipe(data)` / `saveRecipe(name)` / `loadRecipe()` | `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` / `saveRecipe(rootId, name)` / `loadRecipe(rootId)` |
+| `useEntryOperation` | `saveRecipe()` / `loadRecipe()` | `saveRecipe(rootId)` / `loadRecipe(rootId)` |
+
+- rootIdが渡されない、またはルートでないIDが渡された場合は(`isRoot(rootId)`で検証し)例外を投げる。暗黙のフォールバックは行わない。
+- `getRoot()`自体は「最初に登録されたルートを返す」実装のまま残すが、アプリコード(コンポーネント・サービス)からは呼ばない。用途は既存テスト内の参照など、単一ルートであることが自明な箇所に限る。
+
+**呼び出し元の対応:**
+- **Save(MenuArea)**: `useTabStore().activeTab.rootEntryId`を`saveRecipe(rootId)`に渡す(`activeTab === null`ならSaveボタンは無効化済み。セクション2参照)。
+- **Load(MenuArea)**: `useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`loadRecipe(rootId)`に渡す。新規タブにロードするため、`MenuArea.vue:62`の「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。ファイル選択がキャンセルされた場合にタブを残すか閉じるかはセクション6の不明点として扱う。
+- **Clear(RecipeItem)**: 既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す(`RecipeItem.vue:76`)。
+- **ExecutionLogView**: ログは全タブ共通(セクション4参照)のため、`ExecutionLogView.vue:124`の`getRoot()`との比較を「`useTabStore().tabs`のいずれかの`rootEntryId`と一致するか」の判定に置き換える(`entryManager.isRoot(entryId)`でも同等)。
+
+**接続のルート別フィルタ:**
+- `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`を満たすものだけを`connections`として保存する。
+- `RecipeDeserializer`の`connectionCount`も同様に、そのルートに属する接続のみを数える。
+- `ConnectionView.vue:40`もアクティブタブのrootIdに属する接続のみを描画対象とする(セクション3参照)。
+
+**テストへの影響:** `EntryPersistanceService.test.js`など既存テストの`buildRecipe()`/`restoreRecipe(recipe)`/`clearEntries()`呼び出しはrootIdを渡す形に更新する。あわせて、2ルートを作成し「片方のルートだけが保存/クリア/復元され、他方のルートとその接続は影響を受けない」ことを検証するテストを追加する。
 
 ### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [resolved]
 
@@ -130,6 +157,7 @@ export const useTabStore = defineStore('tab', () => {
 - **全タブ削除後(0タブ)の扱い**: 全てのタブを閉じられる仕様か、最低1タブは残す(最後の1つの xボタンは無効化する)仕様か。0タブを許容する場合、MainAreaの空状態の表示をどうするか。
 - **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
+- **Loadのファイル選択キャンセル時の新規タブ**: セクション1の方針ではLoad時に先に`createTab()`で新規タブを作成してから`loadRecipe(rootId)`を呼ぶ。ファイル選択がキャンセルされた場合やレシピの読み込みに失敗した場合、作成した空タブを`closeTab()`で閉じるか、空タブとして残すか(あるいはファイル選択後にタブを作成する順序にするか)。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
 - **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
 
