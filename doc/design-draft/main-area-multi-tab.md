@@ -40,13 +40,59 @@
 - `clearEntries(rootId)` / `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` のようにrootId引数を追加する。`getRoot()`自体は「最初のルートを返す」実装のまま残し、呼び出し元(MenuArea/RecipeItem/タブ管理側)が「アクティブなタブのrootId」を明示的に渡す形にする。既存の単一タブ運用の呼び出し元(テストなど)への影響は最小限。
 - `RecipeItem`のClearボタンは既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す。
 - `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`のものだけを保存するようフィルタする。`RecipeDeserializer`の`connectionCount`も同様にそのルートの接続のみを数える。
-- `MenuArea.vue:62`と`ExecutionLogView.vue:124`の`getRoot()`呼び出しも、アクティブタブのrootId(後述の`useTabs`)を参照する形に置き換える。ExecutionLogViewは「全タブのルートIDのいずれか」で判定するのが妥当(ログは全タブ共通のため。セクション4参照)。
+- `MenuArea.vue:62`と`ExecutionLogView.vue:124`の`getRoot()`呼び出しも、アクティブタブのrootId(セクション2の`useTabStore`の`activeTab.rootEntryId`)を参照する形に置き換える。ExecutionLogViewは「全タブのルートIDのいずれか」で判定するのが妥当(ログは全タブ共通のため。セクション4参照)。
 
-### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [undecided]
+### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [resolved]
 
-タブID・ラベル・対応する`rootEntryId`の一覧、およびどのタブがアクティブかという状態は現在どこにも存在しない。MenuArea(Load/Saveボタンの有効・無効判定に必要)とMainArea(タブバー描画に必要)の両方から参照される。
+タブID・ラベル・対応する`rootEntryId`の一覧、およびどのタブがアクティブかという状態は現在どこにも存在しない。MenuArea(Load/Saveボタンの有効・無効判定に必要)とMainArea(タブバー描画に必要)をはじめ、RecipeItem・ExecutionLogView・ConnectionView・`useEntryOperation`など複数のモジュールから参照される。
 
-**提案:** `useSystemState.js`と同じ「モジュールレベル`ref`を持つcomposable」パターンで新規に `useTabs.js` を作り、`tabs: ref([{ id, label, rootEntryId }])` と `activeTabId: ref(null)` を保持する。MenuAreaはこれを参照して「タブ数===10ならLoad無効」「activeTabId===nullならSave無効」を判定する。現在`MainArea.vue:33-35`にあるルート生成処理(`addEntry` → `moveEntry(id, null, 0)` → `setComm(id)`)は`useTabs`のタブ作成関数に移す。
+**検討した選択肢:**
+- (A) 専用のグローバルなタブストアを新設し、タブ一覧・アクティブタブとタブ作成/削除処理を集約する
+- (B) MainAreaのローカル状態とし、MenuAreaへはprops/イベントまたはprovide/injectで受け渡す
+- (C) ECS(`EntryHierarchyHandler`のルート一覧)からタブ一覧を導出し、`activeRootId`のみ保持する
+
+**決定:** (A)を採用し、**Pinia**のストア `useTabStore` として実装する。タブ状態は複数モジュールから参照されるため、`useSystemState.js`のような独自のモジュールレベル`ref`ではなく、Vue公式の状態管理ライブラリであるPiniaで管理する。(B)は兄弟コンポーネント間(MainArea/MenuArea)でのバケツリレーやLoad時のタブ作成コールバックが必要になり、(C)はラベルやタブ単位のUI状態(Comm状態・スクロール位置)をECSに持たせられず、ルートの並び順も保証されないため不採用とした。
+
+**導入作業:**
+- `pinia`を`dependencies`に追加し、`client/main.js`で`app.use(createPinia())`を登録する(既存の`app.provide(...)`より前)。
+- ストアは`client/stores/useTabStore.js`に配置する(ファイル名はエクスポートする`useTabStore`と一致させる)。
+- ユニットテストでは各テストの`beforeEach`で`setActivePinia(createPinia())`を呼び、テスト間で状態をリセットする(モジュールレベル`ref`の手動リセットが不要になる)。
+
+**ストアの構成(Setup Store形式):**
+
+```js
+// client/stores/useTabStore.js
+export const useTabStore = defineStore('tab', () => {
+  const entryManager = inject('entryManager')
+  const entryExecutionService = inject('entryExecutionService')
+
+  // state
+  const tabs = ref([])            // [{ id, label, rootEntryId }]
+  const activeTabId = ref(null)
+
+  // getters
+  const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? null)
+  const isTabLimitReached = computed(() => tabs.value.length >= MAX_TABS) // MAX_TABS = 10
+
+  // actions
+  function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → activeTabId 更新 */ }
+  async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → activeTabId 付け替え */ }
+  function setActiveTab(tabId) { /* activeTabId 更新 */ }
+
+  return { tabs, activeTabId, activeTab, isTabLimitReached, createTab, closeTab, setActiveTab }
+})
+```
+
+- **state**: `tabs`(`{ id, label, rootEntryId }`の配列)と`activeTabId`。タブ単位のUI状態(セクション3の`commBtnStatus`、セクション6のスクロール位置など)が必要になった場合は、タブ要素のフィールドとしてこのストアに追加する。
+- **getters**: `activeTab`、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
+- **actions**:
+  - `createTab(label)`: 現在`MainArea.vue:33-35`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
+  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。
+  - `setActiveTab(tabId)`: アクティブタブを切り替える。
+- **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
+- **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
+
+なお、新規タブを作成直後にアクティブにするか、0タブを許容するかといったストアの振る舞いの詳細は、セクション6の不明点として引き続き確認する。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [undecided]
 
@@ -56,7 +102,7 @@
 - (a) タブごとに1つのRecipeItemを`v-for`で生成し、非アクティブなものは`v-show`で隠す(常時マウント)
 - (b) アクティブな1インスタンスのみマウントし、`:key="activeTab.rootEntryId"`で`rootEntryId`をpropで渡し直す(タブ切替時に再マウント)
 
-**提案:** (b)。(a)は最大10個のRecipeItemが常時`getHierarchyTick`監視等のwatcherを持ち続けることになり、要件上メリットが薄い割にコストが大きい。さらに(a)では各RecipeItemの`measureEntries()`が`clearLayouts()`で全エントリのレイアウトを消し合うため、レイアウトストアのルート別分離が別途必要になる。(b)ならアクティブな1インスタンスだけがレイアウトを登録するため現状の実装のまま動く。ただし(b)では**タブ切替時にスクロール位置やCommボタンの接続状態表示(`commBtnStatus`、RecipeItemのローカル`ref`)がリセットされる**というUX上のトレードオフがある。`commBtnStatus`はタブ単位の状態として`useTabs`側に持たせる(または`EntryExecutionService._entrySocketMap`の有無から導出する)ことで回避できる。スクロール位置のリセットは要件に明記がなく、許容できるか確認したい(その他不明点として後述)。
+**提案:** (b)。(a)は最大10個のRecipeItemが常時`getHierarchyTick`監視等のwatcherを持ち続けることになり、要件上メリットが薄い割にコストが大きい。さらに(a)では各RecipeItemの`measureEntries()`が`clearLayouts()`で全エントリのレイアウトを消し合うため、レイアウトストアのルート別分離が別途必要になる。(b)ならアクティブな1インスタンスだけがレイアウトを登録するため現状の実装のまま動く。ただし(b)では**タブ切替時にスクロール位置やCommボタンの接続状態表示(`commBtnStatus`、RecipeItemのローカル`ref`)がリセットされる**というUX上のトレードオフがある。`commBtnStatus`はタブ単位の状態として`useTabStore`側に持たせる(または`EntryExecutionService._entrySocketMap`の有無から導出する)ことで回避できる。スクロール位置のリセットは要件に明記がなく、許容できるか確認したい(その他不明点として後述)。
 
 また、`ConnectionView.vue:40`は`getConnections()`で全ルートの接続を描画対象にしているため、(b)でも非アクティブタブの接続が混入する。接続線は`getAllLayouts()`にレイアウトがあるエントリ同士しか描けないため実害は出にくいが、`getRootOf()`でアクティブタブのrootIdに属する接続のみに絞る修正を入れる。
 
@@ -75,7 +121,7 @@
 - **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターン(`RecipeDeserializer.js:48`)と同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
 - **子プロセス**: 前提のとおり、タブ(ルート)ごとの`ScriptRunnerHost`は`RunnerHostRegistry`に残り続ける。タブ削除時にプロセスを終了させないと、最大10個を超えて作成/削除を繰り返すたびにアイドルの子プロセスが蓄積する。`RunnerHostRegistry.shutdown(entryId)`自体は実装済みなので、これを呼ぶ経路(Electron: `runner:shutdown` のようなIPCハンドラと`preload.js`の公開API、Web版: `DELETE /api/runners/:entryId`のようなAPIルート、クライアント: `ScriptExecutionService.shutdownRunner(entryId)`)を追加する必要がある。
 
-**削除処理の順序(提案):** `deleteComm(rootId)` → ランナー終了依頼(`shutdownRunner(rootId)`) → `removeEntry(rootId)` → `useTabs`からタブを除去しアクティブタブを付け替え。ルート削除とソケット解放は既存パターンの流用で、設計判断が必要なのは子プロセス終了APIの追加のみ。
+**削除処理の順序(提案):** `deleteComm(rootId)` → ランナー終了依頼(`shutdownRunner(rootId)`) → `removeEntry(rootId)` → `useTabStore`からタブを除去しアクティブタブを付け替え(`useTabStore.closeTab()`がこの一連の処理を担う)。ルート削除とソケット解放は既存パターンの流用で、設計判断が必要なのは子プロセス終了APIの追加のみ。
 
 ### 6. その他の不明点(要確認) [undecided]
 
@@ -85,7 +131,7 @@
 - **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
-- **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabs`に保存・復元する)。
+- **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
 
 ### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
 
