@@ -4,6 +4,9 @@ on:
     - cron: "45 22 * * 0-4"   # 7:45 JST, weekdays (Mon-Fri); UTC is the previous day, so Sun-Thu
   workflow_dispatch:
 
+env:
+  REMIND_USER: ${{ vars.REMIND_USER || github.repository_owner }}
+
 jobs:
   find-targets:
     runs-on: ubuntu-latest
@@ -20,7 +23,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           list=$(gh issue list --label design-considerations --state open \
-            --author acchi17 --json number,title --limit 50 \
+            --author "$REMIND_USER" --json number,title --limit 50 \
             | jq -c '[ .[]
                 | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
                 | {issue: .number, branch: $c.b} ]
@@ -59,7 +62,7 @@ jobs:
             2. It has a wide impact (affects multiple files or modules)
             3. It would be costly to change later
             Comment requirements:
-            - Mention @acchi17 at the beginning
+            - Mention @${{ env.REMIND_USER }} at the beginning
             - For the selected point, briefly describe the file name and location,
               what needs to be decided, the options and their trade-offs, and your
               recommendation
