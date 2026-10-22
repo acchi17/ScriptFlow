@@ -1,7 +1,7 @@
 name: Claude Code Reminder
 on:
   schedule:
-    - cron: "0 0 * * 1-5"   # 9:00 JST, weekdays (Mon-Fri)
+    - cron: "45 22 * * 0-4"   # 7:45 JST, weekdays (Mon-Fri); UTC is the previous day, so Sun-Thu
   workflow_dispatch:
 
 jobs:
