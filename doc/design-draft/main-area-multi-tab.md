@@ -126,12 +126,73 @@ export const useTabStore = defineStore('tab', () => {
 `RecipeItem.vue`は既に`entryId`(rootId)をpropで受け取る形になっており、ルート生成の責務は呼び出し元(現状MainArea)にある。したがって「インスタンス化するたびにルートが増える」問題は既に解消済みで、残る論点はタブ切替時のインスタンスの扱いのみ。
 
 **設計判断が必要な点:** タブ切替時にRecipeItemインスタンスをどう扱うか。
+
+**追加要件(将来):** 将来、複数のタブ(少なくとも2つ)を同時に表示できるようにしたい(画面分割表示)。今回の実装は1タブ表示のままでよいが、分割表示を後から追加する際にRecipeItem・レイアウト管理・`useTabStore`の作り直しが発生しない構造にしておく。
+
+**現状の実装で「2つのRecipeItemを同時にマウントできない」要因:**
+- **レイアウトストアがアプリ全体で1つ**: `RecipeItem.measureEntries()`(`RecipeItem.vue:103-118`)は`entryManager.clearLayouts()`で**全エントリ分**のレイアウトを消してから自パネル内のエントリだけを再登録する。2インスタンスあると互いのレイアウトを消し合い、片方の接続線・背景線が消える。また`layoutsTick`(`EntryHandlerFacade.js:139`)も1つなので、片方の再計測でもう片方の`entryLayoutMap`/`ConnectionView`まで再計算される。
+- **`entryLayoutMap`がルートを区別しない**: `RecipeItem.vue:129-132`の背景線は`getAllLayouts()`(全ルート分)を描画するため、別ペインのエントリ位置に背景線が引かれる。
+- **`ConnectionView`がルートを区別しない**: `ConnectionView.vue:40`は`getConnections()`で全ルートの接続を対象にし、`getLayout()`は全ルート共通のストアを引く。propも持たないため、どのルートを描くかを指定できない。
+- **`commBtnStatus`がRecipeItemのローカル`ref`**(`RecipeItem.vue:84`): 再マウントで消える。
+
+**検討した選択肢:**
 - (a) タブごとに1つのRecipeItemを`v-for`で生成し、非アクティブなものは`v-show`で隠す(常時マウント)
 - (b) アクティブな1インスタンスのみマウントし、`:key="activeTab.rootEntryId"`で`rootEntryId`をpropで渡し直す(タブ切替時に再マウント)
+- (c) **「表示中のタブ」の分だけRecipeItemをマウントする**。`useTabStore`に`visibleTabs`(表示中タブの配列)を持たせ、MainAreaは`v-for="tab in visibleTabs" :key="tab.rootEntryId"`で描画する。今回は`visibleTabs = [activeTab]`(要素数1)なので挙動は(b)と同じだが、RecipeItem以下を「自分のrootIdの範囲だけを扱う」実装に揃えておき、分割表示時は`visibleTabs`が2要素以上を返すだけで済むようにする
 
-**提案:** (b)。(a)は最大10個のRecipeItemが常時`getHierarchyTick`監視等のwatcherを持ち続けることになり、要件上メリットが薄い割にコストが大きい。さらに(a)では各RecipeItemの`measureEntries()`が`clearLayouts()`で全エントリのレイアウトを消し合うため、レイアウトストアのルート別分離が別途必要になる。(b)ならアクティブな1インスタンスだけがレイアウトを登録するため現状の実装のまま動く。ただし(b)では**タブ切替時にスクロール位置やCommボタンの接続状態表示(`commBtnStatus`、RecipeItemのローカル`ref`)がリセットされる**というUX上のトレードオフがある。`commBtnStatus`はタブ単位の状態として`useTabStore`側に持たせる(または`EntryExecutionService._entrySocketMap`の有無から導出する)ことで回避できる。スクロール位置のリセットは要件に明記がなく、許容できるか確認したい(その他不明点として後述)。
+| 案 | 今回(1タブ表示)のコスト | 分割表示への拡張 |
+|---|---|---|
+| (a) | 最大10インスタンスのwatcher常駐。レイアウトストアのルート別分離が必須 | 「どれを`v-show`するか」をペインごとに管理する必要があり、結局(c)と同じ状態管理が要る |
+| (b) | 最小(現状のレイアウト実装のまま動く) | レイアウトストア・`ConnectionView`・背景線がアプリ全体で1つという前提に依存するため、分割表示時にRecipeItem以下とECSのレイアウト処理を作り直すことになる |
+| (c) | (b)+レイアウトのルート別分離・`ConnectionView`のrootId化(いずれも小規模) | MainAreaのテンプレートとストアの`visibleTabs`の中身を変えるだけ。RecipeItem以下は変更不要 |
 
-また、`ConnectionView.vue:40`は`getConnections()`で全ルートの接続を描画対象にしているため、(b)でも非アクティブタブの接続が混入する。接続線は`getAllLayouts()`にレイアウトがあるエントリ同士しか描けないため実害は出にくいが、`getRootOf()`でアクティブタブのrootIdに属する接続のみに絞る修正を入れる。
+**提案:** (c)。分割表示を前提にすると、(b)のままでは「RecipeItemは画面に1つだけ」という前提がレイアウト管理・接続描画に埋め込まれ、後から外すコストが大きい。(c)は今回(b)と同じくマウントされるのは1インスタンスで実行時コストも同じだが、ルート単位で閉じた実装にしておくことで、分割表示の追加をMainAreaとストアに局所化できる。
+
+```mermaid
+graph TD
+  Store["useTabStore<br/>tabs / activeTabId<br/>visibleTabs(今回は [activeTab])<br/>tab.commStatus"]
+  MainArea["MainArea<br/>v-for tab in visibleTabs<br/>:key = tab.rootEntryId"]
+  RI1["RecipeItem (entryId = rootA)"]
+  RI2["RecipeItem (entryId = rootB)<br/>※分割表示時のみ"]
+  CV1["ConnectionView (rootId = rootA)"]
+  CV2["ConnectionView (rootId = rootB)"]
+  Facade["EntryHandlerFacade<br/>addLayout / clearLayouts(rootId)<br/>getAllLayouts(rootId) / getLayoutsTick(rootId)<br/>getConnections(rootId)"]
+  MenuArea["MenuArea<br/>Save → activeTab (フォーカス中のタブ)"]
+
+  Store --> MainArea
+  Store --> MenuArea
+  MainArea --> RI1
+  MainArea -.-> RI2
+  RI1 --> CV1
+  RI2 -.-> CV2
+  RI1 --> Facade
+  RI2 -.-> Facade
+  CV1 --> Facade
+  CV2 -.-> Facade
+```
+
+**今回の実装で行う変更:**
+1. **レイアウトストアのルート別分離(`EntryHandlerFacade`)**
+   - `EntryLayoutComponent`に`rootId`を持たせ、`addLayout(entryId, y, height)`は登録時に`getRootOf(entryId)`でrootIdを記録する。
+   - `clearLayouts(rootId)`は指定ルートのレイアウトのみ削除する。`getAllLayouts(rootId)`も指定ルート分のみ返す。セクション1と同じ方針でrootIdは**必須**とし、省略時のフォールバックは行わない。
+   - `layoutsTick`(単一)を`getLayoutsTick(rootId)`(ルート別のtick。`getHierarchyTick(rootId)`と同じ作り)に置き換え、あるルートの再計測が他ルートの表示を再計算させないようにする。ルート削除時(`removeEntry(rootId)`)はtickも破棄する。
+   - `getLayout(entryId)`はエントリIDで一意に引けるため変更しない。
+2. **RecipeItem**: `measureEntries()`は`clearLayouts(props.entryId)`を呼ぶ。`entryLayoutMap`は`getLayoutsTick(props.entryId)`/`getAllLayouts(props.entryId)`を参照する。`ConnectionView`には`:root-id="entryId"`を渡す。
+3. **ConnectionView**: `rootId`をprop(`{ type: String, required: true }`)で受け取り、`getRootOf(endpoint.entryId) === rootId`を両端が満たす接続のみを描画する(セクション1の接続フィルタと同じ条件。`EntryHandlerFacade.getConnections(rootId)`として共通化し、`buildRecipe(rootId)`・`connectionCount`からも使う)。tickは`getLayoutsTick(rootId)`を参照する。
+4. **`commBtnStatus`のストア移管**: タブ要素に`commStatus`(`'none' | 'connected' | 'failed'`)を持たせ、RecipeItemは`entryId`から自分のタブを引いて表示・更新する(`useTabStore`に`getTabByRootId(rootId)`/`setCommStatus(rootId, status)`を追加)。RecipeItemは「アクティブタブ」ではなく**自分のprop `entryId`**でタブを特定する。分割表示時に2つのRecipeItemが共存しても互いの状態を参照しない。
+5. **`useTabStore`への追加(セクション2の構成に対する追記)**
+   - getter `visibleTabs`: 今回は`activeTab ? [activeTab] : []`を返す。
+   - MainAreaは`visibleTabs`だけを見てRecipeItemを描画し、`activeTab`を直接参照しない。`activeTab`は「フォーカス中のタブ」(Save対象・タブバーのハイライト)の意味で使う。
+6. **MainArea**: `<RecipeItem v-for="tab in visibleTabs" :key="tab.rootEntryId" :entry-id="tab.rootEntryId" />`とする。コンテナはflexレイアウトにしておき、要素数が増えたら横に並ぶようにする(今回は1要素なので見た目は変わらない)。
+
+**RecipeItem以下の実装ルール(分割表示に備えて):** RecipeItemとその子孫(`ContainerChildren`・`ConnectionView`など)は、操作対象のルートを`props.entryId`(または`getRootOf()`)だけから決め、`useTabStore().activeTab`を参照しない。アクティブタブを参照してよいのはMenuArea(Save)・MainArea(タブバー)・`useTabStore`自身に限る。
+
+**分割表示を実装する際に別途検討する事項(今回はスコープ外):**
+- **ペインの表現**: `useTabStore`に`panes`(`[{ id, tabId }]`)と`focusedPaneId`を追加し、`visibleTabs`を`panes`から導出、`activeTab`をフォーカス中ペインのタブとする。タブバーをペインごとに持つか、1本のタブバーから各ペインに割り当てるかはUI設計時に決める。今回の`visibleTabs`/`activeTab`の使い分けを守っていれば、この変更はストアとMainAreaに閉じる。
+- **ペイン間のドラッグ&ドロップ**: 現状の`ContainerChildren.vue:65-70`の`moveEntry()`はルートを跨ぐ移動を制限していないため、分割表示ではペインAのエントリをペインBにドロップできてしまう。ルートを跨ぐ移動を禁止するか、許可して(コピーとして扱う/移動元の接続を削除する等)扱うかを決める必要がある。
+- **ルートを跨ぐパラメータ接続**: `connectingSource`(`useSystemState`)はアプリ共通のため、ペインAで接続を開始してペインBのパラメータをクリックできてしまう。接続作成時に両端の`getRootOf()`が一致することを検証して拒否する必要がある。
+- **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4の「アプリ全体で1つ」の方針の見直し(タブ単位ロック等)と合わせて検討する。
+- **スクロール位置**: 分割表示でも、ペイン内でタブを切り替えるとRecipeItemは再マウントされスクロール位置は先頭に戻る(セクション6の不明点と同じ)。
 
 ### 4. アプリ全体で共有されているグローバル状態の扱い [undecided]
 
@@ -159,7 +220,7 @@ export const useTabStore = defineStore('tab', () => {
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
 - **Loadのファイル選択キャンセル時の新規タブ**: セクション1の方針ではLoad時に先に`createTab()`で新規タブを作成してから`loadRecipe(rootId)`を呼ぶ。ファイル選択がキャンセルされた場合やレシピの読み込みに失敗した場合、作成した空タブを`closeTab()`で閉じるか、空タブとして残すか(あるいはファイル選択後にタブを作成する順序にするか)。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
-- **タブ切替時のスクロール位置**: セクション3の(b)案ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
+- **タブ切替時のスクロール位置**: セクション3の(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
 
 ### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
 
