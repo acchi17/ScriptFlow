@@ -65,7 +65,7 @@
 **接続のルート別フィルタ:**
 - `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`を満たすものだけを`connections`として保存する。
 - `RecipeDeserializer`の`connectionCount`も同様に、そのルートに属する接続のみを数える。
-- `ConnectionView.vue:40`もアクティブタブのrootIdに属する接続のみを描画対象とする(セクション3参照)。
+- `ConnectionView.vue:40`も親のRecipeItemからprop `rootId`で渡されたルートに属する接続のみを描画対象とする(セクション3参照)。
 
 **テストへの影響:** `EntryPersistanceService.test.js`など既存テストの`buildRecipe()`/`restoreRecipe(recipe)`/`clearEntries()`呼び出しはrootIdを渡す形に更新する。あわせて、2ルートを作成し「片方のルートだけが保存/クリア/復元され、他方のルートとその接続は影響を受けない」ことを検証するテストを追加する。
 
@@ -94,38 +94,42 @@ export const useTabStore = defineStore('tab', () => {
   const entryExecutionService = inject('entryExecutionService')
 
   // state
-  const tabs = ref([])            // [{ id, label, rootEntryId }]
+  const tabs = ref([])            // [{ id, label, rootEntryId, commStatus }]
   const activeTabId = ref(null)
 
   // getters
   const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? null)
+  const visibleTabs = computed(() => activeTab.value ? [activeTab.value] : []) // セクション3。分割表示時はpanesから導出
   const isTabLimitReached = computed(() => tabs.value.length >= MAX_TABS) // MAX_TABS = 10
 
   // actions
   function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → activeTabId 更新 */ }
   async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → activeTabId 付け替え */ }
   function setActiveTab(tabId) { /* activeTabId 更新 */ }
+  function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
+  function setCommStatus(rootId, status) { /* 該当タブの commStatus 更新(セクション3) */ }
 
-  return { tabs, activeTabId, activeTab, isTabLimitReached, createTab, closeTab, setActiveTab }
+  return { tabs, activeTabId, activeTab, visibleTabs, isTabLimitReached, createTab, closeTab, setActiveTab, getTabByRootId, setCommStatus }
 })
 ```
 
-- **state**: `tabs`(`{ id, label, rootEntryId }`の配列)と`activeTabId`。タブ単位のUI状態(セクション3の`commBtnStatus`、セクション6のスクロール位置など)が必要になった場合は、タブ要素のフィールドとしてこのストアに追加する。
-- **getters**: `activeTab`、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
+- **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)と`activeTabId`。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
+- **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue:33-35`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。
+  - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
 なお、新規タブを作成直後にアクティブにするか、0タブを許容するかといったストアの振る舞いの詳細は、セクション6の不明点として引き続き確認する。
 
-### 3. RecipeItemコンポーネントの複数タブ対応 [undecided]
+### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
 `RecipeItem.vue`は既に`entryId`(rootId)をpropで受け取る形になっており、ルート生成の責務は呼び出し元(現状MainArea)にある。したがって「インスタンス化するたびにルートが増える」問題は既に解消済みで、残る論点はタブ切替時のインスタンスの扱いのみ。
 
-**設計判断が必要な点:** タブ切替時にRecipeItemインスタンスをどう扱うか。
+**論点:** タブ切替時にRecipeItemインスタンスをどう扱うか。
 
 **追加要件(将来):** 将来、複数のタブ(少なくとも2つ)を同時に表示できるようにしたい(画面分割表示)。今回の実装は1タブ表示のままでよいが、分割表示を後から追加する際にRecipeItem・レイアウト管理・`useTabStore`の作り直しが発生しない構造にしておく。
 
@@ -146,7 +150,9 @@ export const useTabStore = defineStore('tab', () => {
 | (b) | 最小(現状のレイアウト実装のまま動く) | レイアウトストア・`ConnectionView`・背景線がアプリ全体で1つという前提に依存するため、分割表示時にRecipeItem以下とECSのレイアウト処理を作り直すことになる |
 | (c) | (b)+レイアウトのルート別分離・`ConnectionView`のrootId化(いずれも小規模) | MainAreaのテンプレートとストアの`visibleTabs`の中身を変えるだけ。RecipeItem以下は変更不要 |
 
-**提案:** (c)。分割表示を前提にすると、(b)のままでは「RecipeItemは画面に1つだけ」という前提がレイアウト管理・接続描画に埋め込まれ、後から外すコストが大きい。(c)は今回(b)と同じくマウントされるのは1インスタンスで実行時コストも同じだが、ルート単位で閉じた実装にしておくことで、分割表示の追加をMainAreaとストアに局所化できる。
+**決定:** (c)を採用する。分割表示を前提にすると、(b)のままでは「RecipeItemは画面に1つだけ」という前提がレイアウト管理・接続描画に埋め込まれ、後から外すコストが大きい。(c)は今回(b)と同じくマウントされるのは1インスタンスで実行時コストも同じだが、ルート単位で閉じた実装にしておくことで、分割表示の追加をMainAreaとストアに局所化できる。(a)は最大10インスタンス分のwatcherが常駐するうえ、レイアウトストアのルート別分離は(c)と同様に必要で、分割表示時にはペインごとの表示状態管理も結局必要になるため不採用。(b)は今回の差分は最小だが、分割表示の追加時にRecipeItem以下とECSのレイアウト処理の作り直しが発生するため不採用とした。
+
+タブ切替時のスクロール位置のリセットを許容するかは、(c)の構造に影響しない(必要になればタブ要素のフィールドとして`useTabStore`に追加するだけで済む)ため、引き続きセクション6の不明点として扱う。
 
 ```mermaid
 graph TD
@@ -220,7 +226,7 @@ graph TD
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
 - **Loadのファイル選択キャンセル時の新規タブ**: セクション1の方針ではLoad時に先に`createTab()`で新規タブを作成してから`loadRecipe(rootId)`を呼ぶ。ファイル選択がキャンセルされた場合やレシピの読み込みに失敗した場合、作成した空タブを`closeTab()`で閉じるか、空タブとして残すか(あるいはファイル選択後にタブを作成する順序にするか)。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
-- **タブ切替時のスクロール位置**: セクション3の(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
+- **タブ切替時のスクロール位置**: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
 
 ### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
 
