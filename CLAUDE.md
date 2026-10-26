@@ -25,7 +25,7 @@ npm run web:package      # Assemble a portable Windows distribution (out/scriptf
 npm run test:e2e         # Builds the web target, starts it, and runs e2e-tests/*.spec.js against it
 ```
 
-Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/ecs/component-handlers/__tests__/EntryManagementFacade.test.js`). End-to-end tests that need a real browser (native drag-and-drop, real layout/scrolling) live in `e2e-tests/*.spec.js` and run via `npm run test:e2e`. For UI verification beyond what unit/e2e tests cover, run `npm run electron:start`.
+Unit tests live alongside their subject in `__tests__/` directories (e.g. `client/ecs/component-handlers/__tests__/EntryHandlerFacade.test.js`). End-to-end tests that need a real browser (native drag-and-drop, real layout/scrolling) live in `e2e-tests/*.spec.js` and run via `npm run test:e2e`. For UI verification beyond what unit/e2e tests cover, run `npm run electron:start`.
 
 ## Design Documents
 

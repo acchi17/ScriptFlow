@@ -15,7 +15,7 @@
 
 ## キー: `entryId`
 
-タブ機能未実装の現時点でも、`EntryHierarchyHandler`は複数rootを内部的に保持できる設計であり、`SocketManager`/`EntryExecutionService`の通信ソケット管理は既に「rootのentryId」をキーに使っている(`EntryExecutionService.js:194` `this._entrySocketMap.set(entryId, { socketId: entryId })`)。将来のタブ機能におけるtabIdは、このentryId(root)のエイリアスとして後から乗せる想定。
+タブ機能未実装の現時点でも、`EntryHierarchyHandler`は複数rootを内部的に保持できる設計であり、`SocketManager`/`EntryExecutionService`の通信ソケット管理は既に「rootのentryId」をキーに使っている(`EntryExecutionService.createComm()`の`this._entrySocketMap.set(entryId, { socketId: entryId })`)。将来のタブ機能におけるtabIdは、このentryId(root)のエイリアスとして後から乗せる想定。
 
 新規に`rootId`/`tabId`という別名を導入せず、既存の呼称`entryId`に統一する。
 

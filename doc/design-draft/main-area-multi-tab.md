@@ -14,19 +14,19 @@
 
 ## Background: Current Code Structure
 
-- [MainArea.vue](../../client/components/MainArea.vue) の `.tab-bar` はタブ1個分のHTML(ラベル "Recipe" 固定)が書かれているだけで、タブの配列やアクティブタブという状態は存在しない。ルートエントリは**MainAreaの`setup()`で1回だけ** `entryManager.addEntry('container', 'root-container')` → `moveEntry(rootEntryId, null, 0)` → `setComm(rootEntryId)`(既定の通信設定を登録)の順で生成され(`MainArea.vue:33-35`)、その`rootEntryId`がpropとして単一の`RecipeItem`に渡される。
-- [RecipeItem.vue](../../client/components/RecipeItem.vue) は `entryId` を必須propとして受け取る形になっており、自分ではルートを生成しない。Run/Communication Settingボタン、`getHierarchyTick(props.entryId)`の監視はこのpropのrootIdに対して動作する。ただしClearボタンは `entryManager.clearEntries()` を引数なしで呼んでおり(`RecipeItem.vue:76`)、propのrootIdを使っていない。また`measureEntries()`は`entryManager.clearLayouts()`でレイアウト情報を全エントリ分クリアしてから自分のパネル内のエントリだけを再登録する。
-- [EntryHierarchyHandler.js](../../client/ecs/component-handlers/internal/EntryHierarchyHandler.js) の `setRoot`/`unsetRoot`/`isRoot`/`getRootOf`/`getHierarchyTick` は複数ルートを内部的に保持できる設計で、`__tests__/EntryHandlerFacade.test.js` に2ルート並行運用のテスト(`:113` ルート削除時に他ルートが残る、`:152-185` 2ルート/`getRootOf`/ルート別の連番、`:187-211` ルート別のhierarchy tick)が既にある。`ContainerChildren.vue:51` も`getRootOf()`経由で所属ルートのtickを監視している。
-- ただし `EntryHandlerFacade.getRoot()`(`EntryHandlerFacade.js:245`)は「最初に登録されたルート」を返し、`clearEntries()`(`EntryHandlerFacade.js:383-393`)も内部でその`getRoot()`を暗黙に使う。同様に `entryManager.getRoot()` を直接呼んでいる箇所が以下にあり、いずれもrootIdを引数で選べない。
-  - `RecipeSerializer.buildRecipe()`(`RecipeSerializer.js:17`)
-  - `RecipeDeserializer.restoreRecipe()`(`RecipeDeserializer.js:42`)
-  - `MenuArea.vue:62`(Load前の上書き確認で「現在のレシピが空か」を判定)
-  - `ExecutionLogView.vue:124`(ルートコンテナ自身の実行行をログ表示から除外する判定)
-- 接続(connection)はルートを問わず1つのストアに入っており、`getConnections()`(`EntryHandlerFacade.js:528`)は全ルート分を返す。`RecipeSerializer.buildRecipe()`はこれをそのまま`connections`として保存し(`RecipeSerializer.js:28`)、`ConnectionView.vue:40`も全接続を描画対象にする。`RecipeDeserializer`の`connectionCount`(`RecipeDeserializer.js:64`)も全ルート分の件数になる。
-- 通信設定は ECS の `comms` コンポーネント(`EntryHandlerFacade.getComm()`/`setComm()`)としてエントリ単位で保持され、`World.despawn()`で他コンポーネントと一緒に削除される。実際のソケットは `EntryExecutionService` の `_entrySocketMap`(`entryId -> { socketId }`)で管理され、`createComm(entryId, host, port)`/`deleteComm(entryId)`(`EntryExecutionService.js:191-211`)がホスト側(Electron IPC `socket:create`/`socket:destroy`、Web版 `POST /api/sockets`・`DELETE /api/sockets/:id`)に依頼する。`CommSettingView` には`entryId`(=rootEntryId)が渡され、`socketId`にもそのentryIdが使われる。**ソケットは既にentryId(ルート)単位で複数持てる設計**。
-- スクリプト実行子プロセスは [RunnerHostRegistry.js](../../shared/RunnerHostRegistry.js) により**ルートのentryId単位で既に分離済み**。`ScriptRunnerHost`(1インスタンス=1子プロセス、JS/Pythonの切替はAppSettingsで決まるアプリ共通設定)を`Map<entryId, ScriptRunnerHost>`で保持し、`get(entryId)`で遅延生成する。`EntryExecutionService`はスクリプト実行時に`getRootOf(entryId)`で所属ルートを解決して渡し(`EntryExecutionService.js:80-81`)、`electron/main.js:120-131`・`server/api.js:64-79`がそのentryIdで`runnerRegistry.get(entryId)`を引く。ソケット作成/破棄も同じルートのプロセスにルーティングされる。
-  - ただし`RunnerHostRegistry.shutdown(entryId)`(1ルート分のプロセス終了)を呼ぶ経路は無く、現状呼ばれているのはアプリ/サーバ終了時の`shutdownAll()`のみ(`electron/main.js:177-183`、`server/index.js:56-58`)。レンダラからルート単位でプロセス終了を依頼するIPC/HTTP APIは存在しない。
-- `useSystemState.js` の `isExecuting` / `selectedEntryId` / `connectingSource` / `showLog` / `lastError` はいずれもモジュールレベルの単一 `ref` で、アプリ全体でただ1つ共有されている。`executingRootEntryId` も追加されているが、値が入るのは`executeEntry()`経由(`useEntryOperation.js:23`)のみで、Save/Load時の`setExecuting(true)`(`useEntryOperation.js:53,68`)ではnullのまま。現状この値を参照している箇所は無い。`ExecutionLogService` の実行履歴ツリーもインスタンス単一。
+- [MainArea.vue](../../client/components/MainArea.vue) の `.tab-bar` はタブ1個分のHTML(ラベル "Recipe" 固定)が書かれているだけで、タブの配列やアクティブタブという状態は存在しない。ルートエントリは**MainAreaの`setup()`で1回だけ** `entryManager.addEntry('container', 'root-container')` → `moveEntry(rootEntryId, null, 0)` → `setComm(rootEntryId)`(既定の通信設定を登録)の順で生成され、その`rootEntryId`がpropとして単一の`RecipeItem`に渡される。
+- [RecipeItem.vue](../../client/components/RecipeItem.vue) は `entryId` を必須propとして受け取る形になっており、自分ではルートを生成しない。Run/Communication Settingボタン、`getHierarchyTick(props.entryId)`の監視はこのpropのrootIdに対して動作する。ただしClearボタンのハンドラ`clearRecipe()`は `entryManager.clearEntries()` を引数なしで呼んでおり、propのrootIdを使っていない。また`measureEntries()`は`entryManager.clearLayouts()`でレイアウト情報を全エントリ分クリアしてから自分のパネル内のエントリだけを再登録する。
+- [EntryHierarchyHandler.js](../../client/ecs/component-handlers/internal/EntryHierarchyHandler.js) の `setRoot`/`unsetRoot`/`isRoot`/`getRootOf`/`getHierarchyTick` は複数ルートを内部的に保持できる設計で、`__tests__/EntryHandlerFacade.test.js` に2ルート並行運用のテスト(`describe('EntryHandlerFacade.removeEntry')`のルート削除時に他ルートが残るケース、`describe('EntryHandlerFacade root entries')` の2ルート/`getRootOf`/ルート別の連番、`describe('EntryHandlerFacade.getHierarchyTick')` のルート別のhierarchy tick)が既にある。`ContainerChildren.vue`の`children` computedも`getRootOf()`経由で所属ルートのtickを監視している。
+- ただし `EntryHandlerFacade.getRoot()`は「最初に登録されたルート」を返し、`EntryHandlerFacade.clearEntries()`も内部でその`getRoot()`を暗黙に使う。同様に `entryManager.getRoot()` を直接呼んでいる箇所が以下にあり、いずれもrootIdを引数で選べない。
+  - `RecipeSerializer.buildRecipe()`
+  - `RecipeDeserializer.restoreRecipe()`
+  - `MenuArea.vue`の`onLoadRecipe()`(Load前の上書き確認で「現在のレシピが空か」を判定)
+  - `ExecutionLogView.vue`の`transformedLogs` computed(ルートコンテナ自身の実行行をログ表示から除外する判定)
+- 接続(connection)はルートを問わず1つのストアに入っており、`EntryHandlerFacade.getConnections()`は全ルート分を返す。`RecipeSerializer.buildRecipe()`はこれをそのまま`connections`として保存し、`ConnectionView.vue`の`connectionsWithLanes` computedも全接続を描画対象にする。`RecipeDeserializer.restoreRecipe()`が返す`connectionCount`も全ルート分の件数になる。
+- 通信設定は ECS の `comms` コンポーネント(`EntryHandlerFacade.getComm()`/`setComm()`)としてエントリ単位で保持され、`World.despawn()`で他コンポーネントと一緒に削除される。実際のソケットは `EntryExecutionService` の `_entrySocketMap`(`entryId -> { socketId }`)で管理され、`EntryExecutionService.createComm(entryId, host, port)`/`deleteComm(entryId)`がホスト側(Electron IPC `socket:create`/`socket:destroy`、Web版 `POST /api/sockets`・`DELETE /api/sockets/:id`)に依頼する。`CommSettingView` には`entryId`(=rootEntryId)が渡され、`socketId`にもそのentryIdが使われる。**ソケットは既にentryId(ルート)単位で複数持てる設計**。
+- スクリプト実行子プロセスは [RunnerHostRegistry.js](../../shared/RunnerHostRegistry.js) により**ルートのentryId単位で既に分離済み**。`ScriptRunnerHost`(1インスタンス=1子プロセス、JS/Pythonの切替はAppSettingsで決まるアプリ共通設定)を`Map<entryId, ScriptRunnerHost>`で保持し、`get(entryId)`で遅延生成する。`EntryExecutionService`はスクリプト実行時に`getRootOf(entryId)`で所属ルートを解決して渡し(`EntryExecutionService._executeBlock()`)、`electron/main.js`のIPCハンドラ(`script:execute`/`socket:create`/`socket:destroy`)・`server/api.js`のルート(`POST /scripts/:name/execute`/`POST /sockets`/`DELETE /sockets/:id`)がそのentryIdで`runnerRegistry.get(entryId)`を引く。ソケット作成/破棄も同じルートのプロセスにルーティングされる。
+  - ただし`RunnerHostRegistry.shutdown(entryId)`(1ルート分のプロセス終了)を呼ぶ経路は無く、現状呼ばれているのはアプリ/サーバ終了時の`shutdownAll()`のみ(`electron/main.js`の`before-quit`ハンドラ、`server/index.js`の`shutdown()`)。レンダラからルート単位でプロセス終了を依頼するIPC/HTTP APIは存在しない。
+- `useSystemState.js` の `isExecuting` / `selectedEntryId` / `connectingSource` / `showLog` / `lastError` はいずれもモジュールレベルの単一 `ref` で、アプリ全体でただ1つ共有されている。`executingRootEntryId` も追加されているが、値が入るのは`useEntryOperation.executeEntry()`経由のみで、`useEntryOperation.saveRecipe()`/`loadRecipe()`内の`setExecuting(true)`ではnullのまま。現状この値を参照している箇所は無い。`ExecutionLogService` の実行履歴ツリーもインスタンス単一。
 
 ## Design Considerations
 
@@ -58,14 +58,14 @@
 
 **呼び出し元の対応:**
 - **Save(MenuArea)**: `useTabStore().activeTab.rootEntryId`を`saveRecipe(rootId)`に渡す(`activeTab === null`ならSaveボタンは無効化済み。セクション2参照)。
-- **Load(MenuArea)**: `useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`loadRecipe(rootId)`に渡す。新規タブにロードするため、`MenuArea.vue:62`の「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。ファイル選択がキャンセルされた場合にタブを残すか閉じるかはセクション6の不明点として扱う。
-- **Clear(RecipeItem)**: 既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す(`RecipeItem.vue:76`)。
-- **ExecutionLogView**: ログは全タブ共通(セクション4参照)のため、`ExecutionLogView.vue:124`の`getRoot()`との比較を「`useTabStore().tabs`のいずれかの`rootEntryId`と一致するか」の判定に置き換える(`entryManager.isRoot(entryId)`でも同等)。
+- **Load(MenuArea)**: `useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`loadRecipe(rootId)`に渡す。新規タブにロードするため、`MenuArea.vue`の`onLoadRecipe()`にある「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。ファイル選択がキャンセルされた場合にタブを残すか閉じるかはセクション6の不明点として扱う。
+- **Clear(RecipeItem)**: 既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す(`RecipeItem.vue`の`clearRecipe()`)。
+- **ExecutionLogView**: ログは全タブ共通(セクション4参照)のため、`ExecutionLogView.vue`の`transformedLogs`内の`getRoot()`との比較を「`useTabStore().tabs`のいずれかの`rootEntryId`と一致するか」の判定に置き換える(`entryManager.isRoot(entryId)`でも同等)。
 
 **接続のルート別フィルタ:**
 - `buildRecipe(rootId)`は、接続の両端が`getRootOf(endpoint.entryId) === rootId`を満たすものだけを`connections`として保存する。
 - `RecipeDeserializer`の`connectionCount`も同様に、そのルートに属する接続のみを数える。
-- `ConnectionView.vue:40`も親のRecipeItemからprop `rootId`で渡されたルートに属する接続のみを描画対象とする(セクション3参照)。
+- `ConnectionView.vue`も親のRecipeItemからprop `rootId`で渡されたルートに属する接続のみを描画対象とする(セクション3参照)。
 
 **テストへの影響:** `EntryPersistanceService.test.js`など既存テストの`buildRecipe()`/`restoreRecipe(recipe)`/`clearEntries()`呼び出しはrootIdを渡す形に更新する。あわせて、2ルートを作成し「片方のルートだけが保存/クリア/復元され、他方のルートとその接続は影響を受けない」ことを検証するテストを追加する。
 
@@ -116,7 +116,7 @@ export const useTabStore = defineStore('tab', () => {
 - **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)と`activeTabId`。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
-  - `createTab(label)`: 現在`MainArea.vue:33-35`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
+  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
@@ -134,10 +134,10 @@ export const useTabStore = defineStore('tab', () => {
 **追加要件(将来):** 将来、複数のタブ(少なくとも2つ)を同時に表示できるようにしたい(画面分割表示)。今回の実装は1タブ表示のままでよいが、分割表示を後から追加する際にRecipeItem・レイアウト管理・`useTabStore`の作り直しが発生しない構造にしておく。
 
 **現状の実装で「2つのRecipeItemを同時にマウントできない」要因:**
-- **レイアウトストアがアプリ全体で1つ**: `RecipeItem.measureEntries()`(`RecipeItem.vue:103-118`)は`entryManager.clearLayouts()`で**全エントリ分**のレイアウトを消してから自パネル内のエントリだけを再登録する。2インスタンスあると互いのレイアウトを消し合い、片方の接続線・背景線が消える。また`layoutsTick`(`EntryHandlerFacade.js:139`)も1つなので、片方の再計測でもう片方の`entryLayoutMap`/`ConnectionView`まで再計算される。
-- **`entryLayoutMap`がルートを区別しない**: `RecipeItem.vue:129-132`の背景線は`getAllLayouts()`(全ルート分)を描画するため、別ペインのエントリ位置に背景線が引かれる。
-- **`ConnectionView`がルートを区別しない**: `ConnectionView.vue:40`は`getConnections()`で全ルートの接続を対象にし、`getLayout()`は全ルート共通のストアを引く。propも持たないため、どのルートを描くかを指定できない。
-- **`commBtnStatus`がRecipeItemのローカル`ref`**(`RecipeItem.vue:84`): 再マウントで消える。
+- **レイアウトストアがアプリ全体で1つ**: `RecipeItem.vue`の`measureEntries()`は`entryManager.clearLayouts()`で**全エントリ分**のレイアウトを消してから自パネル内のエントリだけを再登録する。2インスタンスあると互いのレイアウトを消し合い、片方の接続線・背景線が消える。また`EntryHandlerFacade.layoutsTick`も1つなので、片方の再計測でもう片方の`entryLayoutMap`/`ConnectionView`まで再計算される。
+- **`entryLayoutMap`がルートを区別しない**: `RecipeItem.vue`の`entryLayoutMap` computed(背景線)は`getAllLayouts()`(全ルート分)を描画するため、別ペインのエントリ位置に背景線が引かれる。
+- **`ConnectionView`がルートを区別しない**: `ConnectionView.vue`の`connectionsWithLanes` computedは`getConnections()`で全ルートの接続を対象にし、`getLayout()`は全ルート共通のストアを引く。propも持たないため、どのルートを描くかを指定できない。
+- **`commBtnStatus`が`RecipeItem.vue`のローカル`ref`**: 再マウントで消える。
 
 **検討した選択肢:**
 - (a) タブごとに1つのRecipeItemを`v-for`で生成し、非アクティブなものは`v-show`で隠す(常時マウント)
@@ -195,7 +195,7 @@ graph TD
 
 **分割表示を実装する際に別途検討する事項(今回はスコープ外):**
 - **ペインの表現**: `useTabStore`に`panes`(`[{ id, tabId }]`)と`focusedPaneId`を追加し、`visibleTabs`を`panes`から導出、`activeTab`をフォーカス中ペインのタブとする。タブバーをペインごとに持つか、1本のタブバーから各ペインに割り当てるかはUI設計時に決める。今回の`visibleTabs`/`activeTab`の使い分けを守っていれば、この変更はストアとMainAreaに閉じる。
-- **ペイン間のドラッグ&ドロップ**: 現状の`ContainerChildren.vue:65-70`の`moveEntry()`はルートを跨ぐ移動を制限していないため、分割表示ではペインAのエントリをペインBにドロップできてしまう。ルートを跨ぐ移動を禁止するか、許可して(コピーとして扱う/移動元の接続を削除する等)扱うかを決める必要がある。
+- **ペイン間のドラッグ&ドロップ**: 現状の`ContainerChildren.vue`のドロップコールバック(`setOnDropCallback`)内の`moveEntry()`はルートを跨ぐ移動を制限していないため、分割表示ではペインAのエントリをペインBにドロップできてしまう。ルートを跨ぐ移動を禁止するか、許可して(コピーとして扱う/移動元の接続を削除する等)扱うかを決める必要がある。
 - **ルートを跨ぐパラメータ接続**: `connectingSource`(`useSystemState`)はアプリ共通のため、ペインAで接続を開始してペインBのパラメータをクリックできてしまう。接続作成時に両端の`getRootOf()`が一致することを検証して拒否する必要がある。
 - **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4の「アプリ全体で1つ」の方針の見直し(タブ単位ロック等)と合わせて検討する。
 - **スクロール位置**: 分割表示でも、ペイン内でタブを切り替えるとRecipeItemは再マウントされスクロール位置は先頭に戻る(セクション6の不明点と同じ)。
@@ -211,8 +211,8 @@ graph TD
 
 ### 5. タブ削除時のソケット/ルート/子プロセス削除 [undecided]
 
-- **ルート**: `EntryHandlerFacade.removeEntry(entryId)`(`EntryHandlerFacade.js:323-347`)は対象がルート自身の場合に`hierarchyHandler.unsetRoot()`まで含めて処理し、配下エントリ・接続・パラメータ・`comms`コンポーネントも削除する(`__tests__/EntryHandlerFacade.test.js:113`で他ルートが残ることも検証済み)。ルートの削除自体は追加改修なしで可能。
-- **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターン(`RecipeDeserializer.js:48`)と同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
+- **ルート**: `EntryHandlerFacade.removeEntry(entryId)`は対象がルート自身の場合に`hierarchyHandler.unsetRoot()`まで含めて処理し、配下エントリ・接続・パラメータ・`comms`コンポーネントも削除する(`__tests__/EntryHandlerFacade.test.js`の`describe('EntryHandlerFacade.removeEntry')`で他ルートが残ることも検証済み)。ルートの削除自体は追加改修なしで可能。
+- **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターンと同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
 - **子プロセス**: 前提のとおり、タブ(ルート)ごとの`ScriptRunnerHost`は`RunnerHostRegistry`に残り続ける。タブ削除時にプロセスを終了させないと、最大10個を超えて作成/削除を繰り返すたびにアイドルの子プロセスが蓄積する。`RunnerHostRegistry.shutdown(entryId)`自体は実装済みなので、これを呼ぶ経路(Electron: `runner:shutdown` のようなIPCハンドラと`preload.js`の公開API、Web版: `DELETE /api/runners/:entryId`のようなAPIルート、クライアント: `ScriptExecutionService.shutdownRunner(entryId)`)を追加する必要がある。
 
 **削除処理の順序(提案):** `deleteComm(rootId)` → ランナー終了依頼(`shutdownRunner(rootId)`) → `removeEntry(rootId)` → `useTabStore`からタブを除去しアクティブタブを付け替え(`useTabStore.closeTab()`がこの一連の処理を担う)。ルート削除とソケット解放は既存パターンの流用で、設計判断が必要なのは子プロセス終了APIの追加のみ。
