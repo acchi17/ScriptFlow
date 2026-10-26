@@ -1,0 +1,120 @@
+name: Claude Code Implementation Plan
+on:
+  schedule:
+    - cron: "0 1 * * 1-5"   # 10:00 JST, weekdays (Mon-Fri)
+  workflow_dispatch:
+
+jobs:
+  find-targets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      targets: ${{ steps.build.outputs.targets }}
+      count: ${{ steps.build.outputs.count }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          list=$(gh issue list --label design-considerations --state open \
+            --author acchi17 --json number,title --limit 50 \
+            | jq -c '[ .[]
+                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]
+                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+          echo "targets=$list" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
+
+  plan:
+    needs: find-targets
+    if: needs.find-targets.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.find-targets.outputs.targets) }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BASE_BRANCH: ${{ matrix.branch }}
+      PLAN_BRANCH: impl-plan/issue-${{ matrix.issue }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - id: detect
+        run: |
+          # Skip while a previous plan PR for this issue is still open
+          if [ -n "$(gh pr list --head "$PLAN_BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            echo "files=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files=""
+          for f in doc/design-draft/*.md; do
+            [ -f "$f" ] || continue
+            # Fully resolved = at least one [resolved], no [undecided] left, and no plan yet
+            if grep -qF '[resolved]' "$f" && ! grep -qF '[undecided]' "$f" \
+              && [ ! -f "doc/impl-plan/$(basename "$f")" ]; then
+              files="$files $f"
+            fi
+          done
+          echo "files=${files# }" >> "$GITHUB_OUTPUT"
+
+      - if: steps.detect.outputs.files != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ matrix.branch }}
+          prompt: |
+            The following design documents have all design considerations resolved:
+            ${{ steps.detect.outputs.files }}
+            For each one, create an implementation plan at doc/impl-plan/<same file name>.
+            The design document is finalized: do not modify it and do not revisit its decisions.
+            Before planning, read the code the design document references to confirm the current structure.
+            Plan requirements:
+            - Write in the same language as the design document
+            - Split the work into phases that can each be implemented, tested and committed on
+              their own. Put behavior-preserving refactors in separate phases before new features.
+            - For each phase, list: goal, files to change and what changes, behavior that must not
+              change, tests to add or update (test file and describe name), and completion criteria
+              (`npm test` passes, plus manual checks with `npm run electron:start` where UI is affected)
+            - Include a "Scope" section, an "Out of scope" section taken from the design document,
+              and acceptance criteria mapped to the design document's functional requirements
+            - Reference code by file path and identifier, never by line number
+            - If something in the design document is ambiguous, do not guess; list it under a
+              "Notes for reviewer" section
+            Only write files under doc/impl-plan/.
+          claude_args: >-
+            --max-turns 50
+            --allowedTools "Read,Glob,Grep,Write"
+
+      - if: steps.detect.outputs.files != ''
+        env:
+          FILES: ${{ steps.detect.outputs.files }}
+          ISSUE: ${{ matrix.issue }}
+        run: |
+          # Only the plan folder is committed, even if Claude touched other files
+          git add doc/impl-plan/
+          if git diff --cached --quiet; then
+            echo "No implementation plan was written"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$PLAN_BRANCH"
+          git commit -m "docs: add implementation plan for $FILES"
+          # Force-push: the branch may remain from a previously closed (unmerged) PR
+          git push --force origin "$PLAN_BRANCH"
+          gh pr create --base "$BASE_BRANCH" --head "$PLAN_BRANCH" \
+            --title "Implementation plan: $FILES" \
+            --body "Implementation plan generated from: $FILES
+
+          Refs #$ISSUE"
