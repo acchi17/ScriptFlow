@@ -117,7 +117,7 @@ export const useTabStore = defineStore('tab', () => {
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
-  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。
+  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
@@ -209,13 +209,45 @@ graph TD
 
 **提案:** 今回の機能要件は「タブの作成・削除・Load/Save」に閉じたスコープなので、実行ロックやログのタブ単位分離は本機能のスコープ外とし、現状通り「アプリ全体で1つ」の挙動を維持することを提案する。スクリプト実行プロセスは既にルート単位で分離されている(前提参照)ため、将来タブごとの分離(タブAの実行中はタブBを操作可能にする、ログをタブ別にフィルタする等)が必要になった場合も、ボトルネックはUI側のロック/ログのみで、既存の`executingRootEntryId`をタブ単位ロックの起点にできる。その際は別の設計検討として切り出す。
 
-### 5. タブ削除時のソケット/ルート/子プロセス削除 [undecided]
+### 5. タブ削除時のソケット/ルート/子プロセス削除 [resolved]
 
 - **ルート**: `EntryHandlerFacade.removeEntry(entryId)`は対象がルート自身の場合に`hierarchyHandler.unsetRoot()`まで含めて処理し、配下エントリ・接続・パラメータ・`comms`コンポーネントも削除する(`__tests__/EntryHandlerFacade.test.js`の`describe('EntryHandlerFacade.removeEntry')`で他ルートが残ることも検証済み)。ルートの削除自体は追加改修なしで可能。
 - **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターンと同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
-- **子プロセス**: 前提のとおり、タブ(ルート)ごとの`ScriptRunnerHost`は`RunnerHostRegistry`に残り続ける。タブ削除時にプロセスを終了させないと、最大10個を超えて作成/削除を繰り返すたびにアイドルの子プロセスが蓄積する。`RunnerHostRegistry.shutdown(entryId)`自体は実装済みなので、これを呼ぶ経路(Electron: `runner:shutdown` のようなIPCハンドラと`preload.js`の公開API、Web版: `DELETE /api/runners/:entryId`のようなAPIルート、クライアント: `ScriptExecutionService.shutdownRunner(entryId)`)を追加する必要がある。
+- **子プロセス**: 前提のとおり、タブ(ルート)ごとの`ScriptRunnerHost`は`RunnerHostRegistry`に残り続ける。タブ削除時にプロセスを終了させないと、最大10個を超えて作成/削除を繰り返すたびにアイドルの子プロセスが蓄積する。`RunnerHostRegistry.shutdown(entryId)`自体は実装済みだが、レンダラからこれを呼ぶ経路が無い。
 
-**削除処理の順序(提案):** `deleteComm(rootId)` → ランナー終了依頼(`shutdownRunner(rootId)`) → `removeEntry(rootId)` → `useTabStore`からタブを除去しアクティブタブを付け替え(`useTabStore.closeTab()`がこの一連の処理を担う)。ルート削除とソケット解放は既存パターンの流用で、設計判断が必要なのは子プロセス終了APIの追加のみ。
+**検討した選択肢:**
+- (A) ルート単位のランナー終了APIを明示的に追加し、`useTabStore.closeTab()`から呼ぶ
+- (B) ホスト側の`socket:destroy`/`DELETE /api/sockets/:id`の処理の中でランナーも終了させる(新規APIなし)
+- (C) `RunnerHostRegistry`にアイドルタイムアウト(一定時間未使用のホストを終了するGC)を持たせる(クライアント側の変更なし)
+
+**決定:** (A)を採用する。プロセスのライフサイクルがタブの削除と1対1で明示的に対応し、テストもしやすい。(B)は新規APIが不要だが、プロセスの寿命をソケットに結びつけてしまう。ソケットを一度も有効にせずにスクリプトだけ実行したタブではプロセスがリークし、またLoad時の`deleteComm()`(`RecipeDeserializer.restoreRecipe()`)のたびにランナーが終了・再起動されてしまうため不採用。(C)はクライアントの変更が不要だが、終了タイミングが予測できず、ホストにタイマー処理が増え、開いたままのタブのランナー(`numpy`/`pandas`等の重いimportを済ませたもの。セクション7の注意点参照)を終了させてしまい得るため不採用とした。
+
+**追加するAPI:**
+
+| 層 | 追加内容 |
+|---|---|
+| Electron main(`electron/main.js`) | `ipcMain.handle('runner:shutdown', async (_evt, entryId) => ensureRunnerRegistry().shutdown(entryId))` |
+| Electron preload(`electron/preload.js`) | `shutdownRunner: (entryId) => ipcRenderer.invoke('runner:shutdown', entryId)` |
+| Web版(`server/api.js`) | `router.delete('/runners/:entryId', ...)`(= `DELETE /api/runners/:entryId`)。`runnerRegistry.shutdown(req.params.entryId)`を待ってから`{ shutdown: true }`を返す |
+| クライアント(`ScriptExecutionService`) | `shutdownRunner(entryId)`。`createSocket()`/`destroySocket()`と同様にElectron/Web版を切り替えて上記を呼ぶ |
+| クライアント(`EntryExecutionService`) | `shutdownRunner(entryId)`。`scriptExecutionService.shutdownRunner(entryId)`に委譲する(`useTabStore`は既に`inject`している`entryExecutionService`経由で呼ぶ。`createComm()`/`deleteComm()`と同じ経路) |
+
+- **冪等性**: ホストは遅延生成のため、そのタブで一度もスクリプト実行/ソケット作成が行われていなければ`RunnerHostRegistry`にホストが存在しない。この場合は何もせず成功扱いとする(`RunnerHostRegistry.shutdown()`は既にホスト未登録時に`Promise.resolve()`を返す実装であり、そのまま使える)。同じentryIdに対する2回目以降の呼び出しも同様に無害とする。
+- **`get()`を経由しない**: 終了APIは`runnerRegistry.get(entryId)`ではなく`runnerRegistry.shutdown(entryId)`を直接呼ぶ。`get()`はホストを遅延生成してしまうため、終了のためだけにホストを作ることになる。
+
+**削除処理の順序(`useTabStore.closeTab(tabId)`):**
+1. `entryExecutionService.deleteComm(rootId)`: ソケット記録(`_entrySocketMap`)を削除し、ソケットがあればホストに破棄を依頼する(ソケットが無ければ何もしないため、ここで子プロセスが起動されることは無い)。
+2. `entryExecutionService.shutdownRunner(rootId)`: 当該ルートの子プロセスを終了する。
+3. `entryManager.removeEntry(rootId)`: ルートと配下エントリ・接続・`comms`等を削除する。
+4. `tabs`からタブを除去し、アクティブタブを付け替える(付け替え先のルールや0タブの扱いはセクション6の不明点)。
+
+- **エラー時の扱い**: 1・2のホスト側処理が失敗(IPC/HTTPエラー)しても、エラーをログに出したうえで3・4を続行する。ホスト側の失敗でタブが閉じられなくなる状態を作らないためである。プロセスが終了できずに残った場合も、アプリ/サーバ終了時の`shutdownAll()`で最終的に回収される。
+- **実行中のタブ削除**: セクション4の方針(実行ロックはアプリ全体で1つ)により、実行中はMainArea全体に`.executing`のdim overlayがかかりxボタンを押せないため、実行中のランナーを終了させるケースは今回考慮しない。タブ単位ロックを導入する場合は、実行中タブのxボタン無効化と合わせて再検討する。
+
+**テスト:**
+- `RunnerHostRegistry`: `shutdown(entryId)`が対象ホストのみ終了し他のホストが残ること、未登録のentryIdで何もしないことを検証する(既存テストが無ければ追加)。
+- `server/api.js`: `DELETE /api/runners/:entryId`が`runnerRegistry.shutdown()`を呼び、未登録のentryIdでも成功を返すことを検証する。
+- `useTabStore.closeTab()`: `deleteComm` → `shutdownRunner` → `removeEntry`の呼び出し順序、および`shutdownRunner`が失敗しても`removeEntry`とタブ除去が行われることを、モックした`entryExecutionService`/`entryManager`で検証する。
 
 ### 6. その他の不明点(要確認) [undecided]
 
@@ -237,7 +269,7 @@ graph TD
 **採用したインスタンス設計**: 「単一インスタンスが内部で複数プロセスを管理する」案ではなく、`ScriptRunnerHost`をルートごとに複数生成し、ルーティングだけを外側の薄いレジストリ(`RunnerHostRegistry`)に切り出す案を採用している。1プロセス分のプロトコル管理とプール管理の責務が分離され、`ScriptRunnerHost`は1インスタンス=1プロセスの実装のまま再利用できる。
 
 **本機能に関わる残課題**:
-- タブ削除時に`RunnerHostRegistry.shutdown(entryId)`を呼ぶ経路が無い(セクション5参照)。これは本機能のスコープで対応する。
+- タブ削除時に`RunnerHostRegistry.shutdown(entryId)`を呼ぶ経路が無い。これは本機能のスコープで対応し、セクション5で追加するランナー終了API(Electron `runner:shutdown`/Web版 `DELETE /api/runners/:entryId`/`ScriptExecutionService.shutdownRunner()`)を`useTabStore.closeTab()`から呼ぶことで解消する。
 - 実行ロック・ログはUI側でアプリ全体共通のままなので、プロセスが分離されていてもタブ間の並列実行はUI上できない(セクション4の方針どおりスコープ外)。
 
 **注意点**: 素のPythonインタプリタ起動自体はNodeと大差ない(実測: 素のPython起動 約60ms、`node -e ""` 約64ms)。ただし`script_runner.py`が起動時に読み込む標準ライブラリ(特に`asyncio`)のimportで実質約180msかかり、加えてユーザースクリプトが`numpy`/`pandas`等の重いライブラリをimportする場合はプロセスごとにそのコストを個別に払うことになる。遅延生成により各タブでこのコストは「そのタブで最初にスクリプトを実行した時」に一度だけ発生するため、タブ上限(10個)分が同時に重なることはないが、ユーザースクリプトの内容次第で新規タブの初回実行が重くなり得る点は要検討事項として残る。
