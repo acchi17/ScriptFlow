@@ -104,8 +104,8 @@ export const useTabStore = defineStore('tab', () => {
 
   // actions
   function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → activeTabId 更新 */ }
-  async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → activeTabId 付け替え */ }
-  function setActiveTab(tabId) { /* activeTabId 更新(変化時は resetState()。セクション4) */ }
+  async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → アクティブだった場合は tabs[0] ?? null に付け替え(セクション6) */ }
+  function setActiveTab(tabId) { /* activeTabId 更新(null 可。変化時は resetState()。セクション4) */ }
   function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
   function setCommStatus(rootId, status) { /* 該当タブの commStatus 更新(セクション3) */ }
 
@@ -117,13 +117,13 @@ export const useTabStore = defineStore('tab', () => {
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
-  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
+  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-なお、新規タブを作成直後にアクティブにするか、0タブを許容するかといったストアの振る舞いの詳細は、セクション6の不明点として引き続き確認する。
+0タブの許容(`activeTabId`は`null`になり得る)と削除後のアクティブタブの付け替えはセクション6で決定済み。新規タブを作成直後にアクティブにするかは、セクション6の不明点として引き続き確認する。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -251,7 +251,7 @@ graph TD
 1. `entryExecutionService.deleteComm(rootId)`: ソケット記録(`_entrySocketMap`)を削除し、ソケットがあればホストに破棄を依頼する(ソケットが無ければ何もしないため、ここで子プロセスが起動されることは無い)。
 2. `entryExecutionService.shutdownRunner(rootId)`: 当該ルートの子プロセスを終了する。
 3. `entryManager.removeEntry(rootId)`: ルートと配下エントリ・接続・`comms`等を削除する。
-4. `tabs`からタブを除去し、アクティブタブを付け替える(付け替え先のルールや0タブの扱いはセクション6の不明点)。
+4. `tabs`からタブを除去し、アクティブタブを付け替える(閉じたタブがアクティブだった場合は残りの最も左のタブ、残りが0個なら`null`。セクション6で決定)。
 
 - **エラー時の扱い**: 1・2のホスト側処理が失敗(IPC/HTTPエラー)しても、エラーをログに出したうえで3・4を続行する。ホスト側の失敗でタブが閉じられなくなる状態を作らないためである。プロセスが終了できずに残った場合も、アプリ/サーバ終了時の`shutdownAll()`で最終的に回収される。
 - **実行中のタブ削除**: セクション4の方針(実行ロックはアプリ全体で1つ)により、実行中はMainArea全体に`.executing`のdim overlayがかかりxボタンを押せないため、実行中のランナーを終了させるケースは今回考慮しない。タブ単位ロックを導入する場合は、実行中タブのxボタン無効化と合わせて再検討する。
@@ -265,7 +265,16 @@ graph TD
 
 - **「通信ソケットを新規に作成」の意味**: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント)の登録のみで、接続先情報は無い。要件文言の「通信ソケットを新規に作成」は「タブ(ルート)ごとに独立した通信設定・ソケット管理単位(entryIdに紐づく)を用意する」という意味であり、タブ作成時に実際にTCP接続を試みるわけではないと解釈している。この理解で正しいか確認したい。
 - **タブ削除時の確認ダイアログ**: Loadボタン押下時は既存レシピの上書きを`window.confirm`で確認しているが、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様なので、確認ダイアログを出すべきか。
-- **全タブ削除後(0タブ)の扱い**: 全てのタブを閉じられる仕様か、最低1タブは残す(最後の1つの xボタンは無効化する)仕様か。0タブを許容する場合、MainAreaの空状態の表示をどうするか。
+- **全タブ削除後(0タブ)の扱いとタブ削除後のアクティブタブ [resolved]**:
+  - 選択肢:
+    - (A) 0タブを許容し、MainAreaに空状態(メッセージと+ボタン)を表示する
+    - (B) 最低1タブは常に残す(最後の1つのxボタンを無効化する、または閉じたら空の新規タブを作る)
+  - **決定:** (A)を採用する。要件(全タブにxボタンを配置する、タブ未選択時はSaveボタンを無効化する)をそのまま満たし、`activeTab === null`はセクション1〜3で既に考慮済み(Save無効化、`visibleTabs = []`)のため追加の分岐が少ない。(B)は「タブ未選択時のSave無効化」が発生し得なくなり、最後のタブのxボタンだけ挙動が異なるため不採用とした。
+  - **0タブの許容**: 最後のタブも含めて全てのxボタンを有効とし、全タブを閉じた場合は`activeTabId = null`とする。`useTabStore.setActiveTab()`は`null`を受け付ける(`null`への変化時も`resetState()`を呼ぶ。セクション4)。
+  - **0タブ時のMainArea**: `visibleTabs`が空のためRecipeItemはマウントされない。タブバーには+ボタンのみを表示し、本体領域には空状態のメッセージ(例: 「+ボタンまたはLoadでタブを作成してください」)を表示する。MenuAreaのSaveボタンは`activeTab === null`で無効化され、Loadボタンは有効のまま(Loadは新規タブを作成するため)。
+  - **起動時**: 現状の挙動(起動直後に空のレシピが1つ表示される)を維持するため、MainAreaの`setup()`で`useTabStore().createTab()`を1回呼び、タブを1つ作成した状態で起動する(現在`setup()`にあるルート生成処理はセクション2のとおり`createTab()`に移る)。
+  - **タブ削除後のアクティブタブ**: アクティブ(選択中)のタブを閉じた場合は、残ったタブのうち**最も左のタブ**(`tabs[0]`)をアクティブにする。残りが0個なら`null`とする。アクティブでないタブを閉じた場合はアクティブタブを変更しない。付け替えは`setActiveTab()`経由で行う(セクション4)。
+  - **テスト**: `useTabStore.closeTab()`について、(1) アクティブタブを閉じると残りの最も左のタブがアクティブになること(閉じたタブが先頭・中間・末尾のいずれでも`tabs[0]`になる)、(2) 非アクティブタブを閉じてもアクティブタブが変わらないこと、(3) 最後の1タブを閉じると`tabs`が空・`activeTabId === null`・`visibleTabs`が空になること、を検証する。
 - **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
 - **Loadのファイル選択キャンセル時の新規タブ**: セクション1の方針ではLoad時に先に`createTab()`で新規タブを作成してから`loadRecipe(rootId)`を呼ぶ。ファイル選択がキャンセルされた場合やレシピの読み込みに失敗した場合、作成した空タブを`closeTab()`で閉じるか、空タブとして残すか(あるいはファイル選択後にタブを作成する順序にするか)。
