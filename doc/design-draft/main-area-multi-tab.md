@@ -105,7 +105,7 @@ export const useTabStore = defineStore('tab', () => {
   // actions
   function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → activeTabId 更新 */ }
   async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → activeTabId 付け替え */ }
-  function setActiveTab(tabId) { /* activeTabId 更新 */ }
+  function setActiveTab(tabId) { /* activeTabId 更新(変化時は resetState()。セクション4) */ }
   function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
   function setCommStatus(rootId, status) { /* 該当タブの commStatus 更新(セクション3) */ }
 
@@ -118,7 +118,7 @@ export const useTabStore = defineStore('tab', () => {
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
-  - `setActiveTab(tabId)`: アクティブタブを切り替える。
+  - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
@@ -197,17 +197,29 @@ graph TD
 - **ペインの表現**: `useTabStore`に`panes`(`[{ id, tabId }]`)と`focusedPaneId`を追加し、`visibleTabs`を`panes`から導出、`activeTab`をフォーカス中ペインのタブとする。タブバーをペインごとに持つか、1本のタブバーから各ペインに割り当てるかはUI設計時に決める。今回の`visibleTabs`/`activeTab`の使い分けを守っていれば、この変更はストアとMainAreaに閉じる。
 - **ペイン間のドラッグ&ドロップ**: 現状の`ContainerChildren.vue`のドロップコールバック(`setOnDropCallback`)内の`moveEntry()`はルートを跨ぐ移動を制限していないため、分割表示ではペインAのエントリをペインBにドロップできてしまう。ルートを跨ぐ移動を禁止するか、許可して(コピーとして扱う/移動元の接続を削除する等)扱うかを決める必要がある。
 - **ルートを跨ぐパラメータ接続**: `connectingSource`(`useSystemState`)はアプリ共通のため、ペインAで接続を開始してペインBのパラメータをクリックできてしまう。接続作成時に両端の`getRootOf()`が一致することを検証して拒否する必要がある。
-- **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4の「アプリ全体で1つ」の方針の見直し(タブ単位ロック等)と合わせて検討する。
+- **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4で採用した「アプリ全体で1つ」の方針の見直し(タブ単位ロック等。セクション4でスコープ外とした事項)と合わせて検討する。
 - **スクロール位置**: 分割表示でも、ペイン内でタブを切り替えるとRecipeItemは再マウントされスクロール位置は先頭に戻る(セクション6の不明点と同じ)。
 
-### 4. アプリ全体で共有されているグローバル状態の扱い [undecided]
+### 4. アプリ全体で共有されているグローバル状態の扱い [resolved]
 
 `isExecuting`(実行中ロック)、`selectedEntryId`(選択状態)、`connectingSource`(パラメータ接続中状態)、`lastError`、`ExecutionLogService`の実行履歴は現状すべて「アプリ全体でただ1つ」。複数タブ化すると以下の挙動になる。
 - 実行中ロック: タブAで実行中の間、タブBのRun/Load/Saveボタンも無効化される(MainArea全体に`.executing`のdim overlayがかかるため、タブバーの切替・+/xボタンも操作不可になる)。
 - 選択状態/接続中状態: RecipeItemのhierarchy tick監視で`cancelConnection()`/選択解除が行われるが、タブ切替そのものでは解除されない。別タブのentryIdなので実害は小さい(表示上は何も選択されていないように見える)が、タブ切替時に`resetState()`を呼んでおくのが安全。
 - 実行ログ: 全タブの実行ログが1つのログパネルに混在して表示される。
 
-**提案:** 今回の機能要件は「タブの作成・削除・Load/Save」に閉じたスコープなので、実行ロックやログのタブ単位分離は本機能のスコープ外とし、現状通り「アプリ全体で1つ」の挙動を維持することを提案する。スクリプト実行プロセスは既にルート単位で分離されている(前提参照)ため、将来タブごとの分離(タブAの実行中はタブBを操作可能にする、ログをタブ別にフィルタする等)が必要になった場合も、ボトルネックはUI側のロック/ログのみで、既存の`executingRootEntryId`をタブ単位ロックの起点にできる。その際は別の設計検討として切り出す。
+**検討した選択肢:**
+- (A) 現状通り「アプリ全体で1つ」の挙動を維持する
+- (B) 実行ロックをタブ単位にし、実行ログもタブ別にフィルタする(本機能で対応)
+
+**決定:** (A)を採用する。今回の機能要件は「タブの作成・削除・Load/Save」に閉じたスコープなので、実行ロックやログのタブ単位分離は本機能のスコープ外とし、`isExecuting`・`selectedEntryId`・`connectingSource`・`lastError`・`ExecutionLogService`の実行履歴はいずれもアプリ全体で1つのまま変更しない。スクリプト実行プロセスは既にルート単位で分離されている(前提参照)ため、将来タブごとの分離が必要になった場合も、ボトルネックはUI側のロック/ログのみで、既存の`executingRootEntryId`をタブ単位ロックの起点にできる。(B)はタブ間の並列操作が可能になりセクション3の分割表示とも相性が良いが、`useSystemState`・MainAreaのoverlay・`ExecutionLogView`・`useTabStore.closeTab()`(実行中タブの削除への対応が必要になる)まで改修範囲が広がるため、本機能では不採用とした。
+
+**本方針に基づく挙動:**
+- **実行中ロック**: タブAで実行中の間はMainArea全体に`.executing`のdim overlayがかかり、タブBのRun/Load/Save、タブ切替、+/xボタンも操作不可となる。これは仕様として許容する。セクション5で実行中のタブ削除を考慮しないのはこのロックを前提としている。
+- **実行ログ**: 全タブの実行ログを1つのログパネルに混在して表示する。ルートコンテナ自身の実行行の除外判定は全タブの`rootEntryId`に対して行う(セクション1の`ExecutionLogView`の対応)。
+- **タブ切替時の状態リセット**: アクティブタブが変わる際に`useSystemState().resetState()`(`cancelConnection()` + `clearSelection()`)を呼び、別タブのエントリに対する選択状態・パラメータ接続中状態が残らないようにする。呼び出しは`useTabStore.setActiveTab()`に集約し、`activeTabId`が実際に変わる場合のみ行う。`createTab()`/`closeTab()`によるアクティブタブの付け替えも`setActiveTab()`経由で行うことで、同じリセットが適用される。`useSystemState`は内部で`inject('entryManager')`するが、ストアの他の依存と同じくSetup Store内で取得できる(セクション2)。`lastError`はリセット対象に含めない(現状の`resetState()`の範囲のまま)。
+- **テスト**: `useTabStore.setActiveTab()`で別タブに切り替えると`selectedEntryId`/`connectingSource`がクリアされ、同じタブを指定した場合はクリアされないことを検証する。
+
+**スコープ外(別の設計検討として切り出す):** タブ単位の実行ロック(タブAの実行中もタブBを操作可能にする)、ログのタブ別フィルタ、それに伴う実行中タブの削除処理。セクション3の分割表示で別途検討する事項(アプリ共通のグローバル状態の見直し)と合わせて検討する。
 
 ### 5. タブ削除時のソケット/ルート/子プロセス削除 [resolved]
 
@@ -270,6 +282,6 @@ graph TD
 
 **本機能に関わる残課題**:
 - タブ削除時に`RunnerHostRegistry.shutdown(entryId)`を呼ぶ経路が無い。これは本機能のスコープで対応し、セクション5で追加するランナー終了API(Electron `runner:shutdown`/Web版 `DELETE /api/runners/:entryId`/`ScriptExecutionService.shutdownRunner()`)を`useTabStore.closeTab()`から呼ぶことで解消する。
-- 実行ロック・ログはUI側でアプリ全体共通のままなので、プロセスが分離されていてもタブ間の並列実行はUI上できない(セクション4の方針どおりスコープ外)。
+- 実行ロック・ログはUI側でアプリ全体共通のままなので、プロセスが分離されていてもタブ間の並列実行はUI上できない(セクション4で採用した(A)の方針どおりスコープ外)。
 
 **注意点**: 素のPythonインタプリタ起動自体はNodeと大差ない(実測: 素のPython起動 約60ms、`node -e ""` 約64ms)。ただし`script_runner.py`が起動時に読み込む標準ライブラリ(特に`asyncio`)のimportで実質約180msかかり、加えてユーザースクリプトが`numpy`/`pandas`等の重いライブラリをimportする場合はプロセスごとにそのコストを個別に払うことになる。遅延生成により各タブでこのコストは「そのタブで最初にスクリプトを実行した時」に一度だけ発生するため、タブ上限(10個)分が同時に重なることはないが、ユーザースクリプトの内容次第で新規タブの初回実行が重くなり得る点は要検討事項として残る。
