@@ -1,8 +1,11 @@
 name: Claude Code Implementation Plan
 on:
   schedule:
-    - cron: "0 1 * * 1-5"   # 10:00 JST, weekdays (Mon-Fri)
+    - cron: "0 21 * * 0-4"
   workflow_dispatch:
+
+env:
+  REMIND_USER: ${{ vars.REMIND_USER || github.repository_owner }}
 
 jobs:
   find-targets:
@@ -20,7 +23,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           list=$(gh issue list --label design-considerations --state open \
-            --author acchi17 --json number,title --limit 50 \
+            --author "$REMIND_USER" --json number,title --limit 50 \
             | jq -c '[ .[]
                 | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
                 | {issue: .number, branch: $c.b} ]
@@ -62,7 +65,7 @@ jobs:
             [ -f "$f" ] || continue
             # Fully resolved = at least one [resolved], no [undecided] left, and no plan yet
             if grep -qF '[resolved]' "$f" && ! grep -qF '[undecided]' "$f" \
-              && [ ! -f "doc/impl-plan/$(basename "$f")" ]; then
+              && [ ! -f "doc/impl-plan/$(basename "$f" .md)-plan.md" ]; then
               files="$files $f"
             fi
           done
@@ -76,8 +79,11 @@ jobs:
           prompt: |
             The following design documents have all design considerations resolved:
             ${{ steps.detect.outputs.files }}
-            For each one, create an implementation plan at doc/impl-plan/<same file name>.
+            For each one, create an implementation plan at doc/impl-plan/<design file name without .md>-plan.md
+            (e.g. doc/design-draft/foo.md -> doc/impl-plan/foo-plan.md).
             The design document is finalized: do not modify it and do not revisit its decisions.
+            The design documents will be moved to doc/design/ together with the plan, so refer to
+            them as doc/design/<file name> inside the plan.
             Before planning, read the code the design document references to confirm the current structure.
             Plan requirements:
             - Write in the same language as the design document
@@ -107,10 +113,15 @@ jobs:
             echo "No implementation plan was written"
             exit 1
           fi
+          # Promote each design document that got a plan from design-draft/ to design/ (git mv stages it)
+          mkdir -p doc/design
+          for f in $FILES; do
+            [ -f "doc/impl-plan/$(basename "$f" .md)-plan.md" ] && git mv "$f" "doc/design/$(basename "$f")"
+          done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$PLAN_BRANCH"
-          git commit -m "docs: add implementation plan for $FILES"
+          git commit -m "docs: add implementation plan and move design to doc/design for $FILES"
           # Force-push: the branch may remain from a previously closed (unmerged) PR
           git push --force origin "$PLAN_BRANCH"
           gh pr create --base "$BASE_BRANCH" --head "$PLAN_BRANCH" \
