@@ -4,7 +4,7 @@
 
 ## Functional Requirements
 
-- MainAreaのタブを最大10個まで作成可能とする。
+- MainAreaのタブを最大10個まで作成可能とする。(タブが10個の場合は+ボタンも無効化する。Design Considerations セクション6で決定)
 - 各タブの右端にxボタンを配置する。
 - タブバーの最も右側に配置されるタブの隣に+ボタンを配置する。
 - +ボタンがクリックされたらタブを新規作成する。タブが作成されるとルートエントリ及び通信ソケットを新規に作成しタブに対応させる。(通信ソケットはタブ作成時には作成せず、タブ作成後にユーザーが`CommSettingView`で`useTcpIp`を有効にした時点で作成する。Design Considerations セクション6で決定)
@@ -117,7 +117,7 @@ export const useTabStore = defineStore('tab', () => {
 ```
 
 - **state**: `tabs`(`{ id, label, rootEntryId, commStatus, scrollTop }`の配列)、`activeTabId`、および新規タブの連番ラベル用カウンタ`nextTabNumber`(セクション6)。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。`scrollTop`はタブ切替時にレシピパネルのスクロール位置を復元するためのもの(初期値`0`。セクション6)。その他のタブ単位のUI状態が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
-- **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
+- **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。MainAreaも`isTabLimitReached`でタブバーの+ボタンを無効化する(セクション6)。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。`label`は省略可能で、省略時は`Recipe N`の連番ラベルを生成する(Loadはファイル名を渡す。セクション6)。上限到達時は何もせず`null`を返す(連番も進めない)。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。確認ダイアログは出さない(xボタン押下時の確認はMainArea側で行う。セクション6)。
@@ -128,7 +128,7 @@ export const useTabStore = defineStore('tab', () => {
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、タブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)、およびタブ切替時のスクロール位置の保存・復元は、セクション6で決定済み。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、タブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)、タブ切替時のスクロール位置の保存・復元、およびタブ数上限到達時の+ボタンの無効化は、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -266,7 +266,7 @@ graph TD
 - `server/api.js`: `DELETE /api/runners/:entryId`が`runnerRegistry.shutdown()`を呼び、未登録のentryIdでも成功を返すことを検証する。
 - `useTabStore.closeTab()`: `deleteComm` → `shutdownRunner` → `removeEntry`の呼び出し順序、および`shutdownRunner`が失敗しても`removeEntry`とタブ除去が行われることを、モックした`entryExecutionService`/`entryManager`で検証する。
 
-### 6. その他の不明点(要確認) [undecided]
+### 6. その他の不明点(要確認) [resolved]
 
 - **「通信ソケットを新規に作成」の意味 [resolved]**:
   - 背景: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント。`DEFAULT_COMM`により`useTcpIp: false`)の登録のみで、接続先情報は無い。
@@ -344,7 +344,16 @@ graph TD
   - **テスト**:
     - `EntryPersistanceService`: 既存の`loadRecipe returns null when the user cancels the open dialog`は`pickRecipe()`がキャンセル時に`null`を返すテストに置き換える。
     - `useEntryOperation.loadRecipe()`: (1) キャンセル時に`createTab()`が呼ばれず`tabs`が変わらないこと、(2) 成功時に新規タブが1つ作成されそのrootIdに復元されること(既存タブは影響を受けない)、(3) `restoreRecipe()`が例外を投げた場合に作成したタブが`closeTab()`で閉じられ、`lastError`が設定され`false`が返ることを、モックした`platformService`と`useTabStore`で検証する。
-- **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
+- **タブ数上限に達した場合の+ボタン [resolved]**:
+  - 背景: 要件はタブが10個の状態でのLoadボタンの無効化のみ明記しており、+ボタンの扱いは書かれていない。
+  - 選択肢:
+    - (A) `useTabStore().isTabLimitReached`が`true`の間、+ボタンを無効化する
+    - (B) +ボタンは有効のままとし、クリックしても何もしない(`createTab()`が`null`を返すだけ)
+    - (C) +ボタンは有効のままとし、クリック時にメッセージ(トーストや`lastError`)で上限到達を通知する
+  - **決定:** (A)を採用する。Loadボタンと同じgetter(`isTabLimitReached`)で同じ挙動になり、上限に達したことがボタンの状態ですぐに分かる。(B)はクリックしても説明なしに何も起きず、Loadと+で挙動が食い違うため不採用。(C)はLoadにも本ドラフトの他の箇所にも無い新しい通知経路を追加することになるため不採用とした。
+  - **MainAreaの実装**: タブバーの+ボタンに`:disabled="tabStore.isTabLimitReached"`を設定する。セクション4の実行中ロック(`.executing`のオーバーレイ)による操作不可とは独立しており、どちらか一方でも該当すれば押せない。0タブ時(「全タブ削除後(0タブ)の扱い」)は`isTabLimitReached`が`false`なので+ボタンは常に有効。タブを1つ閉じて10個未満になれば自動的に再び有効になる(getterがリアクティブなため追加の処理は不要)。
+  - **ストア側のガード**: `createTab()`は上限到達時に何もせず`null`を返す動作をそのまま残す(セクション2)。+ボタン経由では通常発生しないが、`useEntryOperation.loadRecipe()`の手順3と同じく防御的なガードとして扱う。
+  - **テスト**: MainAreaについて、(1) タブが10個のとき+ボタンが`disabled`になること、(2) 9個以下(0個を含む)では有効なこと、(3) 10個の状態から1つ閉じると再び有効になること、を検証する。
 - **タブ切替時のスクロール位置 [resolved]**:
   - 背景: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ(`:key="tab.rootEntryId"`)、レシピパネルのスクロール位置が先頭に戻る。
   - 選択肢:
