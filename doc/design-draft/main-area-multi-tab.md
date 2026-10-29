@@ -119,14 +119,14 @@ export const useTabStore = defineStore('tab', () => {
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。`label`は省略可能で、省略時は`Recipe N`の連番ラベルを生成する(Loadはファイル名を渡す。セクション6)。上限到達時は何もせず`null`を返す(連番も進めない)。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
-  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
+  - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。確認ダイアログは出さない(xボタン押下時の確認はMainArea側で行う。セクション6)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
   - `setTabLabel(rootId, label)`: Save成功時に`useEntryOperation.saveRecipe()`が保存ファイル名でラベルを更新するために使う(セクション6)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、およびタブのラベルの決め方は、セクション6で決定済み。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、およびタブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)は、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -277,7 +277,17 @@ graph TD
   - **Load時**: レシピに`useTcpIp: true`の通信設定が含まれる場合は、従来どおり`RecipeDeserializer.restoreRecipe()`が復元処理の中で`createComm()`を呼ぶ。これはユーザーが保存した「`useTcpIp`有効」の設定を復元するものであり、タブ作成そのものによるソケット作成ではない。
   - **タブ削除時**: ソケットが作成されていれば`closeTab()`の`deleteComm(rootId)`で破棄され、作成されていなければ何もしない(セクション5)。
   - **テスト**: `useTabStore.createTab()`が`entryExecutionService.createComm()`を呼ばないこと、作成したタブの`commStatus`が`'none'`であることを検証する。
-- **タブ削除時の確認ダイアログ**: Loadボタン押下時は既存レシピの上書きを`window.confirm`で確認しているが、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様なので、確認ダイアログを出すべきか。
+- **タブ削除時の確認ダイアログ [resolved]**:
+  - 背景: 現状のLoadボタン押下時は既存レシピの上書きを`window.confirm`で確認している(`MenuArea.vue` `onLoadRecipe()`の`getChildren(rootEntryId).length > 0`判定。セクション1でLoadは常に新規タブへ読み込むことになったため削除予定)が、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様。
+  - 選択肢:
+    - (A) 確認しない
+    - (B) 常に`window.confirm`で確認する
+    - (C) タブが空でない場合(ルートに子エントリがある場合)のみ確認する
+    - (D) 未保存の変更がある場合のみ確認する(タブごとのdirtyフラグを導入)
+  - **決定:** (C)を採用する。空のタブは確認なしで閉じ、子エントリを持つタブを閉じる場合のみ`window.confirm`で確認する。新しい状態を持たずに誤操作によるレシピ消失を防げる。(A)は誤クリック1回でレシピが失われ取り消しもできないため不採用。(B)は空のタブや保存直後のタブでも毎回確認が出て、最大10タブの操作が煩雑になるため不採用。(D)はUXが最も良いが、`useTabStore`にdirtyフラグを追加し、階層・パラメータ・接続・通信設定の変更経路すべてで立て、`saveRecipe`/`restoreRecipe`でクリアする必要があり改修範囲が広いため、本機能では不採用とした。
+  - **判定と確認の場所**: 確認はMainAreaのxボタンのハンドラで行い、`useTabStore.closeTab()`の中では行わない。`entryManager.getChildren(tab.rootEntryId).length > 0`の場合のみ`window.confirm('Closing this tab discards its recipe. Continue?')`(文言は実装時に調整可)を出し、キャンセルされたら何もしない。空のタブ、または確認でOKされた場合に`closeTab(tab.id)`を呼ぶ。`closeTab()`はセクション6のLoad失敗時など確認を出してはならない経路からもプログラム的に呼ばれるため、ストアはUIの確認を知らないままとする(`force`引数なども追加しない)。
+  - **補足**: 子エントリが無いタブは、通信設定(`useTcpIp`など)を変更していても確認なしで閉じる。パラメータ接続は子エントリ間にしか存在しないため、子エントリの有無で判定すれば十分である。保存直後のタブでも子エントリがあれば確認が出るが、これは許容する。
+  - **テスト**: MainAreaについて、(1) 空のタブのxボタンでは`window.confirm`が呼ばれず`closeTab()`が呼ばれること、(2) 子エントリのあるタブでは`window.confirm`が呼ばれ、OKなら`closeTab()`が呼ばれ、キャンセルなら呼ばれないこと、を`window.confirm`をモックして検証する。`useTabStore.closeTab()`が`window.confirm`を呼ばないことも確認する。
 - **全タブ削除後(0タブ)の扱いとタブ削除後のアクティブタブ [resolved]**:
   - 選択肢:
     - (A) 0タブを許容し、MainAreaに空状態(メッセージと+ボタン)を表示する
