@@ -103,7 +103,7 @@ export const useTabStore = defineStore('tab', () => {
   const isTabLimitReached = computed(() => tabs.value.length >= MAX_TABS) // MAX_TABS = 10
 
   // actions
-  function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → activeTabId 更新 */ }
+  function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → setActiveTab(tab.id)(常にアクティブ化。セクション6) */ }
   async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → アクティブだった場合は tabs[0] ?? null に付け替え(セクション6) */ }
   function setActiveTab(tabId) { /* activeTabId 更新(null 可。変化時は resetState()。セクション4) */ }
   function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
@@ -116,14 +116,14 @@ export const useTabStore = defineStore('tab', () => {
 - **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)と`activeTabId`。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
-  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
+  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)と削除後のアクティブタブの付け替えはセクション6で決定済み。新規タブを作成直後にアクティブにするかは、セクション6の不明点として引き続き確認する。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、および新規タブを作成直後にアクティブにすることは、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -276,7 +276,16 @@ graph TD
   - **タブ削除後のアクティブタブ**: アクティブ(選択中)のタブを閉じた場合は、残ったタブのうち**最も左のタブ**(`tabs[0]`)をアクティブにする。残りが0個なら`null`とする。アクティブでないタブを閉じた場合はアクティブタブを変更しない。付け替えは`setActiveTab()`経由で行う(セクション4)。
   - **テスト**: `useTabStore.closeTab()`について、(1) アクティブタブを閉じると残りの最も左のタブがアクティブになること(閉じたタブが先頭・中間・末尾のいずれでも`tabs[0]`になる)、(2) 非アクティブタブを閉じてもアクティブタブが変わらないこと、(3) 最後の1タブを閉じると`tabs`が空・`activeTabId === null`・`visibleTabs`が空になること、を検証する。
 - **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
-- **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
+- **新規タブの初期表示 [resolved]**:
+  - 選択肢:
+    - (A) +ボタン・Loadのどちらで作成したタブも、作成後すぐにアクティブにする
+    - (B) 作成したタブはアクティブにせず、バックグラウンドで開く(現在のアクティブタブを維持する)
+    - (C) Loadで作成したタブのみアクティブにし、+ボタンでは現在のアクティブタブを維持する
+  - **決定:** (A)を採用する。一般的なタブUIの挙動であり、Load後に読み込んだレシピがすぐに表示される。セクション2・4および本セクションのLoad手順(`resetState()`を`createTab()`経由の`setActiveTab()`に任せる)は既にこの挙動を前提としている。(B)はLoad直後に読み込んだレシピが表示されず、`loadRecipe()`の`resetState()`の扱いも再検討が必要になるため不採用。(C)は`createTab()`に`activate`フラグが必要になり、1つのアクションに2通りの挙動が入ってテストも複雑になるため不採用とした。
+  - **`createTab()`の手順**: `addEntry` → `moveEntry(id, null, 0)` → `setComm(id)` → `tabs.push` → `setActiveTab(tab.id)`の単一の経路とし、分岐を設けない。
+  - **前のタブの選択状態**: `setActiveTab()`による`resetState()`(セクション4)で、作成前のタブの選択状態・パラメータ接続中状態はクリアされる。タブ切替時と同じ挙動であり、これを許容する。
+  - **起動時・0タブからの作成**: 起動時の`createTab()`(上記「全タブ削除後(0タブ)の扱い」)や0タブ状態からの作成でも同じく新規タブがアクティブになり、`activeTabId`が`null`から新規タブのIDに変わる。
+  - **テスト**: `useTabStore.createTab()`について、(1) 作成したタブが`activeTabId`になること(既存タブがある場合・0タブの場合の両方)、(2) 作成前のタブの`selectedEntryId`/`connectingSource`がクリアされること、(3) 上限到達で`null`を返す場合は`tabs`・`activeTabId`が変わらないこと、を検証する。
 - **Loadのファイル選択キャンセル/読み込み失敗時の新規タブ [resolved]**:
   - 選択肢:
     - (A) 先に`createTab()`でタブを作成し、キャンセル/失敗時は`closeTab()`で閉じる
@@ -291,7 +300,7 @@ graph TD
     1. `setExecuting(true)` / `clearError()`(従来どおり)。
     2. `pickRecipe()`でファイルを選択させる。`null`(キャンセル)なら何もせず`false`を返す。タブは作成されない。
     3. `useTabStore().createTab(label)`で新規タブを作成する。ファイル情報(`fileName`・`data.meta.name`)がこの時点で手元にあるため、ラベルに使うことができる(ラベルの決め方自体は「タブのラベル」の不明点で扱う)。Loadボタンは`isTabLimitReached`で無効化済みのため通常`createTab()`が`null`を返すことはないが、念のためガードし、`null`ならエラー(`setError()`)として`false`を返す。
-    4. `restoreRecipe(picked.data, tab.rootEntryId)`で新規タブにレシピを復元し、`lastReport`を更新して`true`を返す。従来`loadRecipe()`内で呼んでいた`resetState()`は、`createTab()`によるアクティブタブの付け替え(`setActiveTab()`。セクション4)で行われるため不要になる(新規タブを作成直後にアクティブにするかは「新規タブの初期表示」の不明点として扱う)。
+    4. `restoreRecipe(picked.data, tab.rootEntryId)`で新規タブにレシピを復元し、`lastReport`を更新して`true`を返す。従来`loadRecipe()`内で呼んでいた`resetState()`は、`createTab()`によるアクティブタブの付け替え(`setActiveTab()`。セクション4)で行われるため不要になる(新規タブは作成直後にアクティブになる。「新規タブの初期表示」で決定済み)。
     5. **読み込み失敗時**: `restoreRecipe()`が例外を投げた場合は、途中まで復元された状態を残さないよう`useTabStore().closeTab(tab.id)`で作成したタブを閉じ(セクション5の削除順序がそのまま適用され、復元中に作成されたソケットやランナーも片付く)、`setError(error.message)`して`false`を返す。`pickRecipe()`自体の失敗(ファイルのパースエラー等)はタブ作成前なので、エラーを設定するだけでよい。
     6. `finally`で`setExecuting(false)`。
   - **失敗時のアクティブタブ**: 5で`closeTab()`した場合、閉じたタブがアクティブであればセクション6の決定どおり残りの最も左のタブ(`tabs[0]`)がアクティブになり、Load前にアクティブだったタブには戻らない。読み込み失敗はまれなエラー経路であるため、これを許容する。
