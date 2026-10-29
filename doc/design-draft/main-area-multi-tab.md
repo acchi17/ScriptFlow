@@ -57,7 +57,7 @@
 - `getRoot()`自体は「最初に登録されたルートを返す」実装のまま残すが、アプリコード(コンポーネント・サービス)からは呼ばない。用途は既存テスト内の参照など、単一ルートであることが自明な箇所に限る。
 
 **呼び出し元の対応:**
-- **Save(MenuArea)**: `useTabStore().activeTab.rootEntryId`を`saveRecipe(rootId)`に渡す(`activeTab === null`ならSaveボタンは無効化済み。セクション2参照)。
+- **Save(MenuArea)**: `useTabStore().activeTab.rootEntryId`を`saveRecipe(rootId)`に渡す(`activeTab === null`ならSaveボタンは無効化済み。セクション2参照)。保存ダイアログの提案名にはタブのラベルを使い、保存成功時はタブのラベルを保存ファイル名に更新する(セクション6「タブのラベル」)。
 - **Load(MenuArea)**: `useEntryOperation.loadRecipe()`を呼ぶ。`loadRecipe()`は**ファイル選択が確定してから**`useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`restoreRecipe(data, rootId)`に渡す(キャンセル・読み込み失敗時の扱いを含めセクション6で決定)。新規タブにロードするため、`MenuArea.vue`の`onLoadRecipe()`にある「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。
 - **Clear(RecipeItem)**: 既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す(`RecipeItem.vue`の`clearRecipe()`)。
 - **ExecutionLogView**: ログは全タブ共通(セクション4参照)のため、`ExecutionLogView.vue`の`transformedLogs`内の`getRoot()`との比較を「`useTabStore().tabs`のいずれかの`rootEntryId`と一致するか」の判定に置き換える(`entryManager.isRoot(entryId)`でも同等)。
@@ -96,6 +96,7 @@ export const useTabStore = defineStore('tab', () => {
   // state
   const tabs = ref([])            // [{ id, label, rootEntryId, commStatus }]
   const activeTabId = ref(null)
+  const nextTabNumber = ref(1)    // 新規タブの連番ラベル用。単調増加(セクション6)
 
   // getters
   const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? null)
@@ -103,27 +104,29 @@ export const useTabStore = defineStore('tab', () => {
   const isTabLimitReached = computed(() => tabs.value.length >= MAX_TABS) // MAX_TABS = 10
 
   // actions
-  function createTab(label) { /* addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → setActiveTab(tab.id)(常にアクティブ化。セクション6) */ }
+  function createTab(label) { /* label 省略時は `Recipe ${nextTabNumber++}`(セクション6)。addEntry → moveEntry(id, null, 0) → setComm(id) → tabs.push → setActiveTab(tab.id)(常にアクティブ化。セクション6) */ }
   async function closeTab(tabId) { /* deleteComm → shutdownRunner → removeEntry → tabs から除去 → アクティブだった場合は tabs[0] ?? null に付け替え(セクション6) */ }
   function setActiveTab(tabId) { /* activeTabId 更新(null 可。変化時は resetState()。セクション4) */ }
   function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
   function setCommStatus(rootId, status) { /* 該当タブの commStatus 更新(セクション3) */ }
+  function setTabLabel(rootId, label) { /* 該当タブの label 更新(Save成功時。セクション6) */ }
 
-  return { tabs, activeTabId, activeTab, visibleTabs, isTabLimitReached, createTab, closeTab, setActiveTab, getTabByRootId, setCommStatus }
+  return { tabs, activeTabId, activeTab, visibleTabs, isTabLimitReached, createTab, closeTab, setActiveTab, getTabByRootId, setCommStatus, setTabLabel }
 })
 ```
 
-- **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)と`activeTabId`。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
+- **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)、`activeTabId`、および新規タブの連番ラベル用カウンタ`nextTabNumber`(セクション6)。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
-  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
+  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。`label`は省略可能で、省略時は`Recipe N`の連番ラベルを生成する(Loadはファイル名を渡す。セクション6)。上限到達時は何もせず`null`を返す(連番も進めない)。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
+  - `setTabLabel(rootId, label)`: Save成功時に`useEntryOperation.saveRecipe()`が保存ファイル名でラベルを更新するために使う(セクション6)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、およびタブ作成時にソケットを作成しないことは、セクション6で決定済み。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、およびタブのラベルの決め方は、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -285,7 +288,19 @@ graph TD
   - **起動時**: 現状の挙動(起動直後に空のレシピが1つ表示される)を維持するため、MainAreaの`setup()`で`useTabStore().createTab()`を1回呼び、タブを1つ作成した状態で起動する(現在`setup()`にあるルート生成処理はセクション2のとおり`createTab()`に移る)。
   - **タブ削除後のアクティブタブ**: アクティブ(選択中)のタブを閉じた場合は、残ったタブのうち**最も左のタブ**(`tabs[0]`)をアクティブにする。残りが0個なら`null`とする。アクティブでないタブを閉じた場合はアクティブタブを変更しない。付け替えは`setActiveTab()`経由で行う(セクション4)。
   - **テスト**: `useTabStore.closeTab()`について、(1) アクティブタブを閉じると残りの最も左のタブがアクティブになること(閉じたタブが先頭・中間・末尾のいずれでも`tabs[0]`になる)、(2) 非アクティブタブを閉じてもアクティブタブが変わらないこと、(3) 最後の1タブを閉じると`tabs`が空・`activeTabId === null`・`visibleTabs`が空になること、を検証する。
-- **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
+- **タブのラベル [resolved]**:
+  - 背景: 新規作成タブのデフォルトラベルと、Loadでレシピをロードしたタブのラベルについて要件に指定がない。現状のタブバーはラベル"Recipe"固定。
+  - 選択肢:
+    - (A) 新規: 連番`Recipe N` / Load: レシピの`meta.name`(無ければファイル名)
+    - (B) 新規: 連番`Recipe N` / Load: ファイル名
+    - (C) 全タブ固定`Recipe`(現状のまま)
+  - **決定:** (B)を採用する。**ラベルにレシピの`meta.name`は使わない。** 実際に開いた(保存した)ファイルがタブ上で分かり、ラベルの由来がファイル名に一本化される。(A)は`meta.name`とファイル名が異なる場合にタブの表示と実際のファイルが食い違うため不採用。(C)は最大10タブを見分けられず、Saveの対象タブを取り違えやすいため不採用とした。
+  - **新規タブ(+ボタン・起動時)**: `Recipe 1`, `Recipe 2`, …の連番とする。番号は`useTabStore`が持つカウンタ(`nextTabNumber`)で**単調増加**させ、タブを削除しても番号は再利用しない(同じラベルのタブが同時に存在しないようにするため)。`createTab(label)`の`label`は省略可能とし、省略時はストア内でこの連番ラベルを生成する。番号はラベルを生成したときだけ進める(Loadで作成したタブは番号を消費しない)。
+  - **Loadしたタブ**: `pickRecipe()`が返す`fileName`から拡張子(`.json`)を除いた名前を`createTab(label)`に渡す。`fileName`はElectron版では`path.basename()`済み、Web版では`File.name`であり、いずれもディレクトリを含まない。`data.meta.name`は参照しない。
+  - **Save後のラベル**: Saveが成功したら、保存したファイル名(拡張子を除く)でそのタブのラベルを更新する。`platformService.saveRecipeAs()`の戻り値はElectron版ではフルパス、Web版では渡した提案名そのものなので、`/`・`\`の両方で区切った末尾要素から拡張子を除いて使う。キャンセル(`null`)時はラベルを変えない。また、保存ダイアログの提案名(`saveRecipe(rootId, name)`の`name`)にはタブの現在のラベルを渡す。
+    - そのため`useEntryOperation.saveRecipe(rootId)`は、`EntryPersistanceService.saveRecipe(rootId, tab.label)`の戻り値から求めたファイル名で`useTabStore().setTabLabel(rootId, label)`を呼ぶ。`EntryPersistanceService`自体はタブを知らないままとする。
+  - **ストアへの追加**: state に`nextTabNumber`(初期値1)、action に`setTabLabel(rootId, label)`を追加する(セクション2)。ラベルはタブのUI状態であり、ECSには持たせない。
+  - **テスト**: (1) `createTab()`をラベル省略で呼ぶと`Recipe 1`, `Recipe 2`, …となり、タブを閉じた後の作成でも番号が再利用されないこと、(2) ラベル指定の`createTab(label)`はそのラベルになり連番を消費しないこと、(3) `useEntryOperation.loadRecipe()`で`fileName: 'foo.json'`・`meta.name: 'bar'`のレシピを読み込むとタブのラベルが`foo`になること、(4) `saveRecipe(rootId)`成功時にラベルが保存ファイル名(Electronのフルパス・Webの名前の両方)に更新され、キャンセル時は変わらないこと、を検証する。
 - **新規タブの初期表示 [resolved]**:
   - 選択肢:
     - (A) +ボタン・Loadのどちらで作成したタブも、作成後すぐにアクティブにする
@@ -309,7 +324,7 @@ graph TD
   - **`useEntryOperation.loadRecipe()`の手順**:
     1. `setExecuting(true)` / `clearError()`(従来どおり)。
     2. `pickRecipe()`でファイルを選択させる。`null`(キャンセル)なら何もせず`false`を返す。タブは作成されない。
-    3. `useTabStore().createTab(label)`で新規タブを作成する。ファイル情報(`fileName`・`data.meta.name`)がこの時点で手元にあるため、ラベルに使うことができる(ラベルの決め方自体は「タブのラベル」の不明点で扱う)。Loadボタンは`isTabLimitReached`で無効化済みのため通常`createTab()`が`null`を返すことはないが、念のためガードし、`null`ならエラー(`setError()`)として`false`を返す。
+    3. `useTabStore().createTab(label)`で新規タブを作成する。ラベルには`picked.fileName`から拡張子を除いた名前を渡す(`data.meta.name`は使わない。「タブのラベル」で決定済み)。Loadボタンは`isTabLimitReached`で無効化済みのため通常`createTab()`が`null`を返すことはないが、念のためガードし、`null`ならエラー(`setError()`)として`false`を返す。
     4. `restoreRecipe(picked.data, tab.rootEntryId)`で新規タブにレシピを復元し、`lastReport`を更新して`true`を返す。従来`loadRecipe()`内で呼んでいた`resetState()`は、`createTab()`によるアクティブタブの付け替え(`setActiveTab()`。セクション4)で行われるため不要になる(新規タブは作成直後にアクティブになる。「新規タブの初期表示」で決定済み)。
     5. **読み込み失敗時**: `restoreRecipe()`が例外を投げた場合は、途中まで復元された状態を残さないよう`useTabStore().closeTab(tab.id)`で作成したタブを閉じ(セクション5の削除順序がそのまま適用され、復元中に作成されたソケットやランナーも片付く)、`setError(error.message)`して`false`を返す。`pickRecipe()`自体の失敗(ファイルのパースエラー等)はタブ作成前なので、エラーを設定するだけでよい。
     6. `finally`で`setExecuting(false)`。
