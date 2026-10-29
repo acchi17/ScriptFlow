@@ -50,15 +50,15 @@
 | `EntryHandlerFacade` | `clearEntries()` | `clearEntries(rootId)` |
 | `RecipeSerializer` | `buildRecipe()` | `buildRecipe(rootId)` |
 | `RecipeDeserializer` | `restoreRecipe(data)` | `restoreRecipe(data, rootId)`(内部の`clearEntries()`・`deleteComm()`にも同じrootIdを渡す) |
-| `EntryPersistanceService` | `buildRecipe()` / `restoreRecipe(data)` / `saveRecipe(name)` / `loadRecipe()` | `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` / `saveRecipe(rootId, name)` / `loadRecipe(rootId)` |
-| `useEntryOperation` | `saveRecipe()` / `loadRecipe()` | `saveRecipe(rootId)` / `loadRecipe(rootId)` |
+| `EntryPersistanceService` | `buildRecipe()` / `restoreRecipe(data)` / `saveRecipe(name)` / `loadRecipe()` | `buildRecipe(rootId)` / `restoreRecipe(data, rootId)` / `saveRecipe(rootId, name)` / `pickRecipe()`(`loadRecipe()`を廃止し、ファイル選択のみを行うメソッドに分離。セクション6) |
+| `useEntryOperation` | `saveRecipe()` / `loadRecipe()` | `saveRecipe(rootId)` / `loadRecipe()`(引数なしのまま。内部でファイル選択 → `createTab()` → `restoreRecipe(data, rootId)`を行う。セクション6) |
 
 - rootIdが渡されない、またはルートでないIDが渡された場合は(`isRoot(rootId)`で検証し)例外を投げる。暗黙のフォールバックは行わない。
 - `getRoot()`自体は「最初に登録されたルートを返す」実装のまま残すが、アプリコード(コンポーネント・サービス)からは呼ばない。用途は既存テスト内の参照など、単一ルートであることが自明な箇所に限る。
 
 **呼び出し元の対応:**
 - **Save(MenuArea)**: `useTabStore().activeTab.rootEntryId`を`saveRecipe(rootId)`に渡す(`activeTab === null`ならSaveボタンは無効化済み。セクション2参照)。
-- **Load(MenuArea)**: `useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`loadRecipe(rootId)`に渡す。新規タブにロードするため、`MenuArea.vue`の`onLoadRecipe()`にある「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。ファイル選択がキャンセルされた場合にタブを残すか閉じるかはセクション6の不明点として扱う。
+- **Load(MenuArea)**: `useEntryOperation.loadRecipe()`を呼ぶ。`loadRecipe()`は**ファイル選択が確定してから**`useTabStore().createTab()`で新規タブを作成し、返された`tab.rootEntryId`を`restoreRecipe(data, rootId)`に渡す(キャンセル・読み込み失敗時の扱いを含めセクション6で決定)。新規タブにロードするため、`MenuArea.vue`の`onLoadRecipe()`にある「現在のレシピが空か」による上書き確認は不要になる(この`getRoot()`呼び出しは削除)。
 - **Clear(RecipeItem)**: 既に持っている`props.entryId`を`clearEntries(props.entryId)`に渡す(`RecipeItem.vue`の`clearRecipe()`)。
 - **ExecutionLogView**: ログは全タブ共通(セクション4参照)のため、`ExecutionLogView.vue`の`transformedLogs`内の`getRoot()`との比較を「`useTabStore().tabs`のいずれかの`rootEntryId`と一致するか」の判定に置き換える(`entryManager.isRoot(entryId)`でも同等)。
 
@@ -277,7 +277,27 @@ graph TD
   - **テスト**: `useTabStore.closeTab()`について、(1) アクティブタブを閉じると残りの最も左のタブがアクティブになること(閉じたタブが先頭・中間・末尾のいずれでも`tabs[0]`になる)、(2) 非アクティブタブを閉じてもアクティブタブが変わらないこと、(3) 最後の1タブを閉じると`tabs`が空・`activeTabId === null`・`visibleTabs`が空になること、を検証する。
 - **タブのラベル**: 新規作成タブのデフォルトラベル(例: "Recipe 1"のような連番か、単に空白か)と、Loadでレシピをロードしたタブのラベル(レシピの`meta.name`やファイル名を使うか)をどうするか、要件に指定がない。
 - **新規タブの初期表示**: +ボタンで作成したタブ、およびLoadで新規作成したタブは、作成後すぐにアクティブ(選択状態)にする想定でよいか。
-- **Loadのファイル選択キャンセル時の新規タブ**: セクション1の方針ではLoad時に先に`createTab()`で新規タブを作成してから`loadRecipe(rootId)`を呼ぶ。ファイル選択がキャンセルされた場合やレシピの読み込みに失敗した場合、作成した空タブを`closeTab()`で閉じるか、空タブとして残すか(あるいはファイル選択後にタブを作成する順序にするか)。
+- **Loadのファイル選択キャンセル/読み込み失敗時の新規タブ [resolved]**:
+  - 選択肢:
+    - (A) 先に`createTab()`でタブを作成し、キャンセル/失敗時は`closeTab()`で閉じる
+    - (B) 先にタブを作成し、キャンセル/失敗時も空タブとして残す
+    - (C) ファイル選択が確定してから`createTab()` → `restoreRecipe(data, rootId)`を行う
+  - **決定:** (C)を採用する。キャンセル時にタブ作成・削除の副作用が一切発生せず、ユーザーから見て最も自然である。(A)はタブが一瞬現れて消えるうえ、`closeTab()`の`deleteComm` → `shutdownRunner` → `removeEntry`が走り、`setActiveTab()`経由の`resetState()`(セクション4)で元のタブの選択状態まで消えてしまうため不採用。(B)はキャンセルのたびに不要な空タブが増え、タブ上限(10個)に早く達してLoadボタンまで無効化されるため不採用とした。
+  - **API変更(セクション1のAPI表に反映済み)**: 現状の`EntryPersistanceService.loadRecipe()`は`platformService.openRecipe()`(ファイル選択)と`restoreRecipe()`を1メソッドで行っているため、これを分離する。
+    - `EntryPersistanceService.pickRecipe()`: `platformService.openRecipe()`を呼び、`{ fileName, data }`(キャンセル時は`null`)をそのまま返す。ECS・タブには触れない。`loadRecipe()`は廃止する。
+    - `EntryPersistanceService.restoreRecipe(data, rootId)`: セクション1のとおり(変更なし)。
+    - `useEntryOperation.loadRecipe()`: 引数なしのまま、以下の手順でLoad全体をまとめる。戻り値は従来どおり「実際にロードしたか」の`boolean`。
+  - **`useEntryOperation.loadRecipe()`の手順**:
+    1. `setExecuting(true)` / `clearError()`(従来どおり)。
+    2. `pickRecipe()`でファイルを選択させる。`null`(キャンセル)なら何もせず`false`を返す。タブは作成されない。
+    3. `useTabStore().createTab(label)`で新規タブを作成する。ファイル情報(`fileName`・`data.meta.name`)がこの時点で手元にあるため、ラベルに使うことができる(ラベルの決め方自体は「タブのラベル」の不明点で扱う)。Loadボタンは`isTabLimitReached`で無効化済みのため通常`createTab()`が`null`を返すことはないが、念のためガードし、`null`ならエラー(`setError()`)として`false`を返す。
+    4. `restoreRecipe(picked.data, tab.rootEntryId)`で新規タブにレシピを復元し、`lastReport`を更新して`true`を返す。従来`loadRecipe()`内で呼んでいた`resetState()`は、`createTab()`によるアクティブタブの付け替え(`setActiveTab()`。セクション4)で行われるため不要になる(新規タブを作成直後にアクティブにするかは「新規タブの初期表示」の不明点として扱う)。
+    5. **読み込み失敗時**: `restoreRecipe()`が例外を投げた場合は、途中まで復元された状態を残さないよう`useTabStore().closeTab(tab.id)`で作成したタブを閉じ(セクション5の削除順序がそのまま適用され、復元中に作成されたソケットやランナーも片付く)、`setError(error.message)`して`false`を返す。`pickRecipe()`自体の失敗(ファイルのパースエラー等)はタブ作成前なので、エラーを設定するだけでよい。
+    6. `finally`で`setExecuting(false)`。
+  - **失敗時のアクティブタブ**: 5で`closeTab()`した場合、閉じたタブがアクティブであればセクション6の決定どおり残りの最も左のタブ(`tabs[0]`)がアクティブになり、Load前にアクティブだったタブには戻らない。読み込み失敗はまれなエラー経路であるため、これを許容する。
+  - **テスト**:
+    - `EntryPersistanceService`: 既存の`loadRecipe returns null when the user cancels the open dialog`は`pickRecipe()`がキャンセル時に`null`を返すテストに置き換える。
+    - `useEntryOperation.loadRecipe()`: (1) キャンセル時に`createTab()`が呼ばれず`tabs`が変わらないこと、(2) 成功時に新規タブが1つ作成されそのrootIdに復元されること(既存タブは影響を受けない)、(3) `restoreRecipe()`が例外を投げた場合に作成したタブが`closeTab()`で閉じられ、`lastError`が設定され`false`が返ることを、モックした`platformService`と`useTabStore`で検証する。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
 - **タブ切替時のスクロール位置**: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
 
