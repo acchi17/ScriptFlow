@@ -7,7 +7,7 @@
 - MainAreaのタブを最大10個まで作成可能とする。
 - 各タブの右端にxボタンを配置する。
 - タブバーの最も右側に配置されるタブの隣に+ボタンを配置する。
-- +ボタンがクリックされたらタブを新規作成する。タブが作成されるとルートエントリ及び通信ソケットを新規に作成しタブに対応させる。
+- +ボタンがクリックされたらタブを新規作成する。タブが作成されるとルートエントリ及び通信ソケットを新規に作成しタブに対応させる。(通信ソケットはタブ作成時には作成せず、タブ作成後にユーザーが`CommSettingView`で`useTcpIp`を有効にした時点で作成する。Design Considerations セクション6で決定)
 - xボタンがクリックされたらタブを削除する。タブが削除されると対応するルートエントリ及び通信ソケットも削除される。
 - メニューエリアのLoadボタン押下によりレシピをロードすると、新規にタブ作成してそこにレシピをロードする。タブが10個作成されている場合、Loadボタンは無効化される。
 - メニューエリアのSaveボタンを押してレシピを保存する場合、選択されているタブのレシピを保存する。タブが選択されていない場合、Saveボタンは無効化される。
@@ -116,14 +116,14 @@ export const useTabStore = defineStore('tab', () => {
 - **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)と`activeTabId`。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
-  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
+  - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。上限到達時は何もせず`null`を返す。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
   - `closeTab(tabId)`: セクション5の順序(`deleteComm(rootId)` → `shutdownRunner(rootId)` → `removeEntry(rootId)` → `tabs`から除去 → アクティブタブの付け替え)でタブを削除する。閉じたタブがアクティブだった場合は残りの最も左のタブ(`tabs[0]`)を、残りが0個なら`null`をアクティブにし、非アクティブタブを閉じた場合はアクティブタブを変えない(セクション6)。`deleteComm`/`shutdownRunner`が失敗してもエラーをログに出して以降の処理を続行する(セクション5)。
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、および新規タブを作成直後にアクティブにすることは、セクション6で決定済み。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、およびタブ作成時にソケットを作成しないことは、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -263,7 +263,17 @@ graph TD
 
 ### 6. その他の不明点(要確認) [undecided]
 
-- **「通信ソケットを新規に作成」の意味**: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント)の登録のみで、接続先情報は無い。要件文言の「通信ソケットを新規に作成」は「タブ(ルート)ごとに独立した通信設定・ソケット管理単位(entryIdに紐づく)を用意する」という意味であり、タブ作成時に実際にTCP接続を試みるわけではないと解釈している。この理解で正しいか確認したい。
+- **「通信ソケットを新規に作成」の意味 [resolved]**:
+  - 背景: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント。`DEFAULT_COMM`により`useTcpIp: false`)の登録のみで、接続先情報は無い。
+  - 選択肢:
+    - (A) タブ作成時はタブ(ルート)ごとの通信設定・ソケット管理単位(entryIdに紐づく)を用意するだけとし、実際のソケットは作成しない
+    - (B) タブ作成時に実際にTCP接続(ソケット)を作成する
+  - **決定:** (A)を採用する。**タブ作成時にソケットは作成しない。** ソケットは、タブ作成後にユーザーがそのタブの`CommSettingView`で`useTcpIp`を有効にした時点で作成する。要件文言の「通信ソケットを新規に作成しタブに対応させる」は「タブ(ルート)ごとに独立したソケット管理単位を持てるようにする」という意味と解釈する。(B)は新規タブに接続先(ホスト/ポート)が無いため既定の接続先が必要になり、`createTab()`が非同期化して接続失敗時のタブの扱いまで決める必要があるうえ、ソケット作成によってそのルートの`ScriptRunnerHost`が早期に起動され、遅延生成の利点(セクション7)が失われるため不採用とした。
+  - **`createTab()`**: セクション2・6のとおり`addEntry` → `moveEntry(id, null, 0)` → `setComm(id)` → `tabs.push` → `setActiveTab(tab.id)`のみを行い、`createComm()`は呼ばない。同期処理のまま、ネットワークエラーで失敗することは無く、子プロセスも起動しない。タブの`commStatus`の初期値は`'none'`とする(セクション3)。
+  - **ソケット作成のタイミング**: 既存の`CommSettingView`の`onClose()`の処理をそのまま使う。ダイアログを閉じる際に`useTcpIp`が有効なら`useEntryOperation.createSocket(props.entryId, host, port)`(→ `EntryExecutionService.createComm()`)でそのタブのrootIdのソケットを作成し、無効なら`releaseSocket(props.entryId)`(→ `deleteComm()`)で破棄する。`CommSettingView`には従来どおりRecipeItemのprop `entryId`(=タブの`rootEntryId`)が渡されるため、追加の改修は不要。結果(`connected`)はRecipeItem経由で`useTabStore.setCommStatus(rootId, status)`に反映する(セクション3)。
+  - **Load時**: レシピに`useTcpIp: true`の通信設定が含まれる場合は、従来どおり`RecipeDeserializer.restoreRecipe()`が復元処理の中で`createComm()`を呼ぶ。これはユーザーが保存した「`useTcpIp`有効」の設定を復元するものであり、タブ作成そのものによるソケット作成ではない。
+  - **タブ削除時**: ソケットが作成されていれば`closeTab()`の`deleteComm(rootId)`で破棄され、作成されていなければ何もしない(セクション5)。
+  - **テスト**: `useTabStore.createTab()`が`entryExecutionService.createComm()`を呼ばないこと、作成したタブの`commStatus`が`'none'`であることを検証する。
 - **タブ削除時の確認ダイアログ**: Loadボタン押下時は既存レシピの上書きを`window.confirm`で確認しているが、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様なので、確認ダイアログを出すべきか。
 - **全タブ削除後(0タブ)の扱いとタブ削除後のアクティブタブ [resolved]**:
   - 選択肢:
