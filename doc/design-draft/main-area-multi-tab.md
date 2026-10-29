@@ -94,7 +94,7 @@ export const useTabStore = defineStore('tab', () => {
   const entryExecutionService = inject('entryExecutionService')
 
   // state
-  const tabs = ref([])            // [{ id, label, rootEntryId, commStatus }]
+  const tabs = ref([])            // [{ id, label, rootEntryId, commStatus, scrollTop }]
   const activeTabId = ref(null)
   const nextTabNumber = ref(1)    // 新規タブの連番ラベル用。単調増加(セクション6)
 
@@ -110,12 +110,13 @@ export const useTabStore = defineStore('tab', () => {
   function getTabByRootId(rootId) { /* rootEntryId からタブを引く(セクション3) */ }
   function setCommStatus(rootId, status) { /* 該当タブの commStatus 更新(セクション3) */ }
   function setTabLabel(rootId, label) { /* 該当タブの label 更新(Save成功時。セクション6) */ }
+  function setScrollTop(rootId, scrollTop) { /* 該当タブの scrollTop 更新(RecipeItemのアンマウント時。セクション6) */ }
 
-  return { tabs, activeTabId, activeTab, visibleTabs, isTabLimitReached, createTab, closeTab, setActiveTab, getTabByRootId, setCommStatus, setTabLabel }
+  return { tabs, activeTabId, activeTab, visibleTabs, isTabLimitReached, createTab, closeTab, setActiveTab, getTabByRootId, setCommStatus, setTabLabel, setScrollTop }
 })
 ```
 
-- **state**: `tabs`(`{ id, label, rootEntryId, commStatus }`の配列)、`activeTabId`、および新規タブの連番ラベル用カウンタ`nextTabNumber`(セクション6)。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。その他のタブ単位のUI状態(セクション6のスクロール位置など)が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
+- **state**: `tabs`(`{ id, label, rootEntryId, commStatus, scrollTop }`の配列)、`activeTabId`、および新規タブの連番ラベル用カウンタ`nextTabNumber`(セクション6)。`commStatus`はセクション3でRecipeItemのローカル`commBtnStatus`から移管したもの。`scrollTop`はタブ切替時にレシピパネルのスクロール位置を復元するためのもの(初期値`0`。セクション6)。その他のタブ単位のUI状態が必要になった場合も、タブ要素のフィールドとしてこのストアに追加する。
 - **getters**: `activeTab`、`visibleTabs`(セクション3)、`isTabLimitReached`。MenuAreaは`isTabLimitReached`でLoadボタンを、`activeTab === null`でSaveボタンを無効化する。
 - **actions**:
   - `createTab(label)`: 現在`MainArea.vue`の`setup()`にあるルート生成処理(`entryManager.addEntry('container', 'root-container')` → `moveEntry(id, null, 0)` → `setComm(id)`)をここに移し(既定の通信設定の登録のみで、ソケットは作成しない。セクション6)、タブを`tabs`に追加して`setActiveTab(tab.id)`で直ちにアクティブにし(セクション6)、作成した`tab`を返す。`label`は省略可能で、省略時は`Recipe N`の連番ラベルを生成する(Loadはファイル名を渡す。セクション6)。上限到達時は何もせず`null`を返す(連番も進めない)。+ボタン(MainArea)とLoad(MenuArea → `useEntryOperation.loadRecipe()`)の両方がこのアクションを呼ぶ。
@@ -123,10 +124,11 @@ export const useTabStore = defineStore('tab', () => {
   - `setActiveTab(tabId)`: アクティブタブを切り替える。`activeTabId`が変わる場合は`useSystemState().resetState()`で選択状態・パラメータ接続中状態をクリアする(セクション4)。`createTab()`/`closeTab()`でのアクティブタブの付け替えもこのアクションを経由する。
   - `getTabByRootId(rootId)` / `setCommStatus(rootId, status)`: RecipeItemが自分の`entryId`からタブを特定し、Comm状態を参照・更新するために使う(セクション3)。
   - `setTabLabel(rootId, label)`: Save成功時に`useEntryOperation.saveRecipe()`が保存ファイル名でラベルを更新するために使う(セクション6)。
+  - `setScrollTop(rootId, scrollTop)`: RecipeItemがアンマウント時に自分のタブのスクロール位置を保存するために使う。復元時は`getTabByRootId(rootId).scrollTop`を読む。該当タブが無ければ何もしない(セクション6)。
 - **依存サービスの取得**: `entryManager`・`entryExecutionService`は`client/main.js`で`app.provide()`されているため、Setup Store内で`inject()`して取得する(Vue 3.3+ / Pinia 2.1+ではストア初期化がアプリのinjectionコンテキスト内で行われる。本リポジトリのVueは3.5系)。ユニットテストでは`createApp().provide(...)`+`app.use(pinia)`でモックを注入する。
 - **ECSとの整合**: ルートの生成・削除は必ず`createTab()`/`closeTab()`経由で行い、コンポーネントから直接`addEntry`/`removeEntry`でルートを増減させないことで、`tabs`とECSのルート一覧の不整合を防ぐ。
 
-0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、およびタブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)は、セクション6で決定済み。
+0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、タブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)、およびタブ切替時のスクロール位置の保存・復元は、セクション6で決定済み。
 
 ### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
 
@@ -155,7 +157,7 @@ export const useTabStore = defineStore('tab', () => {
 
 **決定:** (c)を採用する。分割表示を前提にすると、(b)のままでは「RecipeItemは画面に1つだけ」という前提がレイアウト管理・接続描画に埋め込まれ、後から外すコストが大きい。(c)は今回(b)と同じくマウントされるのは1インスタンスで実行時コストも同じだが、ルート単位で閉じた実装にしておくことで、分割表示の追加をMainAreaとストアに局所化できる。(a)は最大10インスタンス分のwatcherが常駐するうえ、レイアウトストアのルート別分離は(c)と同様に必要で、分割表示時にはペインごとの表示状態管理も結局必要になるため不採用。(b)は今回の差分は最小だが、分割表示の追加時にRecipeItem以下とECSのレイアウト処理の作り直しが発生するため不採用とした。
 
-タブ切替時のスクロール位置のリセットを許容するかは、(c)の構造に影響しない(必要になればタブ要素のフィールドとして`useTabStore`に追加するだけで済む)ため、引き続きセクション6の不明点として扱う。
+タブ切替時のスクロール位置は(c)の構造に影響しないため、セクション6で別途決定した(タブ要素に`scrollTop`を持たせ、RecipeItemがアンマウント時に保存・マウント時に復元する)。
 
 ```mermaid
 graph TD
@@ -201,7 +203,7 @@ graph TD
 - **ペイン間のドラッグ&ドロップ**: 現状の`ContainerChildren.vue`のドロップコールバック(`setOnDropCallback`)内の`moveEntry()`はルートを跨ぐ移動を制限していないため、分割表示ではペインAのエントリをペインBにドロップできてしまう。ルートを跨ぐ移動を禁止するか、許可して(コピーとして扱う/移動元の接続を削除する等)扱うかを決める必要がある。
 - **ルートを跨ぐパラメータ接続**: `connectingSource`(`useSystemState`)はアプリ共通のため、ペインAで接続を開始してペインBのパラメータをクリックできてしまう。接続作成時に両端の`getRootOf()`が一致することを検証して拒否する必要がある。
 - **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4で採用した「アプリ全体で1つ」の方針の見直し(タブ単位ロック等。セクション4でスコープ外とした事項)と合わせて検討する。
-- **スクロール位置**: 分割表示でも、ペイン内でタブを切り替えるとRecipeItemは再マウントされスクロール位置は先頭に戻る(セクション6の不明点と同じ)。
+- **スクロール位置**: ペイン内でタブを切り替えるとRecipeItemは再マウントされるが、セクション6で決定したとおり各RecipeItemが自分の`entryId`のタブの`scrollTop`を保存・復元するため、分割表示でも追加の対応は不要。ただし同じタブを2つのペインに同時表示することを許す場合は、スクロール位置をタブ単位ではなくペイン単位で持つ必要があるため、その時点で見直す。
 
 ### 4. アプリ全体で共有されているグローバル状態の扱い [resolved]
 
@@ -343,7 +345,21 @@ graph TD
     - `EntryPersistanceService`: 既存の`loadRecipe returns null when the user cancels the open dialog`は`pickRecipe()`がキャンセル時に`null`を返すテストに置き換える。
     - `useEntryOperation.loadRecipe()`: (1) キャンセル時に`createTab()`が呼ばれず`tabs`が変わらないこと、(2) 成功時に新規タブが1つ作成されそのrootIdに復元されること(既存タブは影響を受けない)、(3) `restoreRecipe()`が例外を投げた場合に作成したタブが`closeTab()`で閉じられ、`lastError`が設定され`false`が返ることを、モックした`platformService`と`useTabStore`で検証する。
 - **タブ数上限に達した場合の+ボタン**: 要件はLoadボタンの無効化のみ明記しているが、タブが10個の状態で+ボタンも無効化するべきか(一貫性の観点では無効化が自然だが要件に明記がないため確認したい)。
-- **タブ切替時のスクロール位置**: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ、レシピパネルのスクロール位置が先頭に戻る。これを許容してよいか(許容しない場合はタブごとにスクロール位置を`useTabStore`に保存・復元する)。
+- **タブ切替時のスクロール位置 [resolved]**:
+  - 背景: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ(`:key="tab.rootEntryId"`)、レシピパネルのスクロール位置が先頭に戻る。
+  - 選択肢:
+    - (A) リセットを許容する(追加の状態・処理なし)
+    - (B) タブごとにスクロール位置を`useTabStore`に保存し、再マウント時に復元する
+    - (全タブを`v-show`で常時マウントする案はセクション3の(a)として不採用済み)
+  - **決定:** (B)を採用する。長いレシピ間でタブを切り替えるたびに作業位置を見失うのは最大10タブの運用で頻発するため。タブ要素のスキーマ(`{ id, label, rootEntryId, commStatus }`)は本機能で新たに定義するものであり、今フィールドを1つ足すコストは小さい。後から追加するとストア・RecipeItemのマウント/アンマウント処理・テストを再度改修することになる。また、各RecipeItemが自分のタブの位置を復元する作りは、分割表示(セクション3)でもペインごとにそのまま機能する。(A)はこれらの理由で不採用とした。
+  - **ストアへの追加(セクション2)**: タブ要素に`scrollTop`(数値、`createTab()`時の初期値`0`)を追加し、action `setScrollTop(rootId, scrollTop)`を追加する。該当タブが無い場合(既に`closeTab()`で除去済みなど)は何もしない。スクロール位置はタブのUI状態であり、ECSにもレシピファイルにも保存しない(アプリ再起動後は復元しない)。
+  - **RecipeItemでの保存**: `onBeforeUnmount`で`recipePanelRef.value.scrollTop`を`useTabStore().setScrollTop(props.entryId, …)`で保存する。`scroll`イベントごとの保存は行わない(スクロール中にストアを更新し続けないため。値が必要になるのは再マウント時だけである)。タブを閉じた場合は、`closeTab()`が`tabs`から除去した後にRecipeItemがアンマウントされるため、`setScrollTop()`は何もしない。
+  - **RecipeItemでの復元**: `onMounted`で`nextTick()`を待ち(`ContainerChildren`以下の描画後)、`getTabByRootId(props.entryId).scrollTop`を`recipePanelRef.value.scrollTop`に設定する。背景線・接続線(`background-panel`/`connection-panel`)はスクロールされる`recipe-panel`の内側にあり、エントリと一緒にスクロールするため、復元は`measureEntries()`の完了を待つ必要は無い。復元値がコンテンツ高さを超える場合はブラウザが自動的に最大値に丸める。
+  - **実装ルールとの整合**: RecipeItemは`activeTab`ではなく自分のprop `entryId`でタブを特定する(セクション3のRecipeItem以下の実装ルール)。新規作成・Loadしたタブは`scrollTop: 0`なので先頭から表示される。
+  - **テスト**:
+    - `useTabStore`: `createTab()`で作成したタブの`scrollTop`が`0`であること、`setScrollTop()`が該当タブのみを更新し、存在しない`rootId`では何もしないこと。
+    - `RecipeItem`: アンマウント時に`setScrollTop(entryId, scrollTop)`が呼ばれること、マウント時にストアの値がパネルに設定されること(jsdomは`scrollTop`の値を保持しないため、パネル要素の`scrollTop`をプロパティ定義でスタブして検証する)。
+    - e2e(`e2e-tests/`): 実ブラウザでのスクロールが必要なため、長いレシピのタブをスクロール → 別タブへ切替 → 元のタブへ戻るとスクロール位置が戻ることをPlaywrightで検証する。
 
 ### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
 
