@@ -123,7 +123,8 @@ jobs:
           git switch -c "$PLAN_BRANCH"
           git commit -m "docs: add implementation plan and move design to doc/design for $FILES"
           # Force-push: the branch may remain from a previously closed (unmerged) PR
-          git push --force origin "$PLAN_BRANCH"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
+            push --force origin "$PLAN_BRANCH"
           gh pr create --base "$BASE_BRANCH" --head "$PLAN_BRANCH" \
             --title "Implementation plan: $FILES" \
             --body "Implementation plan generated from: $FILES
