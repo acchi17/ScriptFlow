@@ -1,8 +1,5 @@
 # ScriptRunnerHost/PythonRunnerHost 制御チャネルのソケット化
 
-> Status: 設計合意、実装完了(実装順序1〜8)。作成日 2026-09-20。
-> 関連ドキュメント: [python-runner-ipc-comparison.md](python-runner-ipc-comparison.md)(旧検討・本ドキュメントで置き換え)、[recipe-process-separation-design-spec.md](recipe-process-separation-design-spec.md)(`RunnerHostRegistry`は変更なしで前提として利用)、[socket-comm-client-config-design-spec.md](socket-comm-client-config-design-spec.md)(`ClientConfig`設計は本ドキュメントの対象外だが、実装時に`command_delimiter`との整合を確認する)
-
 ## 背景・動機
 
 現状、Node.js親プロセスと子プロセス(script-runner)間の制御通信は2系統に分かれている。

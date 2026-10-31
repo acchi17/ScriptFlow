@@ -1,8 +1,5 @@
 # レシピ単位の子プロセス分離
 
-> Status: 設計具体化・実装は別issue(未実装)。作成日 2026-09-19。
-> 前提ドキュメント: [main-area-multi-tab.md セクション7](main-area-multi-tab.md#7-per-recipe-child-process-isolation-implemented-and-remaining-issues)
-
 ## 背景・動機
 
 将来のマルチタブ機能([main-area-multi-tab.md](main-area-multi-tab.md))実装時、1つの重い/ブロックするスクリプトが他の全レシピの実行を止めてしまう問題を避けるための先行設計。現時点で顕在化している不具合はなく、タブ機能実装に備えた予防的設計。

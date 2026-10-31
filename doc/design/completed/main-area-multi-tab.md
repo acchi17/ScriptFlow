@@ -1,7 +1,5 @@
 # Multi-Tab Support for MainArea
 
-> Status: 要件定義・設計検討中(未実装)。作成日 2026-09-08。
-
 ## Functional Requirements
 
 - MainAreaのタブを最大10個まで作成可能とする。(タブが10個の場合は+ボタンも無効化する。Design Considerations セクション6で決定)
@@ -30,7 +28,7 @@
 
 ## Design Considerations
 
-### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化 [resolved]
+### 1. ルートエントリ/レシピ操作APIのタブ(rootId)対応化 [Resolved]
 
 現状 `EntryHandlerFacade.clearEntries()` / `RecipeSerializer.buildRecipe()` / `RecipeDeserializer.restoreRecipe()` はいずれも内部で`getRoot()`を呼び「暗黙に最初のルートを対象にする」実装であり、複数タブ(複数ルート)を扱うにはrootIdを明示的に渡せるようにする変更が必須になる。`EntryPersistanceService.saveRecipe()`/`loadRecipe()`・`useEntryOperation.saveRecipe()`/`loadRecipe()`もrootIdを受け取る口が無いため、同様に引数を通す必要がある。
 
@@ -69,7 +67,7 @@
 
 **テストへの影響:** `EntryPersistanceService.test.js`など既存テストの`buildRecipe()`/`restoreRecipe(recipe)`/`clearEntries()`呼び出しはrootIdを渡す形に更新する。あわせて、2ルートを作成し「片方のルートだけが保存/クリア/復元され、他方のルートとその接続は影響を受けない」ことを検証するテストを追加する。
 
-### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [resolved]
+### 2. タブ状態(タブ一覧・アクティブタブ)をどこで管理するか [Resolved]
 
 タブID・ラベル・対応する`rootEntryId`の一覧、およびどのタブがアクティブかという状態は現在どこにも存在しない。MenuArea(Load/Saveボタンの有効・無効判定に必要)とMainArea(タブバー描画に必要)をはじめ、RecipeItem・ExecutionLogView・ConnectionView・`useEntryOperation`など複数のモジュールから参照される。
 
@@ -130,7 +128,7 @@ export const useTabStore = defineStore('tab', () => {
 
 0タブの許容(`activeTabId`は`null`になり得る)、削除後のアクティブタブの付け替え、新規タブを作成直後にアクティブにすること、タブ作成時にソケットを作成しないこと、タブのラベルの決め方、タブ削除時の確認ダイアログ(MainArea側で行い、ストアは関与しない)、タブ切替時のスクロール位置の保存・復元、およびタブ数上限到達時の+ボタンの無効化は、セクション6で決定済み。
 
-### 3. RecipeItemコンポーネントの複数タブ対応 [resolved]
+### 3. RecipeItemコンポーネントの複数タブ対応 [Resolved]
 
 `RecipeItem.vue`は既に`entryId`(rootId)をpropで受け取る形になっており、ルート生成の責務は呼び出し元(現状MainArea)にある。したがって「インスタンス化するたびにルートが増える」問題は既に解消済みで、残る論点はタブ切替時のインスタンスの扱いのみ。
 
@@ -205,7 +203,7 @@ graph TD
 - **アプリ共通のグローバル状態**: `isExecuting`による`.executing`のdim overlayはMainArea全体にかかるため、片方のペインの実行中はもう片方も操作できない。`selectedEntryId`も全ペインで1つ。これらはセクション4で採用した「アプリ全体で1つ」の方針の見直し(タブ単位ロック等。セクション4でスコープ外とした事項)と合わせて検討する。
 - **スクロール位置**: ペイン内でタブを切り替えるとRecipeItemは再マウントされるが、セクション6で決定したとおり各RecipeItemが自分の`entryId`のタブの`scrollTop`を保存・復元するため、分割表示でも追加の対応は不要。ただし同じタブを2つのペインに同時表示することを許す場合は、スクロール位置をタブ単位ではなくペイン単位で持つ必要があるため、その時点で見直す。
 
-### 4. アプリ全体で共有されているグローバル状態の扱い [resolved]
+### 4. アプリ全体で共有されているグローバル状態の扱い [Resolved]
 
 `isExecuting`(実行中ロック)、`selectedEntryId`(選択状態)、`connectingSource`(パラメータ接続中状態)、`lastError`、`ExecutionLogService`の実行履歴は現状すべて「アプリ全体でただ1つ」。複数タブ化すると以下の挙動になる。
 - 実行中ロック: タブAで実行中の間、タブBのRun/Load/Saveボタンも無効化される(MainArea全体に`.executing`のdim overlayがかかるため、タブバーの切替・+/xボタンも操作不可になる)。
@@ -226,7 +224,7 @@ graph TD
 
 **スコープ外(別の設計検討として切り出す):** タブ単位の実行ロック(タブAの実行中もタブBを操作可能にする)、ログのタブ別フィルタ、それに伴う実行中タブの削除処理。セクション3の分割表示で別途検討する事項(アプリ共通のグローバル状態の見直し)と合わせて検討する。
 
-### 5. タブ削除時のソケット/ルート/子プロセス削除 [resolved]
+### 5. タブ削除時のソケット/ルート/子プロセス削除 [Resolved]
 
 - **ルート**: `EntryHandlerFacade.removeEntry(entryId)`は対象がルート自身の場合に`hierarchyHandler.unsetRoot()`まで含めて処理し、配下エントリ・接続・パラメータ・`comms`コンポーネントも削除する(`__tests__/EntryHandlerFacade.test.js`の`describe('EntryHandlerFacade.removeEntry')`で他ルートが残ることも検証済み)。ルートの削除自体は追加改修なしで可能。
 - **ソケット**: `RecipeDeserializer.restoreRecipe()`がLoad時に`entryExecutionService.deleteComm(rootId)`を呼んでいる既存パターンと同じ呼び方を、xボタン押下時のタブ削除処理でも踏襲すればよい(`useEntryOperation.releaseSocket(rootId)`経由でも可)。`removeEntry()`より先に呼ぶ。
@@ -266,9 +264,9 @@ graph TD
 - `server/api.js`: `DELETE /api/runners/:entryId`が`runnerRegistry.shutdown()`を呼び、未登録のentryIdでも成功を返すことを検証する。
 - `useTabStore.closeTab()`: `deleteComm` → `shutdownRunner` → `removeEntry`の呼び出し順序、および`shutdownRunner`が失敗しても`removeEntry`とタブ除去が行われることを、モックした`entryExecutionService`/`entryManager`で検証する。
 
-### 6. その他の不明点(要確認) [resolved]
+### 6. その他の不明点(要確認) [Resolved]
 
-- **「通信ソケットを新規に作成」の意味 [resolved]**:
+- **「通信ソケットを新規に作成」の意味 [Resolved]**:
   - 背景: 現状ソケットは`CommSettingView`でユーザーがホスト/ポートを入力し`useTcpIp`を有効にして初めて`EntryExecutionService.createComm()`が呼ばれる(ホスト側でTCP接続を実際に張る)仕組み。タブ作成時に行うのは`setComm(rootId)`による既定の通信設定(`comms`コンポーネント。`DEFAULT_COMM`により`useTcpIp: false`)の登録のみで、接続先情報は無い。
   - 選択肢:
     - (A) タブ作成時はタブ(ルート)ごとの通信設定・ソケット管理単位(entryIdに紐づく)を用意するだけとし、実際のソケットは作成しない
@@ -279,7 +277,7 @@ graph TD
   - **Load時**: レシピに`useTcpIp: true`の通信設定が含まれる場合は、従来どおり`RecipeDeserializer.restoreRecipe()`が復元処理の中で`createComm()`を呼ぶ。これはユーザーが保存した「`useTcpIp`有効」の設定を復元するものであり、タブ作成そのものによるソケット作成ではない。
   - **タブ削除時**: ソケットが作成されていれば`closeTab()`の`deleteComm(rootId)`で破棄され、作成されていなければ何もしない(セクション5)。
   - **テスト**: `useTabStore.createTab()`が`entryExecutionService.createComm()`を呼ばないこと、作成したタブの`commStatus`が`'none'`であることを検証する。
-- **タブ削除時の確認ダイアログ [resolved]**:
+- **タブ削除時の確認ダイアログ [Resolved]**:
   - 背景: 現状のLoadボタン押下時は既存レシピの上書きを`window.confirm`で確認している(`MenuArea.vue` `onLoadRecipe()`の`getChildren(rootEntryId).length > 0`判定。セクション1でLoadは常に新規タブへ読み込むことになったため削除予定)が、タブ削除(xボタン)については要件に確認の有無が書かれていない。未保存の変更が失われる可能性がある点は同様。
   - 選択肢:
     - (A) 確認しない
@@ -290,7 +288,7 @@ graph TD
   - **判定と確認の場所**: 確認はMainAreaのxボタンのハンドラで行い、`useTabStore.closeTab()`の中では行わない。`entryManager.getChildren(tab.rootEntryId).length > 0`の場合のみ`window.confirm('Closing this tab discards its recipe. Continue?')`(文言は実装時に調整可)を出し、キャンセルされたら何もしない。空のタブ、または確認でOKされた場合に`closeTab(tab.id)`を呼ぶ。`closeTab()`はセクション6のLoad失敗時など確認を出してはならない経路からもプログラム的に呼ばれるため、ストアはUIの確認を知らないままとする(`force`引数なども追加しない)。
   - **補足**: 子エントリが無いタブは、通信設定(`useTcpIp`など)を変更していても確認なしで閉じる。パラメータ接続は子エントリ間にしか存在しないため、子エントリの有無で判定すれば十分である。保存直後のタブでも子エントリがあれば確認が出るが、これは許容する。
   - **テスト**: MainAreaについて、(1) 空のタブのxボタンでは`window.confirm`が呼ばれず`closeTab()`が呼ばれること、(2) 子エントリのあるタブでは`window.confirm`が呼ばれ、OKなら`closeTab()`が呼ばれ、キャンセルなら呼ばれないこと、を`window.confirm`をモックして検証する。`useTabStore.closeTab()`が`window.confirm`を呼ばないことも確認する。
-- **全タブ削除後(0タブ)の扱いとタブ削除後のアクティブタブ [resolved]**:
+- **全タブ削除後(0タブ)の扱いとタブ削除後のアクティブタブ [Resolved]**:
   - 選択肢:
     - (A) 0タブを許容し、MainAreaに空状態(メッセージと+ボタン)を表示する
     - (B) 最低1タブは常に残す(最後の1つのxボタンを無効化する、または閉じたら空の新規タブを作る)
@@ -300,7 +298,7 @@ graph TD
   - **起動時**: 現状の挙動(起動直後に空のレシピが1つ表示される)を維持するため、MainAreaの`setup()`で`useTabStore().createTab()`を1回呼び、タブを1つ作成した状態で起動する(現在`setup()`にあるルート生成処理はセクション2のとおり`createTab()`に移る)。
   - **タブ削除後のアクティブタブ**: アクティブ(選択中)のタブを閉じた場合は、残ったタブのうち**最も左のタブ**(`tabs[0]`)をアクティブにする。残りが0個なら`null`とする。アクティブでないタブを閉じた場合はアクティブタブを変更しない。付け替えは`setActiveTab()`経由で行う(セクション4)。
   - **テスト**: `useTabStore.closeTab()`について、(1) アクティブタブを閉じると残りの最も左のタブがアクティブになること(閉じたタブが先頭・中間・末尾のいずれでも`tabs[0]`になる)、(2) 非アクティブタブを閉じてもアクティブタブが変わらないこと、(3) 最後の1タブを閉じると`tabs`が空・`activeTabId === null`・`visibleTabs`が空になること、を検証する。
-- **タブのラベル [resolved]**:
+- **タブのラベル [Resolved]**:
   - 背景: 新規作成タブのデフォルトラベルと、Loadでレシピをロードしたタブのラベルについて要件に指定がない。現状のタブバーはラベル"Recipe"固定。
   - 選択肢:
     - (A) 新規: 連番`Recipe N` / Load: レシピの`meta.name`(無ければファイル名)
@@ -313,7 +311,7 @@ graph TD
     - そのため`useEntryOperation.saveRecipe(rootId)`は、`EntryPersistanceService.saveRecipe(rootId, tab.label)`の戻り値から求めたファイル名で`useTabStore().setTabLabel(rootId, label)`を呼ぶ。`EntryPersistanceService`自体はタブを知らないままとする。
   - **ストアへの追加**: state に`nextTabNumber`(初期値1)、action に`setTabLabel(rootId, label)`を追加する(セクション2)。ラベルはタブのUI状態であり、ECSには持たせない。
   - **テスト**: (1) `createTab()`をラベル省略で呼ぶと`Recipe 1`, `Recipe 2`, …となり、タブを閉じた後の作成でも番号が再利用されないこと、(2) ラベル指定の`createTab(label)`はそのラベルになり連番を消費しないこと、(3) `useEntryOperation.loadRecipe()`で`fileName: 'foo.json'`・`meta.name: 'bar'`のレシピを読み込むとタブのラベルが`foo`になること、(4) `saveRecipe(rootId)`成功時にラベルが保存ファイル名(Electronのフルパス・Webの名前の両方)に更新され、キャンセル時は変わらないこと、を検証する。
-- **新規タブの初期表示 [resolved]**:
+- **新規タブの初期表示 [Resolved]**:
   - 選択肢:
     - (A) +ボタン・Loadのどちらで作成したタブも、作成後すぐにアクティブにする
     - (B) 作成したタブはアクティブにせず、バックグラウンドで開く(現在のアクティブタブを維持する)
@@ -323,7 +321,7 @@ graph TD
   - **前のタブの選択状態**: `setActiveTab()`による`resetState()`(セクション4)で、作成前のタブの選択状態・パラメータ接続中状態はクリアされる。タブ切替時と同じ挙動であり、これを許容する。
   - **起動時・0タブからの作成**: 起動時の`createTab()`(上記「全タブ削除後(0タブ)の扱い」)や0タブ状態からの作成でも同じく新規タブがアクティブになり、`activeTabId`が`null`から新規タブのIDに変わる。
   - **テスト**: `useTabStore.createTab()`について、(1) 作成したタブが`activeTabId`になること(既存タブがある場合・0タブの場合の両方)、(2) 作成前のタブの`selectedEntryId`/`connectingSource`がクリアされること、(3) 上限到達で`null`を返す場合は`tabs`・`activeTabId`が変わらないこと、を検証する。
-- **Loadのファイル選択キャンセル/読み込み失敗時の新規タブ [resolved]**:
+- **Loadのファイル選択キャンセル/読み込み失敗時の新規タブ [Resolved]**:
   - 選択肢:
     - (A) 先に`createTab()`でタブを作成し、キャンセル/失敗時は`closeTab()`で閉じる
     - (B) 先にタブを作成し、キャンセル/失敗時も空タブとして残す
@@ -344,7 +342,7 @@ graph TD
   - **テスト**:
     - `EntryPersistanceService`: 既存の`loadRecipe returns null when the user cancels the open dialog`は`pickRecipe()`がキャンセル時に`null`を返すテストに置き換える。
     - `useEntryOperation.loadRecipe()`: (1) キャンセル時に`createTab()`が呼ばれず`tabs`が変わらないこと、(2) 成功時に新規タブが1つ作成されそのrootIdに復元されること(既存タブは影響を受けない)、(3) `restoreRecipe()`が例外を投げた場合に作成したタブが`closeTab()`で閉じられ、`lastError`が設定され`false`が返ることを、モックした`platformService`と`useTabStore`で検証する。
-- **タブ数上限に達した場合の+ボタン [resolved]**:
+- **タブ数上限に達した場合の+ボタン [Resolved]**:
   - 背景: 要件はタブが10個の状態でのLoadボタンの無効化のみ明記しており、+ボタンの扱いは書かれていない。
   - 選択肢:
     - (A) `useTabStore().isTabLimitReached`が`true`の間、+ボタンを無効化する
@@ -354,7 +352,7 @@ graph TD
   - **MainAreaの実装**: タブバーの+ボタンに`:disabled="tabStore.isTabLimitReached"`を設定する。セクション4の実行中ロック(`.executing`のオーバーレイ)による操作不可とは独立しており、どちらか一方でも該当すれば押せない。0タブ時(「全タブ削除後(0タブ)の扱い」)は`isTabLimitReached`が`false`なので+ボタンは常に有効。タブを1つ閉じて10個未満になれば自動的に再び有効になる(getterがリアクティブなため追加の処理は不要)。
   - **ストア側のガード**: `createTab()`は上限到達時に何もせず`null`を返す動作をそのまま残す(セクション2)。+ボタン経由では通常発生しないが、`useEntryOperation.loadRecipe()`の手順3と同じく防御的なガードとして扱う。
   - **テスト**: MainAreaについて、(1) タブが10個のとき+ボタンが`disabled`になること、(2) 9個以下(0個を含む)では有効なこと、(3) 10個の状態から1つ閉じると再び有効になること、を検証する。
-- **タブ切替時のスクロール位置 [resolved]**:
+- **タブ切替時のスクロール位置 [Resolved]**:
   - 背景: セクション3で採用した(c)案(今回の挙動は(b)と同じ)ではタブ切替のたびにRecipeItemが再マウントされ(`:key="tab.rootEntryId"`)、レシピパネルのスクロール位置が先頭に戻る。
   - 選択肢:
     - (A) リセットを許容する(追加の状態・処理なし)
@@ -370,7 +368,7 @@ graph TD
     - `RecipeItem`: アンマウント時に`setScrollTop(entryId, scrollTop)`が呼ばれること、マウント時にストアの値がパネルに設定されること(jsdomは`scrollTop`の値を保持しないため、パネル要素の`scrollTop`をプロパティ定義でスタブして検証する)。
     - e2e(`e2e-tests/`): 実ブラウザでのスクロールが必要なため、長いレシピのタブをスクロール → 別タブへ切替 → 元のタブへ戻るとスクロール位置が戻ることをPlaywrightで検証する。
 
-### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [resolved]
+### 7. Per-Recipe Child Process Isolation (Implemented) and Remaining Issues [Resolved]
 
 当初は将来の検討事項としていたが、レシピ(ルート)単位の子プロセス分離は既に実装済みである。
 
