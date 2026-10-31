@@ -23,37 +23,42 @@ export default class EntryPersistanceService {
   }
 
   /**
+   * @param {string} rootId - ID of the root entry to serialise
    * @returns {Object} recipe object
    */
-  buildRecipe() {
-    return this._serializer.buildRecipe()
+  buildRecipe(rootId) {
+    return this._serializer.buildRecipe(rootId)
   }
 
   /**
    * @param {Object} data - Parsed recipe object
+   * @param {string} rootId - ID of the live root entry to restore into
    * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }>}
    */
-  async restoreRecipe(data) {
-    return this._deserializer.restoreRecipe(data)
+  async restoreRecipe(data, rootId) {
+    return this._deserializer.restoreRecipe(data, rootId)
   }
 
   /**
-   * Build the current recipe and let the user pick where to save it.
+   * Build the recipe of the given root and let the user pick where to save it.
+   * @param {string} rootId - ID of the root entry to save
    * @param {string} name - Suggested file name (without extension)
    * @returns {Promise<string|null>} chosen path/name, or null if canceled
    */
-  async saveRecipe(name = '') {
-    const data = this.buildRecipe()
+  async saveRecipe(rootId, name = '') {
+    const data = this.buildRecipe(rootId)
     return this.platformService.saveRecipeAs(data, `${name || 'recipe'}.json`)
   }
 
   /**
-   * Let the user pick a recipe file and restore it.
+   * Let the user pick a recipe file and restore it into the given root.
+   * Interim API: to be replaced by pickRecipe() when Load opens a new tab.
+   * @param {string} rootId - ID of the live root entry to restore into
    * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }|null>} null if canceled
    */
-  async loadRecipe() {
+  async loadRecipe(rootId) {
     const picked = await this.platformService.openRecipe()
     if (!picked) return null
-    return this.restoreRecipe(picked.data)
+    return this.restoreRecipe(picked.data, rootId)
   }
 }

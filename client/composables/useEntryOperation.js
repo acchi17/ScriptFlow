@@ -49,11 +49,15 @@ export function useEntryOperation() {
     return await entryExecutionService.deleteComm(entryId)
   }
 
-  const saveRecipe = async (name) => {
+  /**
+   * Save the recipe of the given root.
+   * @param {string} rootId - ID of the root entry to save
+   */
+  const saveRecipe = async (rootId) => {
     setExecuting(true)
     clearError()
     try {
-      await entryPersistanceService.saveRecipe(name)
+      await entryPersistanceService.saveRecipe(rootId)
     } catch (error) {
       setError(error.message)
     } finally {
@@ -62,13 +66,15 @@ export function useEntryOperation() {
   }
 
   /**
+   * Let the user pick a recipe file and restore it into the given root.
+   * @param {string} rootId - ID of the root entry to restore into
    * @returns {Promise<boolean>} true if a recipe was actually loaded (false if the user canceled)
    */
-  const loadRecipe = async () => {
+  const loadRecipe = async (rootId) => {
     setExecuting(true)
     clearError()
     try {
-      const report = await entryPersistanceService.loadRecipe()
+      const report = await entryPersistanceService.loadRecipe(rootId)
       if (!report) return false
       resetState()
       lastReport.value = report

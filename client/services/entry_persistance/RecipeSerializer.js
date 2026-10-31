@@ -11,12 +11,13 @@ export default class RecipeSerializer {
   }
 
   /**
+   * @param {string} rootId - ID of the root entry to serialise
    * @returns {Object} recipe object
+   * @throws {Error} If rootId is not a registered root
    */
-  buildRecipe() {
-    const rootId = this.entryManager.getRoot()
-    if (!rootId) {
-      throw new Error('RecipeSerializer.buildRecipe: no root entry exists')
+  buildRecipe(rootId) {
+    if (!this.entryManager.isRoot(rootId)) {
+      throw new Error(`RecipeSerializer.buildRecipe: "${rootId}" is not a root entry`)
     }
 
     return {
@@ -25,7 +26,7 @@ export default class RecipeSerializer {
         savedAt: new Date().toISOString()
       },
       root: this._serialiseEntry(rootId),
-      connections: this.entryManager.getConnections()
+      connections: this.entryManager.getConnections(rootId)
     }
   }
 

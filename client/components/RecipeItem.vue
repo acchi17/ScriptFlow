@@ -73,7 +73,7 @@ export default {
     const { isExecuting, cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
 
     const clearRecipe = () => {
-      entryManager.clearEntries()
+      entryManager.clearEntries(props.entryId)
     }
 
     const executeRecipe = () => {

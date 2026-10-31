@@ -71,7 +71,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 1: ルート操作APIのrootId必須化と接続のルート別フィルタ
+### [Resolved] Phase 1: ルート操作APIのrootId必須化と接続のルート別フィルタ
 
 **目的:** 設計書 セクション1のAPI変更のうち、タブストアに依存しない部分を行う。タブは1つのままで、アプリの振る舞いは変えない。
 
@@ -424,3 +424,6 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - Phase 1〜4の間、`MenuArea.vue`が`getRoot()`でSave/Loadの対象rootIdを決める(Phase 5で削除)。
     - Phase 5の間、Loadはアクティブタブへの上書きロード(上書き確認あり)のまま(Phase 6で新規タブへのロードに変更)。
 11. **設計書冒頭のStatus行**: 設計書冒頭の「Status: 要件定義・設計検討中(未実装)」は全節が`[resolved]`になった現状と合っていない。本計画では設計書を変更しないため、`doc/design/`への移動時に更新するか確認したい。
+12. **Phase 1実装時の補足(ConnectionViewの暫定対応と手動確認)**:
+    - Phase 1で`getConnections(rootId)`を本ノート1の想定どおり必須(未指定・非ルートで例外)としたため、引数なしで呼んでいた`ConnectionView.vue` `connectionsWithLanes`がそのままでは例外になる。Phase 1の変更ファイル一覧には無いが、振る舞いを変えないために暫定的に`entryManager.getRoot()`の値を`getConnections(rootId)`に渡す形にした(ルートが無い場合は空配列)。Phase 2でrootId propに置き換えて`getRoot()`呼び出しを削除する。本ノート10の暫定状態に「Phase 1〜2の間、`ConnectionView.vue`が`getRoot()`で対象rootIdを決める」が加わる。
+    - 完了条件のうち`npm run electron:start`での手動確認(ブロック追加 → Save → Clear → Load、Clearボタン)は自動実行環境(ディスプレイ無し)のため未実施。単一ルートでのSave/Load往復・提案名`recipe.json`・Clearは`EntryPersistanceService.test.js`/`EntryHandlerFacade.test.js`のユニットテストで代替確認したが、UI上での確認はレビュー時にお願いしたい。

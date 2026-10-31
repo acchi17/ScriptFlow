@@ -37,7 +37,10 @@ export default {
     const connectionsWithLanes = computed(() => {
       entryManager.connectionsTick.value
       entryManager.layoutsTick.value
-      const connections = entryManager.getConnections()
+      // Interim: getConnections() now requires a rootId; resolved via getRoot()
+      // until ConnectionView receives its rootId as a prop.
+      const rootId = entryManager.getRoot()
+      const connections = rootId ? entryManager.getConnections(rootId) : []
 
       const withCoords = []
       for (const conn of connections) {

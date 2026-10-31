@@ -239,7 +239,9 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Get the first registered root entry's ID
+   * Get the first registered root entry's ID.
+   * Not for use from application code — with multiple roots (tabs), callers must
+   * pass the target rootId explicitly instead of relying on "the first root".
    * @returns {string|null} Root entry ID or null
    */
   getRoot() {
@@ -377,12 +379,16 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Remove all entries except the root entry
+   * Remove all descendants of the given root entry (the root itself is kept).
+   * Other roots and their descendants/connections are not affected.
+   * @param {string} rootId - ID of a registered root entry
    * @returns {boolean} Whether clearing was successful
+   * @throws {Error} If rootId is not a registered root
    */
-  clearEntries() {
-    const rootId = this.hierarchyHandler.getRoot();
-    if (!rootId) return false;
+  clearEntries(rootId) {
+    if (!this.isRoot(rootId)) {
+      throw new Error(`EntryHandlerFacade.clearEntries: "${rootId}" is not a root entry`);
+    }
 
     this._removeDescendants(rootId);
 
@@ -522,11 +528,19 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Get all connections as an array.
+   * Get the connections whose both endpoints belong to the given root.
+   * @param {string} rootId - ID of a registered root entry
    * @returns {Array<Object>}
+   * @throws {Error} If rootId is not a registered root
    */
-  getConnections() {
-    return this.connectionHandler.getConnections();
+  getConnections(rootId) {
+    if (!this.isRoot(rootId)) {
+      throw new Error(`EntryHandlerFacade.getConnections: "${rootId}" is not a root entry`);
+    }
+    return this.connectionHandler.getConnections().filter(conn =>
+      this.getRootOf(conn.output.entryId) === rootId &&
+      this.getRootOf(conn.input.entryId) === rootId
+    );
   }
 
   /**

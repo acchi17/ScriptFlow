@@ -327,3 +327,81 @@ describe('EntryHandlerFacade.moveEntry', () => {
     expect(entryManager.getChildren(rootId)).toEqual([blockAId])
   })
 })
+
+function connect(entryManager, outputEntryId, inputEntryId) {
+  return entryManager.addConnection(
+    { entryId: outputEntryId, category: 'output', dataType: 'integer', paramName: 'Result' },
+    { entryId: inputEntryId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+  )
+}
+
+// Two roots, each with its own descendants and one connection between them.
+function createTwoRoots() {
+  const entryManager = new EntryHandlerFacade()
+  const rootAId = addAndAttach(entryManager, null, 'container', 'rootA', 0)
+  const rootBId = addAndAttach(entryManager, null, 'container', 'rootB', 0)
+  const blockA1Id = addAndAttach(entryManager, rootAId, 'block', 'A1', 0)
+  const containerAId = addAndAttach(entryManager, rootAId, 'container', 'CA', 1)
+  const blockA2Id = addAndAttach(entryManager, containerAId, 'block', 'A2', 0)
+  const blockB1Id = addAndAttach(entryManager, rootBId, 'block', 'B1', 0)
+  const blockB2Id = addAndAttach(entryManager, rootBId, 'block', 'B2', 1)
+  const connAId = connect(entryManager, blockA1Id, blockA2Id)
+  const connBId = connect(entryManager, blockB1Id, blockB2Id)
+  return {
+    entryManager, rootAId, rootBId,
+    blockA1Id, containerAId, blockA2Id, blockB1Id, blockB2Id, connAId, connBId
+  }
+}
+
+describe('EntryHandlerFacade.clearEntries', () => {
+  it('removes only the given root\'s descendants, keeping the root itself and other roots intact', () => {
+    const t = createTwoRoots()
+
+    expect(t.entryManager.clearEntries(t.rootAId)).toBe(true)
+
+    expect(t.entryManager.isAlive(t.rootAId)).toBe(true)
+    expect(t.entryManager.isRoot(t.rootAId)).toBe(true)
+    expect(t.entryManager.getChildren(t.rootAId)).toEqual([])
+    expect(t.entryManager.isAlive(t.blockA1Id)).toBe(false)
+    expect(t.entryManager.isAlive(t.containerAId)).toBe(false)
+    expect(t.entryManager.isAlive(t.blockA2Id)).toBe(false)
+    expect(t.entryManager.getConnections(t.rootAId)).toEqual([])
+
+    expect(t.entryManager.getChildren(t.rootBId)).toEqual([t.blockB1Id, t.blockB2Id])
+    expect(t.entryManager.isAlive(t.blockB1Id)).toBe(true)
+    expect(t.entryManager.isAlive(t.blockB2Id)).toBe(true)
+    expect(t.entryManager.getConnections(t.rootBId).map(c => c.id)).toEqual([t.connBId])
+  })
+
+  it('throws when rootId is missing or not a root, without removing anything', () => {
+    const t = createTwoRoots()
+
+    expect(() => t.entryManager.clearEntries()).toThrow(/not a root entry/)
+    expect(() => t.entryManager.clearEntries(t.containerAId)).toThrow(/not a root entry/)
+    expect(() => t.entryManager.clearEntries('no-such-id')).toThrow(/not a root entry/)
+
+    expect(t.entryManager.getChildren(t.rootAId)).toEqual([t.blockA1Id, t.containerAId])
+    expect(t.entryManager.getChildren(t.containerAId)).toEqual([t.blockA2Id])
+    expect(t.entryManager.getChildren(t.rootBId)).toEqual([t.blockB1Id, t.blockB2Id])
+  })
+})
+
+describe('EntryHandlerFacade.getConnections', () => {
+  it('returns only the connections whose endpoints belong to the given root', () => {
+    const t = createTwoRoots()
+
+    const connsA = t.entryManager.getConnections(t.rootAId)
+    expect(connsA.map(c => c.id)).toEqual([t.connAId])
+    expect(connsA[0].output.entryId).toBe(t.blockA1Id)
+    expect(connsA[0].input.entryId).toBe(t.blockA2Id)
+
+    expect(t.entryManager.getConnections(t.rootBId).map(c => c.id)).toEqual([t.connBId])
+  })
+
+  it('throws when rootId is missing or not a root', () => {
+    const t = createTwoRoots()
+
+    expect(() => t.entryManager.getConnections()).toThrow(/not a root entry/)
+    expect(() => t.entryManager.getConnections(t.blockA1Id)).toThrow(/not a root entry/)
+  })
+})

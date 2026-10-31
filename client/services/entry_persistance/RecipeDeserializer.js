@@ -32,19 +32,22 @@ export default class RecipeDeserializer {
 
   /**
    * Restore a recipe object into the live managers.
+   * Only the given root is cleared and restored; other roots are not affected.
    * @param {Object} data - Parsed recipe object
+   * @param {string} rootId - ID of the live root entry to restore into
    * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }>}
+   * @throws {Error} If the format is unsupported or rootId is not a registered root
+   *   (thrown before the ECS is modified)
    */
-  async restoreRecipe(data) {
+  async restoreRecipe(data, rootId) {
     const recipe = this._migrate(data)
     const warnings = []
 
-    const rootId = this.entryManager.getRoot()
-    if (!rootId) {
-      throw new Error('RecipeDeserializer.restoreRecipe: no live root entry to restore into')
+    if (!this.entryManager.isRoot(rootId)) {
+      throw new Error(`RecipeDeserializer.restoreRecipe: "${rootId}" is not a root entry`)
     }
 
-    this.entryManager.clearEntries()
+    this.entryManager.clearEntries(rootId)
     await this.entryExecutionService.deleteComm(rootId)
 
     const idMap = new Map([[recipe.root.id, rootId]])
@@ -61,7 +64,7 @@ export default class RecipeDeserializer {
     await this._restoreComm(recipe.root, idMap)
 
     const entryCount = this.entryManager.getAllDescendants(rootId).length - 1
-    const connectionCount = this.entryManager.getConnections().length
+    const connectionCount = this.entryManager.getConnections(rootId).length
 
     return { entryCount, connectionCount, warnings }
   }

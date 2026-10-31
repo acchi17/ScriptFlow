@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
 import EntryExecutionService from '@/services/entry_execution/EntryExecutionService.js'
 import EntryDefinitionService from '@/services/entry_definition/EntryDefinitionService.js'
@@ -54,11 +54,11 @@ describe('EntryPersistanceService round trip', () => {
     )
     expect(connId).toBeTruthy()
 
-    const recipe = ctx.service.buildRecipe()
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
     expect(recipe.formatVersion).toBe(1)
     expect(recipe.root.children).toHaveLength(2)
 
-    const report = await ctx.service.restoreRecipe(recipe)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     expect(report.warnings).toEqual([])
     expect(report.connectionCount).toBe(1)
@@ -71,7 +71,7 @@ describe('EntryPersistanceService round trip', () => {
     const restoredMulId = ctx.entryManager.getChildren(restoredSubId)[0]
     expect(ctx.entryManager.getInputParamValues(restoredMulId)).toEqual({ NumberA: 0, NumberB: 5 })
 
-    const connections = ctx.entryManager.getConnections()
+    const connections = ctx.entryManager.getConnections(ctx.rootId)
     expect(connections).toHaveLength(1)
     expect(connections[0].output.entryId).toBe(addBlockId)
     expect(connections[0].input.entryId).toBe(mulBlockId)
@@ -87,7 +87,7 @@ describe('EntryPersistanceService round trip', () => {
       { entryId: mulBlockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     )
 
-    const recipe = ctx.service.buildRecipe()
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
 
     // Mirrors what Electron's IPC/contextBridge does internally when saveRecipeAs()
     // sends this object to the main process. Guards against connections becoming
@@ -100,7 +100,7 @@ describe('EntryPersistanceService round trip', () => {
     const ctx = await createContext()
     const blockId = addBlock(ctx, ctx.rootId, 'Add', 0)
 
-    const recipe = ctx.service.buildRecipe()
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
     // Simulate a recipe saved with a different root id (e.g. from an earlier
     // session) that also references that old root id from a connection.
     const staleRootId = 'stale-root-id'
@@ -111,7 +111,7 @@ describe('EntryPersistanceService round trip', () => {
       input: { entryId: blockId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
     })
 
-    const report = await ctx.service.restoreRecipe(recipe)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     // The stray connection is still dropped (the root has no params), but it
     // must be dropped for "param not found" -- proving the id was correctly
@@ -124,10 +124,10 @@ describe('EntryPersistanceService round trip', () => {
   it('keeps an entry with no params when its block definition is missing, and warns', async () => {
     const ctx = await createContext()
     addBlock(ctx, ctx.rootId, 'Add', 0)
-    const recipe = ctx.service.buildRecipe()
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
     recipe.root.children[0].name = 'GoneBlock'
 
-    const report = await ctx.service.restoreRecipe(recipe)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     expect(report.warnings.some(w => w.includes('Block definition "GoneBlock" not found'))).toBe(true)
     const restoredRootId = ctx.entryManager.getRoot()
@@ -140,10 +140,10 @@ describe('EntryPersistanceService round trip', () => {
   it('drops an input param that no longer exists on the block definition, with a warning', async () => {
     const ctx = await createContext()
     addBlock(ctx, ctx.rootId, 'Add', 0)
-    const recipe = ctx.service.buildRecipe()
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
     recipe.root.children[0].inputParams.Extra = 42
 
-    const report = await ctx.service.restoreRecipe(recipe)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     expect(report.warnings.some(w => w.includes('Input param "Extra" no longer exists'))).toBe(true)
     const restoredBlockId = ctx.entryManager.getChildren(ctx.entryManager.getRoot())[0]
@@ -162,11 +162,11 @@ describe('EntryPersistanceService round trip', () => {
     )
     expect(connId).toBeTruthy()
 
-    const recipe = ctx.service.buildRecipe()
-    const report = await ctx.service.restoreRecipe(recipe)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     expect(report.warnings.some(w => w.includes('output must precede input in execution order'))).toBe(true)
-    expect(ctx.entryManager.getConnections()).toHaveLength(0)
+    expect(ctx.entryManager.getConnections(ctx.rootId)).toHaveLength(0)
   })
 
   it('throws on an unsupported formatVersion and leaves the current recipe untouched', async () => {
@@ -181,7 +181,7 @@ describe('EntryPersistanceService round trip', () => {
       connections: []
     }
 
-    await expect(ctx.service.restoreRecipe(badRecipe)).rejects.toThrow(/unsupported recipe formatVersion/)
+    await expect(ctx.service.restoreRecipe(badRecipe, ctx.rootId)).rejects.toThrow(/unsupported recipe formatVersion/)
 
     const rootEntryId = ctx.entryManager.getRoot()
     const rootChildIds = ctx.entryManager.getChildren(rootEntryId)
@@ -197,8 +197,8 @@ describe('EntryPersistanceService round trip', () => {
     ctx.entryManager.setInputParam(ifContainerId, 'Execute', false)
     addBlock(ctx, ifContainerId, 'Add', 0)
 
-    const recipe = ctx.service.buildRecipe()
-    const report = await ctx.service.restoreRecipe(recipe)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
 
     expect(report.warnings).toEqual([])
     const restoredRootId = ctx.entryManager.getRoot()
@@ -215,10 +215,10 @@ describe('EntryPersistanceService round trip', () => {
     const block2Id = addBlock(ctx, containerId, 'Mul', 0)
     ctx.entryManager.addLayout(block1Id, 10, 20)
 
-    const smallRecipe = ctx.service.buildRecipe()
+    const smallRecipe = ctx.service.buildRecipe(ctx.rootId)
     smallRecipe.root.children = []
 
-    const report = await ctx.service.restoreRecipe(smallRecipe)
+    const report = await ctx.service.restoreRecipe(smallRecipe, ctx.rootId)
 
     expect(report.entryCount).toBe(0)
     expect(ctx.entryManager.getChildren(ctx.entryManager.getRoot())).toHaveLength(0)
@@ -233,7 +233,7 @@ describe('EntryPersistanceService round trip', () => {
     const ctx = await createContext()
     addBlock(ctx, ctx.rootId, 'Add', 0)
 
-    const result = await ctx.service.loadRecipe()
+    const result = await ctx.service.loadRecipe(ctx.rootId)
 
     expect(result).toBeNull()
     expect(ctx.entryManager.getChildren(ctx.rootId)).toHaveLength(1)
@@ -243,8 +243,136 @@ describe('EntryPersistanceService round trip', () => {
     const ctx = await createContext()
     addBlock(ctx, ctx.rootId, 'Add', 0)
 
-    const result = await ctx.service.saveRecipe('My recipe')
+    const result = await ctx.service.saveRecipe(ctx.rootId, 'My recipe')
 
     expect(result).toBeNull()
+  })
+
+  it('loadRecipe restores the picked file into the given root', async () => {
+    const ctx = await createContext()
+    addBlock(ctx, ctx.rootId, 'Add', 0)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    ctx.entryManager.clearEntries(ctx.rootId)
+    ctx.service.platformService.openRecipe = async () => ({ data: recipe })
+
+    const report = await ctx.service.loadRecipe(ctx.rootId)
+
+    expect(report.entryCount).toBe(1)
+    const childIds = ctx.entryManager.getChildren(ctx.rootId)
+    expect(childIds.map(id => ctx.entryManager.getEntryName(id))).toEqual(['Add'])
+  })
+
+  it('saveRecipe builds the given root\'s recipe and suggests "recipe.json" by default', async () => {
+    const ctx = await createContext()
+    addBlock(ctx, ctx.rootId, 'Add', 0)
+    const saveRecipeAs = vi.fn(async () => 'saved.json')
+    ctx.service.platformService.saveRecipeAs = saveRecipeAs
+
+    const result = await ctx.service.saveRecipe(ctx.rootId)
+
+    expect(result).toBe('saved.json')
+    expect(saveRecipeAs).toHaveBeenCalledTimes(1)
+    const [data, suggestedName] = saveRecipeAs.mock.calls[0]
+    expect(suggestedName).toBe('recipe.json')
+    expect(data.root.id).toBe(ctx.rootId)
+    expect(data.root.children.map(c => c.name)).toEqual(['Add'])
+  })
+})
+
+// Builds a second root with its own block pair and connection next to ctx.rootId.
+function addSecondRoot(ctx) {
+  const rootBId = ctx.entryManager.addEntry('container', 'root-container')
+  ctx.entryManager.moveEntry(rootBId, null, 0)
+  const addBId = addBlock(ctx, rootBId, 'Add', 0)
+  const mulBId = addBlock(ctx, rootBId, 'Mul', 1)
+  ctx.entryManager.setInputParam(addBId, 'NumberA', 9)
+  const connBId = ctx.entryManager.addConnection(
+    { entryId: addBId, category: 'output', dataType: 'integer', paramName: 'Result' },
+    { entryId: mulBId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+  )
+  return { rootBId, addBId, mulBId, connBId }
+}
+
+function addFirstRootContent(ctx) {
+  const addAId = addBlock(ctx, ctx.rootId, 'Add', 0)
+  const mulAId = addBlock(ctx, ctx.rootId, 'Mul', 1)
+  const connAId = ctx.entryManager.addConnection(
+    { entryId: addAId, category: 'output', dataType: 'integer', paramName: 'Result' },
+    { entryId: mulAId, category: 'input', dataType: 'integer', paramName: 'NumberA' }
+  )
+  return { addAId, mulAId, connAId }
+}
+
+describe('EntryPersistanceService multiple roots', () => {
+  it('buildRecipe(rootA) contains only rootA\'s entries and connections', async () => {
+    const ctx = await createContext()
+    const a = addFirstRootContent(ctx)
+    const b = addSecondRoot(ctx)
+
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+
+    expect(recipe.root.id).toBe(ctx.rootId)
+    expect(recipe.root.children.map(c => c.id)).toEqual([a.addAId, a.mulAId])
+    expect(recipe.connections.map(c => c.id)).toEqual([a.connAId])
+    const serialised = JSON.stringify(recipe)
+    expect(serialised).not.toContain(b.rootBId)
+    expect(serialised).not.toContain(b.addBId)
+    expect(serialised).not.toContain(b.connBId)
+  })
+
+  it('restoreRecipe(data, rootA) clears and restores only rootA, leaving rootB untouched', async () => {
+    const ctx = await createContext()
+    const a = addFirstRootContent(ctx)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    // Extra content in rootA that must be cleared by the restore.
+    const staleId = addBlock(ctx, ctx.rootId, 'Add', 2)
+    const b = addSecondRoot(ctx)
+
+    const report = await ctx.service.restoreRecipe(recipe, ctx.rootId)
+
+    expect(report.warnings).toEqual([])
+    expect(report.entryCount).toBe(2)
+    expect(report.connectionCount).toBe(1)
+    expect(ctx.entryManager.isAlive(staleId)).toBe(false)
+    expect(ctx.entryManager.getChildren(ctx.rootId)).toEqual([a.addAId, a.mulAId])
+    expect(ctx.entryManager.getConnections(ctx.rootId).map(c => c.id)).toEqual([a.connAId])
+
+    expect(ctx.entryManager.getChildren(b.rootBId)).toEqual([b.addBId, b.mulBId])
+    expect(ctx.entryManager.getInputParamValues(b.addBId)).toEqual({ NumberA: 9, NumberB: 0 })
+    expect(ctx.entryManager.getConnections(b.rootBId).map(c => c.id)).toEqual([b.connBId])
+  })
+
+  it('restoreRecipe(data, rootA) only deletes rootA\'s socket record', async () => {
+    const ctx = await createContext()
+    addFirstRootContent(ctx)
+    const b = addSecondRoot(ctx)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    ctx.entryExecutionService._entrySocketMap.set(b.rootBId, { socketId: b.rootBId })
+    const deleteComm = vi.spyOn(ctx.entryExecutionService, 'deleteComm')
+
+    await ctx.service.restoreRecipe(recipe, ctx.rootId)
+
+    expect(deleteComm).toHaveBeenCalledTimes(1)
+    expect(deleteComm).toHaveBeenCalledWith(ctx.rootId)
+    expect(ctx.entryExecutionService._entrySocketMap.has(b.rootBId)).toBe(true)
+  })
+
+  it('buildRecipe/restoreRecipe throw for a missing or non-root id without changing the ECS', async () => {
+    const ctx = await createContext()
+    const a = addFirstRootContent(ctx)
+    const b = addSecondRoot(ctx)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    const deleteComm = vi.spyOn(ctx.entryExecutionService, 'deleteComm')
+
+    expect(() => ctx.service.buildRecipe()).toThrow(/not a root entry/)
+    expect(() => ctx.service.buildRecipe(a.addAId)).toThrow(/not a root entry/)
+    await expect(ctx.service.restoreRecipe(recipe)).rejects.toThrow(/not a root entry/)
+    await expect(ctx.service.restoreRecipe(recipe, a.addAId)).rejects.toThrow(/not a root entry/)
+
+    expect(deleteComm).not.toHaveBeenCalled()
+    expect(ctx.entryManager.getChildren(ctx.rootId)).toEqual([a.addAId, a.mulAId])
+    expect(ctx.entryManager.getConnections(ctx.rootId).map(c => c.id)).toEqual([a.connAId])
+    expect(ctx.entryManager.getChildren(b.rootBId)).toEqual([b.addBId, b.mulBId])
+    expect(ctx.entryManager.getConnections(b.rootBId).map(c => c.id)).toEqual([b.connBId])
   })
 })

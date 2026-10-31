@@ -52,7 +52,8 @@ export default {
     const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
 
     const onSaveRecipe = async () => {
-      await saveRecipe()
+      // Interim: target root is resolved via getRoot() until the tab store provides it
+      await saveRecipe(entryManager.getRoot())
       if (lastError.value) {
         window.alert(`Failed to save recipe: ${lastError.value}`)
       }
@@ -64,7 +65,7 @@ export default {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }
-      const loaded = await loadRecipe()
+      const loaded = await loadRecipe(rootEntryId)
       if (lastError.value) {
         window.alert(`Failed to load recipe: ${lastError.value}`)
       } else if (loaded && lastReport.value?.warnings?.length) {
