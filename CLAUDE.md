@@ -29,7 +29,7 @@ Unit tests live alongside their subject in `__tests__/` directories (e.g. `clien
 
 ## Design Documents
 
-- In design documents under `doc/design/` and `doc/design-draft/`, reference code by file path and identifier (e.g. `RecipeItem.vue` `measureEntries()`, `EntryHandlerFacade.clearEntries()`), never by line number. Line numbers go stale as soon as the code changes.
+- In design documents under `doc/design/`, reference code by file path and identifier (e.g. `RecipeItem.vue` `measureEntries()`, `EntryHandlerFacade.clearEntries()`), never by line number. Line numbers go stale as soon as the code changes.
 - Use Mermaid `graph TD` or `graph LR` for structure diagrams.
 
 ## Important Patterns

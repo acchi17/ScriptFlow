@@ -1,4 +1,4 @@
-name: Claude Code Implementation Plan
+name: Implementation Plan
 on:
   schedule:
     - cron: "0 21 * * 0-4"
@@ -61,11 +61,11 @@ jobs:
             exit 0
           fi
           files=""
-          for f in doc/design-draft/*.md; do
+          for f in doc/design/draft/*.md; do
             [ -f "$f" ] || continue
             # Fully resolved = at least one [Resolved], no [Open] left, and no plan yet
             if grep -qF '[Resolved]' "$f" && ! grep -qF '[Open]' "$f" \
-              && [ ! -f "doc/impl-plan/$(basename "$f" .md)-plan.md" ]; then
+              && [ ! -f "doc/design/impl-plan/$(basename "$f" .md)-plan.md" ]; then
               files="$files $f"
             fi
           done
@@ -79,11 +79,11 @@ jobs:
           prompt: |
             The following design documents have all design considerations resolved:
             ${{ steps.detect.outputs.files }}
-            For each one, create an implementation plan at doc/impl-plan/<design file name without .md>-plan.md
-            (e.g. doc/design-draft/foo.md -> doc/impl-plan/foo-plan.md).
+            For each one, create an implementation plan at doc/design/impl-plan/<design file name without .md>-plan.md
+            (e.g. doc/design/draft/foo.md -> doc/design/impl-plan/foo-plan.md).
             The design document is finalized: do not modify it and do not revisit its decisions.
-            The design documents will be moved to doc/design/ together with the plan, so refer to
-            them as doc/design/<file name> inside the plan.
+            The design documents will be moved to doc/design/completed/ together with the plan, so refer to
+            them as doc/design/completed/<file name> inside the plan.
             Before planning, read the code the design document references to confirm the current structure.
             Plan requirements:
             - Write in the same language as the design document
@@ -98,7 +98,7 @@ jobs:
             - Reference code by file path and identifier, never by line number
             - If something in the design document is ambiguous, do not guess; list it under a
               "Notes for reviewer" section
-            Only write files under doc/impl-plan/.
+            Only write files under doc/design/impl-plan/.
           claude_args: >-
             --max-turns 50
             --allowedTools "Read,Glob,Grep,Write"
@@ -109,20 +109,20 @@ jobs:
           ISSUE: ${{ matrix.issue }}
         run: |
           # Only the plan folder is committed, even if Claude touched other files
-          git add doc/impl-plan/
+          git add doc/design/impl-plan/
           if git diff --cached --quiet; then
             echo "No implementation plan was written"
             exit 1
           fi
-          # Promote each design document that got a plan from design-draft/ to design/ (git mv stages it)
-          mkdir -p doc/design
+          # Promote each design document that got a plan from design/draft/ to design/completed/ (git mv stages it)
+          mkdir -p doc/design/completed
           for f in $FILES; do
-            [ -f "doc/impl-plan/$(basename "$f" .md)-plan.md" ] && git mv "$f" "doc/design/$(basename "$f")"
+            [ -f "doc/design/impl-plan/$(basename "$f" .md)-plan.md" ] && git mv "$f" "doc/design/completed/$(basename "$f")"
           done
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch -c "$PLAN_BRANCH"
-          git commit -m "docs: add implementation plan and move design to doc/design for $FILES"
+          git commit -m "docs: add implementation plan and move design to doc/design/completed for $FILES"
           # Force-push: the branch may remain from a previously closed (unmerged) PR
           git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
             push --force origin "$PLAN_BRANCH"

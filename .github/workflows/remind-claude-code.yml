@@ -52,7 +52,7 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           base_branch: ${{ matrix.branch }}
           prompt: |
-            Read every .md file under doc/design-draft/ and identify all design considerations whose status is marked exactly as "[Open]".
+            Read every .md file under doc/design/draft/ and identify all design considerations whose status is marked exactly as "[Open]".
             Pick only the single most important one from those "[Open]" items and post a reminder about it as a
             comment on Issue #${{ matrix.issue }} (use gh issue comment).
             How to pick (in priority order):
