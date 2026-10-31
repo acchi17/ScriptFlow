@@ -1,0 +1,37 @@
+name: Find Targets
+on:
+  workflow_call:
+    outputs:
+      targets:
+        value: ${{ jobs.find-targets.outputs.targets }}
+      count:
+        value: ${{ jobs.find-targets.outputs.count }}
+      remind_user:
+        value: ${{ jobs.find-targets.outputs.remind_user }}
+
+jobs:
+  find-targets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    env:
+      REMIND_USER: ${{ vars.REMIND_USER || github.repository_owner }}
+    outputs:
+      targets: ${{ steps.build.outputs.targets }}
+      count: ${{ steps.build.outputs.count }}
+      remind_user: ${{ env.REMIND_USER }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          list=$(gh issue list --label design-considerations --state open \
+            --author "$REMIND_USER" --json number,title --limit 50 \
+            | jq -c '[ .[]
+                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]
+                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+          echo "targets=$list" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"

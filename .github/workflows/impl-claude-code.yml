@@ -4,32 +4,9 @@ on:
     - cron: "0 23 * * 0-4"
   workflow_dispatch:
 
-env:
-  REMIND_USER: ${{ vars.REMIND_USER || github.repository_owner }}
-
 jobs:
   find-targets:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      issues: read
-    outputs:
-      targets: ${{ steps.build.outputs.targets }}
-      count: ${{ steps.build.outputs.count }}
-    steps:
-      - id: build
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: |
-          list=$(gh issue list --label design-considerations --state open \
-            --author "$REMIND_USER" --json number,title --limit 50 \
-            | jq -c '[ .[]
-                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
-                | {issue: .number, branch: $c.b} ]
-                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
-          echo "targets=$list" >> "$GITHUB_OUTPUT"
-          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
+    uses: ./.github/workflows/find-targets.yml
 
   implement:
     needs: find-targets
