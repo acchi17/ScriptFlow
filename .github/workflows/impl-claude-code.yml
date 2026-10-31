@@ -41,10 +41,13 @@ jobs:
         include: ${{ fromJSON(needs.find-targets.outputs.targets) }}
     permissions:
       contents: write
+      pull-requests: write
       id-token: write
     env:
       GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
       BASE_BRANCH: ${{ matrix.branch }}
+      IMPL_BRANCH: impl/issue-${{ matrix.issue }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -52,6 +55,11 @@ jobs:
 
       - id: detect
         run: |
+          # Skip while a previous implementation PR for this issue is still open
+          if [ -n "$(gh pr list --head "$IMPL_BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            echo "plan=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # First plan (alphabetical) that still has an [Open] phase heading
           plan=""
           for f in doc/design/impl-plan/*-plan.md; do
@@ -96,6 +104,7 @@ jobs:
       - if: steps.detect.outputs.plan != ''
         env:
           PLAN: ${{ steps.detect.outputs.plan }}
+          ISSUE: ${{ matrix.issue }}
         run: |
           # The phase counts as done only if Claude flipped a heading to [Resolved]
           if git diff -U0 -- "$PLAN" | grep -qE '^\+#+ \[Resolved\]'; then
@@ -105,9 +114,17 @@ jobs:
             exit 1
           fi
           npm test
+          git switch -c "$IMPL_BRANCH"
           git add -A
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git commit -m "feat: implement $phase ($PLAN)"
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
-            push origin "HEAD:$BASE_BRANCH"
+          # Force-push: the branch may remain from a previously closed (unmerged) PR
+          # claude-code-action leaves a revoked token in git config, so push with the job's own token instead
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "$IMPL_BRANCH"
+          gh pr create --base "$BASE_BRANCH" --head "$IMPL_BRANCH" \
+            --title "Implement: $phase" \
+            --body "Implemented $phase from $PLAN
+
+          Refs #$ISSUE"

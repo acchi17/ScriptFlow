@@ -124,8 +124,9 @@ jobs:
           git switch -c "$PLAN_BRANCH"
           git commit -m "docs: add implementation plan and move design to doc/design/completed for $FILES"
           # Force-push: the branch may remain from a previously closed (unmerged) PR
-          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
-            push --force origin "$PLAN_BRANCH"
+          # claude-code-action leaves a revoked token in git config, so push with the job's own token instead
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "$PLAN_BRANCH"
           gh pr create --base "$BASE_BRANCH" --head "$PLAN_BRANCH" \
             --title "Implementation plan: $FILES" \
             --body "Implementation plan generated from: $FILES
