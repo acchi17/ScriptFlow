@@ -63,8 +63,8 @@ jobs:
           files=""
           for f in doc/design-draft/*.md; do
             [ -f "$f" ] || continue
-            # Fully resolved = at least one [resolved], no [undecided] left, and no plan yet
-            if grep -qF '[resolved]' "$f" && ! grep -qF '[undecided]' "$f" \
+            # Fully resolved = at least one [Resolved], no [Open] left, and no plan yet
+            if grep -qF '[Resolved]' "$f" && ! grep -qF '[Open]' "$f" \
               && [ ! -f "doc/impl-plan/$(basename "$f" .md)-plan.md" ]; then
               files="$files $f"
             fi
@@ -89,6 +89,7 @@ jobs:
             - Write in the same language as the design document
             - Split the work into phases that can each be implemented, tested and committed on
               their own. Put behavior-preserving refactors in separate phases before new features.
+            - Label every phase heading with "[Open]" (e.g. "## [Open] Phase 1: Extract X")
             - For each phase, list: goal, files to change and what changes, behavior that must not
               change, tests to add or update (test file and describe name), and completion criteria
               (`npm test` passes, plus manual checks with `npm run electron:start` where UI is affected)

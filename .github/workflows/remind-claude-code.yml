@@ -52,9 +52,8 @@ jobs:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           base_branch: ${{ matrix.branch }}
           prompt: |
-            Read every .md file under doc/design-draft/ and identify all design considerations that are still unresolved, such as items marked as undecided, TBD,
-            needs discussion, or Open Question.
-            Pick only the single most important one and post a reminder about it as a
+            Read every .md file under doc/design-draft/ and identify all design considerations whose status is marked exactly as "[Open]".
+            Pick only the single most important one from those "[Open]" items and post a reminder about it as a
             comment on Issue #${{ matrix.issue }} (use gh issue comment).
             How to pick (in priority order):
             1. It blocks other decisions or implementation work (nothing can move
@@ -67,8 +66,8 @@ jobs:
               what needs to be decided, the options and their trade-offs, and your
               recommendation
             - Briefly explain why you picked this point (e.g. what it is blocking)
-            - At the end, note that this is "1 of N unresolved points"
-            - If there are no unresolved points, do not post anything
+            - At the end, note that this is "1 of N open points"
+            - If there are no "[Open]" items, do not post anything
           claude_args: >-
             --max-turns 15
             --allowedTools "Read,Glob,Grep,Bash(gh issue comment:*)"
