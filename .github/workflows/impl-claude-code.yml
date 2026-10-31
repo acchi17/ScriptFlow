@@ -1,0 +1,113 @@
+name: Implementation
+on:
+  schedule:
+    - cron: "0 23 * * 0-4"
+  workflow_dispatch:
+
+env:
+  REMIND_USER: ${{ vars.REMIND_USER || github.repository_owner }}
+
+jobs:
+  find-targets:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    outputs:
+      targets: ${{ steps.build.outputs.targets }}
+      count: ${{ steps.build.outputs.count }}
+    steps:
+      - id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          list=$(gh issue list --label design-considerations --state open \
+            --author "$REMIND_USER" --json number,title --limit 50 \
+            | jq -c '[ .[]
+                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]
+                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+          echo "targets=$list" >> "$GITHUB_OUTPUT"
+          echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
+
+  implement:
+    needs: find-targets
+    if: needs.find-targets.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.find-targets.outputs.targets) }}
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      BASE_BRANCH: ${{ matrix.branch }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - id: detect
+        run: |
+          # First plan (alphabetical) that still has an [Open] phase heading
+          plan=""
+          for f in doc/design/impl-plan/*-plan.md; do
+            [ -f "$f" ] || continue
+            if grep -qE '^#+ \[Open\]' "$f"; then
+              plan="$f"
+              break
+            fi
+          done
+          echo "plan=$plan" >> "$GITHUB_OUTPUT"
+
+      - if: steps.detect.outputs.plan != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - if: steps.detect.outputs.plan != ''
+        run: npm ci
+
+      - if: steps.detect.outputs.plan != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ matrix.branch }}
+          prompt: |
+            The implementation plan ${{ steps.detect.outputs.plan }} has phases whose heading is labeled "[Open]".
+            Implement only the first "[Open]" phase, in the order written in the plan.
+            Implementation requirements:
+            - Follow the phase's goal, files to change, behavior that must not change, and tests to add or update
+            - Do not modify the design documents under doc/design/ and do not implement other phases
+            - Run `npm test` and `npm run lint`; fix failures caused by your changes
+            - Only when the phase's completion criteria that can be checked automatically are met, change
+              that phase's heading label from "[Open]" to "[Resolved]" in the plan
+            - If the phase cannot be completed, leave the label as "[Open]" and add the reason under the
+              plan's "Notes for reviewer" section
+            Do not run git commands; the workflow commits the result.
+          claude_args: >-
+            --max-turns 80
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(npm test:*),Bash(npm run lint:*)"
+
+      - if: steps.detect.outputs.plan != ''
+        env:
+          PLAN: ${{ steps.detect.outputs.plan }}
+        run: |
+          # The phase counts as done only if Claude flipped a heading to [Resolved]
+          if git diff -U0 -- "$PLAN" | grep -qE '^\+#+ \[Resolved\]'; then
+            phase=$(git diff -U0 -- "$PLAN" | grep -E '^\+#+ \[Resolved\]' | head -n 1 | sed -E 's/^\+#+ \[Resolved\] //')
+          else
+            echo "No phase was resolved"
+            exit 1
+          fi
+          npm test
+          git add -A
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "feat: implement $phase ($PLAN)"
+          git -c http.https://github.com/.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)" \
+            push origin "HEAD:$BASE_BRANCH"
