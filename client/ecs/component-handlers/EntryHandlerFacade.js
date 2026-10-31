@@ -31,10 +31,11 @@ export default class EntryHandlerFacade {
     this._layouts = world.getStore('layouts');
     // Component store holding TCP/IP communication settings of entries
     this._comms = world.getStore('comms');
-    // Reactive counter incremented on every layout change (set/clear).
+    // Per-root reactive counters incremented on every layout change (set/clear) within that root.
     // ComponentStore wraps a plain Map, so Vue can't auto-track reads through it -
-    // consumers must read this tick inside a computed() before calling a getter below.
-    this._layoutsTick = ref(0);
+    // consumers must read the root's tick inside a computed() before calling a getter below.
+    // Created when a root is registered (moveEntry(id, null, ...)) and dropped when the root is removed.
+    this._layoutsTicks = new Map();
   }
 
   // #region Private
@@ -132,48 +133,88 @@ export default class EntryHandlerFacade {
   
   // #region Entry layout related
   /**
-   * Reactive counter that increments whenever a layout is set or cleared.
-   * Watch/read this to react to layout changes without deep reactivity.
-   * @returns {import('vue').Ref<number>}
+   * Throw if rootId is not a registered root.
+   * @param {string} rootId
+   * @param {string} methodName - Caller name used in the error message
+   * @private
    */
-  get layoutsTick() {
-    return this._layoutsTick;
+  _assertRoot(rootId, methodName) {
+    if (!this.isRoot(rootId)) {
+      throw new Error(`EntryHandlerFacade.${methodName}: "${rootId}" is not a root entry`);
+    }
+  }
+
+  /**
+   * Bump the layout tick of a root, if it exists.
+   * @param {string} rootId
+   * @private
+   */
+  _bumpLayoutsTick(rootId) {
+    const tick = this._layoutsTicks.get(rootId);
+    if (tick) tick.value++;
+  }
+
+  /**
+   * Get the reactive counter for one root's layouts, incremented whenever a layout
+   * belonging to that root is set or cleared. Read this inside a computed() to react
+   * to layout changes of a specific root without deep reactivity.
+   * @param {string} rootId
+   * @returns {import('vue').Ref<number>|undefined} The tick, or undefined if rootId is not a registered root
+   */
+  getLayoutsTick(rootId) {
+    return this._layoutsTicks.get(rootId);
   }
 
   /**
    * Record the measured Y position and height of an entry's header element.
+   * The owning root is resolved via getRootOf() and stored with the layout.
+   * Entries that don't belong to any root are ignored.
    * @param {string} entryId
    * @param {number} y
    * @param {number} height
    */
   addLayout(entryId, y, height) {
-    this._layouts.add(entryId, { y, height });
-    this._layoutsTick.value++;
+    const rootId = this.getRootOf(entryId);
+    if (!rootId) return;
+    this._layouts.add(entryId, { y, height, rootId });
+    this._bumpLayoutsTick(rootId);
   }
 
   /**
    * Get the measured layout of an entry.
    * @param {string} entryId
-   * @returns {{ y: number, height: number } | undefined}
+   * @returns {{ y: number, height: number, rootId: string } | undefined}
    */
   getLayout(entryId) {
     return this._layouts.get(entryId);
   }
 
   /**
-   * Get all recorded layouts.
-   * @returns {Array<[string, { y: number, height: number }]>}
+   * Get all recorded layouts belonging to the given root.
+   * @param {string} rootId - ID of a registered root entry
+   * @returns {Array<[string, { y: number, height: number, rootId: string }]>}
+   * @throws {Error} If rootId is not a registered root
    */
-  getAllLayouts() {
-    return Array.from(this._layouts.entries());
+  getAllLayouts(rootId) {
+    this._assertRoot(rootId, 'getAllLayouts');
+    return Array.from(this._layouts.entries()).filter(([, layout]) => layout.rootId === rootId);
   }
 
   /**
-   * Clear all recorded layouts.
+   * Clear the recorded layouts belonging to the given root. Other roots' layouts are kept.
+   * @param {string} rootId - ID of a registered root entry
+   * @throws {Error} If rootId is not a registered root
    */
-  clearLayouts() {
-    this._layouts.clear();
-    this._layoutsTick.value++;
+  clearLayouts(rootId) {
+    this._assertRoot(rootId, 'clearLayouts');
+    const entryIds = [];
+    for (const [entryId, layout] of this._layouts.entries()) {
+      if (layout.rootId === rootId) entryIds.push(entryId);
+    }
+    for (const entryId of entryIds) {
+      this._layouts.remove(entryId);
+    }
+    this._bumpLayoutsTick(rootId);
   }
   // #endregion
 
@@ -333,6 +374,7 @@ export default class EntryHandlerFacade {
     // If entryId is itself the root, unregister it so its hierarchy tick doesn't linger
     if (rootId === entryId) {
       this.hierarchyHandler.unsetRoot(entryId);
+      this._layoutsTicks.delete(entryId);
     }
 
     // If the entry is a container, recursively remove all its descendants
@@ -362,6 +404,9 @@ export default class EntryHandlerFacade {
 
     if (newParentId === null) {
       this.hierarchyHandler.setRoot(entryId);
+      if (this.isRoot(entryId) && !this._layoutsTicks.has(entryId)) {
+        this._layoutsTicks.set(entryId, ref(0));
+      }
       return true;
     }
     return this.hierarchyHandler.attachToParent(newParentId, entryId, index);
