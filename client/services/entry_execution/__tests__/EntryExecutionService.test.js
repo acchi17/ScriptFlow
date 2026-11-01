@@ -64,3 +64,15 @@ describe('EntryExecutionService container execution', () => {
     expect(service.scriptExecutionService.executeScript).toHaveBeenCalledTimes(2)
   })
 })
+
+describe('EntryExecutionService.shutdownRunner', () => {
+  it('delegates to scriptExecutionService.shutdownRunner with the same entryId', async () => {
+    const service = new EntryExecutionService(null)
+    service.scriptExecutionService.shutdownRunner = vi.fn(async () => undefined)
+
+    await service.shutdownRunner('root-1')
+
+    expect(service.scriptExecutionService.shutdownRunner).toHaveBeenCalledTimes(1)
+    expect(service.scriptExecutionService.shutdownRunner).toHaveBeenCalledWith('root-1')
+  })
+})
