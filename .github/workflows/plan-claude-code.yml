@@ -26,11 +26,13 @@ jobs:
       BASE_BRANCH: ${{ matrix.branch }}
       PLAN_BRANCH: impl-plan/issue-${{ matrix.issue }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout target branch
+        uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
 
-      - id: detect
+      - name: Detect resolved design documents
+        id: detect
         run: |
           # Skip while a previous plan PR for this issue is still open
           if [ -n "$(gh pr list --head "$PLAN_BRANCH" --state open --json number --jq '.[0].number')" ]; then
@@ -48,7 +50,8 @@ jobs:
           done
           echo "files=${files# }" >> "$GITHUB_OUTPUT"
 
-      - if: steps.detect.outputs.files != ''
+      - name: Write implementation plans
+        if: steps.detect.outputs.files != ''
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -80,12 +83,12 @@ jobs:
             --max-turns 50
             --allowedTools "Read,Glob,Grep,Write"
 
-      - if: steps.detect.outputs.files != ''
+      - name: Stage plans and promote design documents
+        if: steps.detect.outputs.files != ''
         env:
           FILES: ${{ steps.detect.outputs.files }}
-          ISSUE: ${{ matrix.issue }}
         run: |
-          # Only the plan folder is committed, even if Claude touched other files
+          # Only the plan folder is committed, even if AI agent touched other files
           git add doc/design/impl-plan/
           if git diff --cached --quiet; then
             echo "No implementation plan was written"
@@ -96,16 +99,16 @@ jobs:
           for f in $FILES; do
             [ -f "doc/design/impl-plan/$(basename "$f" .md)-plan.md" ] && git mv "$f" "doc/design/completed/$(basename "$f")"
           done
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git switch -c "$PLAN_BRANCH"
-          git commit -m "docs: add implementation plan and move design to doc/design/completed for $FILES"
-          # Force-push: the branch may remain from a previously closed (unmerged) PR
-          # claude-code-action leaves a revoked token in git config, so push with the job's own token instead
-          git config --local --unset-all http.https://github.com/.extraheader || true
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "$PLAN_BRANCH"
-          gh pr create --base "$BASE_BRANCH" --head "$PLAN_BRANCH" \
-            --title "Implementation plan: $FILES" \
-            --body "Implementation plan generated from: $FILES
 
-          Refs #$ISSUE"
+      - name: Call commit-and-pr action
+        if: steps.detect.outputs.files != ''
+        uses: ./.github/actions/commit-and-pr
+        with:
+          branch: ${{ env.PLAN_BRANCH }}
+          base: ${{ env.BASE_BRANCH }}
+          commit-message: "docs: add implementation plan and move design to doc/design/completed for ${{ steps.detect.outputs.files }}"
+          pr-title: "Implementation plan: ${{ steps.detect.outputs.files }}"
+          pr-body: |
+            Implementation plan generated from: ${{ steps.detect.outputs.files }}
+
+            Refs #${{ matrix.issue }}

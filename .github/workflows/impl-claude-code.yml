@@ -26,11 +26,13 @@ jobs:
       BASE_BRANCH: ${{ matrix.branch }}
       IMPL_BRANCH: impl/issue-${{ matrix.issue }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout target branch
+        uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branch }}
 
-      - id: detect
+      - name: Detect plan with an open phase
+        id: detect
         run: |
           # Skip while a previous implementation PR for this issue is still open
           if [ -n "$(gh pr list --head "$IMPL_BRANCH" --state open --json number --jq '.[0].number')" ]; then
@@ -48,16 +50,19 @@ jobs:
           done
           echo "plan=$plan" >> "$GITHUB_OUTPUT"
 
-      - if: steps.detect.outputs.plan != ''
+      - name: Set up Node.js
+        if: steps.detect.outputs.plan != ''
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
 
-      - if: steps.detect.outputs.plan != ''
+      - name: Install dependencies
+        if: steps.detect.outputs.plan != ''
         run: npm ci
 
-      - if: steps.detect.outputs.plan != ''
+      - name: Implement the first open phase
+        if: steps.detect.outputs.plan != ''
         uses: anthropics/claude-code-action@v1
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -78,12 +83,13 @@ jobs:
             --max-turns 80
             --allowedTools "Read,Glob,Grep,Write,Edit,Bash(npm test:*),Bash(npm run lint:*)"
 
-      - if: steps.detect.outputs.plan != ''
+      - name: Verify resolved phase and stage changes
+        id: stage
+        if: steps.detect.outputs.plan != ''
         env:
           PLAN: ${{ steps.detect.outputs.plan }}
-          ISSUE: ${{ matrix.issue }}
         run: |
-          # The phase counts as done only if Claude flipped a heading to [Resolved]
+          # The phase counts as done only if AI agent flipped a heading to [Resolved]
           if git diff -U0 -- "$PLAN" | grep -qE '^\+#+ \[Resolved\]'; then
             phase=$(git diff -U0 -- "$PLAN" | grep -E '^\+#+ \[Resolved\]' | head -n 1 | sed -E 's/^\+#+ \[Resolved\] //')
           else
@@ -91,17 +97,18 @@ jobs:
             exit 1
           fi
           npm test
-          git switch -c "$IMPL_BRANCH"
           git add -A
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "feat: implement $phase ($PLAN)"
-          # Force-push: the branch may remain from a previously closed (unmerged) PR
-          # claude-code-action leaves a revoked token in git config, so push with the job's own token instead
-          git config --local --unset-all http.https://github.com/.extraheader || true
-          git push --force "https://x-access-token:${GH_TOKEN}@github.com/${GH_REPO}.git" "$IMPL_BRANCH"
-          gh pr create --base "$BASE_BRANCH" --head "$IMPL_BRANCH" \
-            --title "Implement: $phase" \
-            --body "Implemented $phase from $PLAN
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
 
-          Refs #$ISSUE"
+      - name: Call commit-and-pr action
+        if: steps.detect.outputs.plan != ''
+        uses: ./.github/actions/commit-and-pr
+        with:
+          branch: ${{ env.IMPL_BRANCH }}
+          base: ${{ env.BASE_BRANCH }}
+          commit-message: "feat: implement ${{ steps.stage.outputs.phase }} (${{ steps.detect.outputs.plan }})"
+          pr-title: "Implement: ${{ steps.stage.outputs.phase }}"
+          pr-body: |
+            Implemented ${{ steps.stage.outputs.phase }} from ${{ steps.detect.outputs.plan }}
+
+            Refs #${{ matrix.issue }}
