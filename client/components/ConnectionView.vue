@@ -31,16 +31,20 @@ export default {
   name: 'ConnectionView',
   components: { ConnectionItem },
 
-  setup() {
+  props: {
+    // ID of the root entry whose connections are drawn
+    rootId: { type: String, required: true }
+  },
+
+  setup(props) {
     const entryManager = inject('entryManager')
 
     const connectionsWithLanes = computed(() => {
       entryManager.connectionsTick.value
-      entryManager.layoutsTick.value
-      // Interim: getConnections() now requires a rootId; resolved via getRoot()
-      // until ConnectionView receives its rootId as a prop.
-      const rootId = entryManager.getRoot()
-      const connections = rootId ? entryManager.getConnections(rootId) : []
+      // ?. since the root (and its tick) may be removed before this component unmounts
+      entryManager.getLayoutsTick(props.rootId)?.value
+      if (!entryManager.isRoot(props.rootId)) return []
+      const connections = entryManager.getConnections(props.rootId)
 
       const withCoords = []
       for (const conn of connections) {

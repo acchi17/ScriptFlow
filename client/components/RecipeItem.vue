@@ -34,7 +34,7 @@
           </div>
         </div>
         <div class="connection-panel">
-          <ConnectionView />
+          <ConnectionView :root-id="entryId" />
         </div>
       </div>
     </div>
@@ -106,7 +106,7 @@ export default {
       const panelRect = entryPanelRef.value.getBoundingClientRect()
 
       const nodes = entryPanelRef.value.querySelectorAll('[data-entry-id]')
-      entryManager.clearLayouts()
+      entryManager.clearLayouts(props.entryId)
       for (const node of nodes) {
         const rect = node.getBoundingClientRect()
         entryManager.addLayout(
@@ -117,7 +117,9 @@ export default {
       }
     }
 
-    watch(() => entryManager.getHierarchyTick(props.entryId).value, () => {
+    // Ticks are read with ?. since the root (and its ticks) may be removed before this
+    // component unmounts (e.g. when its tab is closed).
+    watch(() => entryManager.getHierarchyTick(props.entryId)?.value, () => {
       cancelConnection()
       const id = getSelectedEntryId.value
       if (id && !entryManager.isAlive(id)) {
@@ -127,8 +129,9 @@ export default {
     })
 
     const entryLayoutMap = computed(() => {
-      entryManager.layoutsTick.value
-      return entryManager.getAllLayouts()
+      entryManager.getLayoutsTick(props.entryId)?.value
+      if (!entryManager.isRoot(props.entryId)) return []
+      return entryManager.getAllLayouts(props.entryId)
     })
 
     return {

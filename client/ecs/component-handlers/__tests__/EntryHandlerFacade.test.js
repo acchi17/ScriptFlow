@@ -405,3 +405,72 @@ describe('EntryHandlerFacade.getConnections', () => {
     expect(() => t.entryManager.getConnections(t.blockA1Id)).toThrow(/not a root entry/)
   })
 })
+
+describe('EntryHandlerFacade layouts', () => {
+  it("returns only the given root's layouts from getAllLayouts", () => {
+    const t = createTwoRoots()
+    t.entryManager.addLayout(t.blockA1Id, 10, 20)
+    t.entryManager.addLayout(t.blockA2Id, 40, 20)
+    t.entryManager.addLayout(t.blockB1Id, 10, 20)
+
+    const idsA = t.entryManager.getAllLayouts(t.rootAId).map(([id]) => id)
+    const idsB = t.entryManager.getAllLayouts(t.rootBId).map(([id]) => id)
+
+    expect(idsA.sort()).toEqual([t.blockA1Id, t.blockA2Id].sort())
+    expect(idsB).toEqual([t.blockB1Id])
+    expect(t.entryManager.getLayout(t.blockA1Id)).toEqual({ y: 10, height: 20, rootId: t.rootAId })
+  })
+
+  it("keeps other roots' layouts when clearing one root", () => {
+    const t = createTwoRoots()
+    t.entryManager.addLayout(t.blockA1Id, 10, 20)
+    t.entryManager.addLayout(t.blockB1Id, 30, 20)
+
+    t.entryManager.clearLayouts(t.rootAId)
+
+    expect(t.entryManager.getAllLayouts(t.rootAId)).toEqual([])
+    expect(t.entryManager.getLayout(t.blockA1Id)).toBeUndefined()
+    expect(t.entryManager.getAllLayouts(t.rootBId)).toEqual([
+      [t.blockB1Id, { y: 30, height: 20, rootId: t.rootBId }]
+    ])
+  })
+
+  it("bumps only the affected root's layouts tick on addLayout/clearLayouts", () => {
+    const t = createTwoRoots()
+    const tickA = t.entryManager.getLayoutsTick(t.rootAId)
+    const tickB = t.entryManager.getLayoutsTick(t.rootBId)
+    expect(tickA).toBeDefined()
+    expect(tickB).toBeDefined()
+    const a0 = tickA.value
+    const b0 = tickB.value
+
+    t.entryManager.addLayout(t.blockA1Id, 10, 20)
+    expect(tickA.value).toBe(a0 + 1)
+    expect(tickB.value).toBe(b0)
+
+    t.entryManager.clearLayouts(t.rootAId)
+    expect(tickA.value).toBe(a0 + 2)
+    expect(tickB.value).toBe(b0)
+  })
+
+  it("drops a root's layouts tick when the root itself is removed", () => {
+    const t = createTwoRoots()
+    expect(t.entryManager.getLayoutsTick(t.rootAId)).toBeDefined()
+
+    t.entryManager.removeEntry(t.rootAId)
+
+    expect(t.entryManager.getLayoutsTick(t.rootAId)).toBeUndefined()
+    expect(t.entryManager.getLayoutsTick(t.rootBId)).toBeDefined()
+  })
+
+  it('throws from clearLayouts/getAllLayouts when rootId is missing or not a root', () => {
+    const t = createTwoRoots()
+    t.entryManager.addLayout(t.blockA1Id, 10, 20)
+
+    expect(() => t.entryManager.clearLayouts()).toThrow(/not a root entry/)
+    expect(() => t.entryManager.clearLayouts(t.blockA1Id)).toThrow(/not a root entry/)
+    expect(() => t.entryManager.getAllLayouts()).toThrow(/not a root entry/)
+    expect(() => t.entryManager.getAllLayouts(t.blockA1Id)).toThrow(/not a root entry/)
+    expect(t.entryManager.getLayout(t.blockA1Id)).toBeDefined()
+  })
+})

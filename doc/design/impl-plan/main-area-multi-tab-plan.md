@@ -118,7 +118,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 2: レイアウトストアのルート別分離とConnectionViewのrootId化
+### [Resolved] Phase 2: レイアウトストアのルート別分離とConnectionViewのrootId化
 
 **目的:** 設計書 セクション3「今回の実装で行う変更」1〜3を行い、RecipeItem以下を「自分のrootIdの範囲だけを扱う」実装に揃える。タブは1つのままで、表示は変えない。
 
@@ -427,3 +427,8 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 12. **Phase 1実装時の補足(ConnectionViewの暫定対応と手動確認)**:
     - Phase 1で`getConnections(rootId)`を本ノート1の想定どおり必須(未指定・非ルートで例外)としたため、引数なしで呼んでいた`ConnectionView.vue` `connectionsWithLanes`がそのままでは例外になる。Phase 1の変更ファイル一覧には無いが、振る舞いを変えないために暫定的に`entryManager.getRoot()`の値を`getConnections(rootId)`に渡す形にした(ルートが無い場合は空配列)。Phase 2でrootId propに置き換えて`getRoot()`呼び出しを削除する。本ノート10の暫定状態に「Phase 1〜2の間、`ConnectionView.vue`が`getRoot()`で対象rootIdを決める」が加わる。
     - 完了条件のうち`npm run electron:start`での手動確認(ブロック追加 → Save → Clear → Load、Clearボタン)は自動実行環境(ディスプレイ無し)のため未実施。単一ルートでのSave/Load往復・提案名`recipe.json`・Clearは`EntryPersistanceService.test.js`/`EntryHandlerFacade.test.js`のユニットテストで代替確認したが、UI上での確認はレビュー時にお願いしたい。
+13. **Phase 2実装時の補足**:
+    - 本ノート3(ルートに属さないエントリへの`addLayout()`)は、暫定的に「無視する(記録せず、tickも進めない)」とした。`measureEntries()`はRecipeItemのパネル内のエントリしか登録しないため通常は発生しない。`rootId: null`で登録する/例外を投げる方針に変える場合は`EntryHandlerFacade.addLayout()`のみの変更で済む。
+    - `ConnectionView.vue`の暫定的な`getRoot()`呼び出し(本ノート12)はrootId propに置き換えて削除した。
+    - 実装上の注意(tickを`?.value`で参照)に合わせ、`RecipeItem.vue`の`watch`に加えて`ContainerChildren.vue` `children`の`getHierarchyTick(...).value`にも`?.`を付けた(ルート削除後にアンマウントされる場合の例外防止。計画の変更ファイル一覧には無い)。また`RecipeItem.vue` `entryLayoutMap`と`ConnectionView.vue` `connectionsWithLanes`は、ルート削除後に`getAllLayouts`/`getConnections`が例外を投げないよう、`isRoot(rootId)`が偽なら空配列を返す。
+    - 完了条件のうち`npm run electron:start`での手動確認(背景線・接続線の位置、ドラッグ後の追従)は自動実行環境(ディスプレイ無し)のため未実施。ルート別のレイアウト/接続の描画は`EntryHandlerFacade.test.js` `EntryHandlerFacade layouts`、`ConnectionView.test.js`、`RecipeItem.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。
