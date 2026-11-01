@@ -6,6 +6,9 @@ on:
 
 jobs:
   find-targets:
+    permissions:
+      contents: read
+      issues: read
     uses: ./.github/workflows/find-targets.yml
 
   remind:
