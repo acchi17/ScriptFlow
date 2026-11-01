@@ -1,0 +1,117 @@
+name: Implementation
+on:
+  schedule:
+    - cron: "0 23 * * 0-4"
+  workflow_dispatch:
+
+jobs:
+  find-targets:
+    permissions:
+      contents: read
+      issues: read
+    uses: ./.github/workflows/find-targets.yml
+
+  implement:
+    needs: find-targets
+    if: needs.find-targets.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJSON(needs.find-targets.outputs.targets) }}
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      BASE_BRANCH: ${{ matrix.branch }}
+      IMPL_BRANCH: impl/issue-${{ matrix.issue }}
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.branch }}
+
+      - name: Detect plan with an open phase
+        id: detect
+        run: |
+          # Skip while a previous implementation PR for this issue is still open
+          if [ -n "$(gh pr list --head "$IMPL_BRANCH" --state open --json number --jq '.[0].number')" ]; then
+            echo "plan=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # First plan (alphabetical) that still has an [Open] phase heading
+          plan=""
+          for f in doc/design/impl-plan/*-plan.md; do
+            [ -f "$f" ] || continue
+            if grep -qE '^#+ \[Open\]' "$f"; then
+              plan="$f"
+              break
+            fi
+          done
+          echo "plan=$plan" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node.js
+        if: steps.detect.outputs.plan != ''
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.detect.outputs.plan != ''
+        run: npm ci
+
+      - name: Implement the first open phase
+        if: steps.detect.outputs.plan != ''
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ matrix.branch }}
+          prompt: |
+            The implementation plan ${{ steps.detect.outputs.plan }} has phases whose heading is labeled "[Open]".
+            Implement only the first "[Open]" phase, in the order written in the plan.
+            Implementation requirements:
+            - Follow the phase's goal, files to change, behavior that must not change, and tests to add or update
+            - Do not modify the design documents under doc/design/ and do not implement other phases
+            - Run `npm test` and `npm run lint`; fix failures caused by your changes
+            - Only when the phase's completion criteria that can be checked automatically are met, change
+              that phase's heading label from "[Open]" to "[Resolved]" in the plan
+            - If the phase cannot be completed, leave the label as "[Open]" and add the reason under the
+              plan's "Notes for reviewer" section
+            Do not run git commands; the workflow commits the result.
+          claude_args: >-
+            --max-turns 80
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(npm test:*),Bash(npm run lint:*)"
+
+      - name: Verify resolved phase and stage changes
+        id: stage
+        if: steps.detect.outputs.plan != ''
+        env:
+          PLAN: ${{ steps.detect.outputs.plan }}
+        run: |
+          # The phase counts as done only if AI agent flipped a heading to [Resolved]
+          if git diff -U0 -- "$PLAN" | grep -qE '^\+#+ \[Resolved\]'; then
+            phase=$(git diff -U0 -- "$PLAN" | grep -E '^\+#+ \[Resolved\]' | head -n 1 | sed -E 's/^\+#+ \[Resolved\] //')
+          else
+            echo "No phase was resolved"
+            exit 1
+          fi
+          npm test
+          git add -A
+          echo "phase=$phase" >> "$GITHUB_OUTPUT"
+
+      - name: Call commit-and-pr action
+        if: steps.detect.outputs.plan != ''
+        uses: ./.github/actions/commit-and-pr
+        with:
+          branch: ${{ env.IMPL_BRANCH }}
+          base: ${{ env.BASE_BRANCH }}
+          commit-message: "feat: implement ${{ steps.stage.outputs.phase }} (${{ steps.detect.outputs.plan }})"
+          pr-title: "Implement: ${{ steps.stage.outputs.phase }}"
+          pr-body: |
+            Implemented ${{ steps.stage.outputs.phase }} from ${{ steps.detect.outputs.plan }}
+
+            Refs #${{ matrix.issue }}
