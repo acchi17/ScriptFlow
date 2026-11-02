@@ -436,3 +436,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 14. **Phase 3実装時の補足**:
     - 本ノート5(失敗時の応答)は、暫定的に既存の`POST /api/scripts/:name/execute`に揃えた。`DELETE /api/runners/:entryId`は`runnerRegistry.shutdown()`がrejectした場合に500(本文はエラーメッセージのtext/plain)を返し、`ScriptExecutionService.shutdownRunner()`はWeb版で非2xx応答を例外にする(Electron版はIPCのrejectがそのまま例外になる)。`EntryExecutionService.shutdownRunner()`は例外をそのまま伝える。`closeTab()`側(Phase 4)でログに出して続行する想定。方針を変える場合は`server/api.js`と`ScriptExecutionService.shutdownRunner()`のみの変更で済む。
     - 完了条件のうち`npm run electron:start`での手動確認(スクリプト実行・通信設定)は自動実行環境(ディスプレイ無し)のため未実施。また`npm run web:build && npm run web:start`後の`curl -X DELETE http://localhost:3000/api/runners/unknown`も、実行環境の権限設定でサーバを起動できず未実施。同等の内容は`server/__tests__/api.test.js`(実`RunnerHostRegistry`を使い、未登録のentryIdで`{ shutdown: true }`が返ること)で代替確認した。実環境での確認はレビュー時にお願いしたい。
+15. **Phase 4未完了の理由(2026-11-02)**:
+    - Phase 4は`pinia`パッケージの導入が前提だが、`node_modules`に`pinia`が存在せず、自動実行環境の権限設定で`npm install pinia`(および`npm view pinia`)が承認待ちとなり実行できなかった。
+    - `pinia`が無い状態で`client/stores/useTabStore.js`・`client/main.js`・`MainArea.vue`・`RecipeItem.vue`・テストを変更すると、`import { defineStore } from 'pinia'`が解決できず`npm test`とアプリのビルドが失敗するため、コードの変更は一切行わず、ラベルは`[Open]`のままとした。
+    - 再実施時は先に本ノート6(Pinia 2.x/3.xの選択とVue範囲の引き上げ)を決め、`npm install pinia@<version>`で`package.json`・`package-lock.json`を更新できる環境で実施する必要がある(参考・要確認: Pinia 3.xはpeerDependenciesでVue 3.5系を要求すると認識しているため、3.xを採用する場合は`package.json`のVue範囲も`^3.5`に引き上げるのが整合的。npmレジストリを参照できなかったため未検証)。
