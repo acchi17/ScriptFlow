@@ -80,5 +80,17 @@ export default function createApiRouter({ appPaths, runnerRegistry }) {
     res.json({ destroyed })
   })
 
+  // Shuts down the script-runner process of one root entry. Deliberately
+  // does not go through get(), so an unknown entryId never spawns a process
+  // and still succeeds.
+  router.delete('/runners/:entryId', async (req, res) => {
+    try {
+      await runnerRegistry.shutdown(req.params.entryId)
+      res.json({ shutdown: true })
+    } catch (error) {
+      res.status(500).type('text/plain').send(error.message)
+    }
+  })
+
   return router
 }

@@ -164,7 +164,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 3: ルート単位のランナー終了API
+### [Resolved] Phase 3: ルート単位のランナー終了API
 
 **目的:** 設計書 セクション5「追加するAPI」を実装する。APIの追加のみで、このフェーズではUIからは呼ばない。
 
@@ -432,3 +432,6 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - `ConnectionView.vue`の暫定的な`getRoot()`呼び出し(本ノート12)はrootId propに置き換えて削除した。
     - 実装上の注意(tickを`?.value`で参照)に合わせ、`RecipeItem.vue`の`watch`に加えて`ContainerChildren.vue` `children`の`getHierarchyTick(...).value`にも`?.`を付けた(ルート削除後にアンマウントされる場合の例外防止。計画の変更ファイル一覧には無い)。また`RecipeItem.vue` `entryLayoutMap`と`ConnectionView.vue` `connectionsWithLanes`は、ルート削除後に`getAllLayouts`/`getConnections`が例外を投げないよう、`isRoot(rootId)`が偽なら空配列を返す。
     - 完了条件のうち`npm run electron:start`での手動確認(背景線・接続線の位置、ドラッグ後の追従)は自動実行環境(ディスプレイ無し)のため未実施。ルート別のレイアウト/接続の描画は`EntryHandlerFacade.test.js` `EntryHandlerFacade layouts`、`ConnectionView.test.js`、`RecipeItem.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。
+14. **Phase 3実装時の補足**:
+    - 本ノート5(失敗時の応答)は、暫定的に既存の`POST /api/scripts/:name/execute`に揃えた。`DELETE /api/runners/:entryId`は`runnerRegistry.shutdown()`がrejectした場合に500(本文はエラーメッセージのtext/plain)を返し、`ScriptExecutionService.shutdownRunner()`はWeb版で非2xx応答を例外にする(Electron版はIPCのrejectがそのまま例外になる)。`EntryExecutionService.shutdownRunner()`は例外をそのまま伝える。`closeTab()`側(Phase 4)でログに出して続行する想定。方針を変える場合は`server/api.js`と`ScriptExecutionService.shutdownRunner()`のみの変更で済む。
+    - 完了条件のうち`npm run electron:start`での手動確認(スクリプト実行・通信設定)は自動実行環境(ディスプレイ無し)のため未実施。また`npm run web:build && npm run web:start`後の`curl -X DELETE http://localhost:3000/api/runners/unknown`も、実行環境の権限設定でサーバを起動できず未実施。同等の内容は`server/__tests__/api.test.js`(実`RunnerHostRegistry`を使い、未登録のentryIdで`{ shutdown: true }`が返ること)で代替確認した。実環境での確認はレビュー時にお願いしたい。

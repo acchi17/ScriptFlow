@@ -209,4 +209,15 @@ export default class EntryExecutionService {
     await this.scriptExecutionService.destroySocket(record.socketId, entryId);
     return true;
   }
+
+  /**
+   * Ask the host process to shut down the script-runner process of a root
+   * entry. Does not touch the entry's socket; call deleteComm() first.
+   *
+   * @param {string} entryId ID of the root entry
+   * @returns {Promise<void>}
+   */
+  async shutdownRunner(entryId) {
+    await this.scriptExecutionService.shutdownRunner(entryId);
+  }
 }

@@ -85,6 +85,25 @@ export default class ScriptExecutionService {
   }
 
   /**
+   * Ask the host process to shut down the script-runner process of a root
+   * entry. Resolves without error if no process exists for the entry.
+   * @param {string} entryId ID of the root entry whose runner is shut down
+   * @returns {Promise<void>}
+   * @throws {Error} If the host process reports a failure
+   */
+  async shutdownRunner(entryId) {
+    if (this.isElectron) {
+      await window.electronAPI.shutdownRunner(entryId);
+      return;
+    }
+    const response = await fetch(`/api/runners/${encodeURIComponent(entryId)}`, { method: 'DELETE' });
+    if (!response.ok) {
+      const text = await response.text().catch(() => '');
+      throw new Error(text || `Runner shutdown failed: ${response.status}`);
+    }
+  }
+
+  /**
    * Service termination process
    */
   terminate() {

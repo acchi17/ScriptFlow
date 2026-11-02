@@ -129,6 +129,12 @@ function registerIpcHandlers() {
   ipcMain.handle('socket:destroy', async (_evt, socketId, entryId) => {
     return ensureRunnerRegistry().get(entryId).destroySocket(socketId)
   })
+
+  // Shuts down the script-runner process of one root entry. Deliberately
+  // does not go through get(), so an unknown entryId never spawns a process.
+  ipcMain.handle('runner:shutdown', async (_evt, entryId) => {
+    return ensureRunnerRegistry().shutdown(entryId)
+  })
 }
 
 function createMainWindow() {
