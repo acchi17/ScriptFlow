@@ -1,4 +1,5 @@
 import { createApp } from 'vue'
+import { createPinia } from 'pinia'
 
 import './assets/styles/variables.css'
 import App from './App.vue'
@@ -30,6 +31,9 @@ const entryPersistanceService = new EntryPersistanceService(
   platformService, entryManager,
   entryExecutionService, entryDefinitionService
 )
+
+// Pinia (stores inject the services provided below)
+app.use(createPinia())
 
 // Provide
 app.provide('entryManager', entryManager)

@@ -6,7 +6,14 @@
           <span class="tab-label">Recipe</span>
         </div>
       </div>
-      <RecipeItem class="tab-content" :entry-id="rootEntryId" />
+      <div class="tab-content">
+        <RecipeItem
+          v-for="tab in visibleTabs"
+          :key="tab.rootEntryId"
+          class="tab-pane"
+          :entry-id="tab.rootEntryId"
+        />
+      </div>
       <div v-show="showLog" class="log-popup">
         <ExecutionLogView />
       </div>
@@ -15,10 +22,11 @@
 </template>
 
 <script>
-import { inject } from 'vue'
+import { storeToRefs } from 'pinia'
 import RecipeItem from './RecipeItem.vue'
 import ExecutionLogView from './ExecutionLogView.vue'
 import { useSystemState } from '../composables/useSystemState'
+import { useTabStore } from '../stores/useTabStore'
 
 export default {
   name: 'MainArea',
@@ -27,14 +35,14 @@ export default {
     ExecutionLogView
   },
   setup() {
-    const entryManager = inject('entryManager')
     const { isExecuting, showLog } = useSystemState()
+    const tabStore = useTabStore()
+    const { visibleTabs } = storeToRefs(tabStore)
 
-    const rootEntryId = entryManager.addEntry('container', 'root-container')
-    entryManager.moveEntry(rootEntryId, null, 0)
-    entryManager.setComm(rootEntryId)
+    // Start with one empty tab, as before multi-tab support.
+    tabStore.createTab()
 
-    return { isExecuting, showLog, rootEntryId }
+    return { isExecuting, showLog, visibleTabs }
   }
 }
 </script>
@@ -97,6 +105,14 @@ export default {
 
 .tab-content {
   height: calc(100% - var(--main-tab-bar-height));
+  display: flex;
+  flex-direction: row;
+}
+
+.tab-pane {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
 }
 
 .log-popup {
