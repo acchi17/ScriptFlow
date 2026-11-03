@@ -256,7 +256,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 5: タブバーUI(+/x/上限/0タブ)とSave・実行ログのタブ対応
+### [Resolved] Phase 5: タブバーUI(+/x/上限/0タブ)とSave・実行ログのタブ対応
 
 **目的:** 複数タブの作成・切替・削除を可能にする(FR1〜FR3、FR5、FR7)。Save対象をアクティブタブにし、`ExecutionLogView`のルート行除外を全タブ対応にする。
 
@@ -446,3 +446,10 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - `closeTab()`は`deleteComm`/`shutdownRunner`の`await`中に同じタブが別経路で閉じられていた場合に備え、`removeEntry`の直前にタブの存在を再確認し、既に無ければ何もしない(二重の`removeEntry`防止。計画には無い防御的処理)。
     - MainAreaは`.tab-content`をflexコンテナ(`flex-direction: row`)とし、各RecipeItemに`.tab-pane`(`flex: 1`)を付けた。要素は1つなので見た目は従来と同じ。
     - 完了条件のうち`npm run electron:start`での手動確認(起動直後の表示、Communication Settingのボタン色、Run/Clear/Save/Load)は自動実行環境(ディスプレイ無し)のため未実施。起動時のタブ作成とRecipeItemの描画は`MainArea.test.js`、ボタン色と再マウント後の保持は`RecipeItem.test.js` `RecipeItem comm status`で代替確認した。UI上での確認はレビュー時にお願いしたい。
+17. **Phase 5実装時の補足**:
+    - 本ノート9(空状態メッセージの文言)は、既存UIの文言に合わせて暫定的に英語の"Click + or Load to create a tab."とした(`MainArea.vue`のモジュール定数`EMPTY_STATE_MESSAGE`)。変更する場合はこの定数のみの変更で済む。
+    - xボタン・+ボタンのアイコンは既存の`--close-icon-image`・`--plus-icon-image`変数(`variables.css`に定義済み)を使ったため、`variables.css`は変更していない。
+    - 10タブが収まるよう、`.tab`を固定の`min-width: 160px`から`flex: 0 1 200px; min-width: 80px; max-width: 240px`に変更した(幅が足りない場合はラベルが省略表示になる)。
+    - 本ノート2のとおり、`ExecutionLogView`のルート行判定は`tabs`の`rootEntryId`との一致のみで行う。閉じたタブの過去の実行ログではルートコンテナ行が表示される。
+    - `MenuArea.vue`の暫定のLoad(アクティブタブへの上書き)では、`activeTab === null`のときもボタンは有効のままで、クリックしても何もしない(計画どおり。Phase 6で新規タブへのロードに置き換える)。
+    - 完了条件のうち`npm run electron:start`での手動確認(タブの作成・切替・削除、10タブ上限、確認ダイアログ、実行中ロック、子プロセス終了、Save)は自動実行環境(ディスプレイ無し)のため未実施。タブバー・xボタン・+ボタン上限・空状態は`MainArea.test.js`、Save対象は`MenuArea.test.js`、ルート行の除外は`ExecutionLogView.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。

@@ -55,11 +55,12 @@
 
 <script>
 import { computed, inject } from 'vue';
+import { useTabStore } from '../stores/useTabStore';
 
 export default {
   name: 'ExecutionLogView',
   setup() {
-    const entryManager = inject('entryManager');
+    const tabStore = useTabStore();
     const executionLogService = inject('executionLogService');
     const logs = executionLogService.getLogs();
 
@@ -121,10 +122,11 @@ export default {
       const result = [];
       try {
         const executionsTree = logs.value;
-        const rootEntryId = entryManager.getRoot();
+        // Root containers of every open tab are hidden; only their children are listed.
+        const rootEntryIds = new Set(tabStore.tabs.map(tab => tab.rootEntryId));
         for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
           const execution = executionsTree.rootExecutions[i];
-          const isRootContainer = execution.entryId === rootEntryId;
+          const isRootContainer = rootEntryIds.has(execution.entryId);
           if (!isRootContainer) {
             result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
           }
