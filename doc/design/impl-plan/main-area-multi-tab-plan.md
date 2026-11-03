@@ -201,7 +201,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 4: Pinia導入とuseTabStore(単一タブのままストア経由に移行)
+### [Resolved] Phase 4: Pinia導入とuseTabStore(単一タブのままストア経由に移行)
 
 **目的:** 設計書 セクション2の`useTabStore`を全アクション込みで実装し、MainArea・RecipeItemをストア経由に切り替える。タブバーのUIは単一タブ表示のままとし、ユーザーから見た振る舞いは変えない。
 
@@ -440,3 +440,9 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - Phase 4は`pinia`パッケージの導入が前提だが、`node_modules`に`pinia`が存在せず、自動実行環境の権限設定で`npm install pinia`(および`npm view pinia`)が承認待ちとなり実行できなかった。
     - `pinia`が無い状態で`client/stores/useTabStore.js`・`client/main.js`・`MainArea.vue`・`RecipeItem.vue`・テストを変更すると、`import { defineStore } from 'pinia'`が解決できず`npm test`とアプリのビルドが失敗するため、コードの変更は一切行わず、ラベルは`[Open]`のままとした。
     - 再実施時は先に本ノート6(Pinia 2.x/3.xの選択とVue範囲の引き上げ)を決め、`npm install pinia@<version>`で`package.json`・`package-lock.json`を更新できる環境で実施する必要がある(参考・要確認: Pinia 3.xはpeerDependenciesでVue 3.5系を要求すると認識しているため、3.xを採用する場合は`package.json`のVue範囲も`^3.5`に引き上げるのが整合的。npmレジストリを参照できなかったため未検証)。
+16. **Phase 4実装時の補足**:
+    - 本ノート15の阻害要因は解消済み。`node_modules`に`pinia@3.0.4`(`package.json`は`^3.0.4`。本ノート6のとおり導入済み)が存在したため、`package.json`は変更せずに実装した。`package.json`のVue範囲(`^3.2.13`)の引き上げは本ノート6の判断待ちのため変更していない。
+    - タブの`id`は本ノート8の想定どおり、ストア内の単調増加カウンタで`tab-1`, `tab-2`, …と生成する(ラベル用の`nextTabNumber`とは別のカウンタ。ラベル指定時も`id`は一意になる)。`rootEntryId`との兼用に変える場合は`useTabStore.createTab()`のみの変更で済む。
+    - `closeTab()`は`deleteComm`/`shutdownRunner`の`await`中に同じタブが別経路で閉じられていた場合に備え、`removeEntry`の直前にタブの存在を再確認し、既に無ければ何もしない(二重の`removeEntry`防止。計画には無い防御的処理)。
+    - MainAreaは`.tab-content`をflexコンテナ(`flex-direction: row`)とし、各RecipeItemに`.tab-pane`(`flex: 1`)を付けた。要素は1つなので見た目は従来と同じ。
+    - 完了条件のうち`npm run electron:start`での手動確認(起動直後の表示、Communication Settingのボタン色、Run/Clear/Save/Load)は自動実行環境(ディスプレイ無し)のため未実施。起動時のタブ作成とRecipeItemの描画は`MainArea.test.js`、ボタン色と再マウント後の保持は`RecipeItem.test.js` `RecipeItem comm status`で代替確認した。UI上での確認はレビュー時にお願いしたい。

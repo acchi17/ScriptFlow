@@ -51,6 +51,7 @@ import { ref, computed, inject, watch, nextTick } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import { useAutoScroll } from '../composables/useAutoScroll'
+import { useTabStore } from '../stores/useTabStore'
 import ConnectionView from './ConnectionView.vue'
 import ContainerChildren from './ContainerChildren.vue'
 import CommSettingView from './CommSettingView.vue'
@@ -81,7 +82,10 @@ export default {
     }
 
     const showCommSetting = ref(false)
-    const commBtnStatus = ref('none')
+    // The comm status lives in this root's tab (found by entryId, never the active tab),
+    // so it survives remounts.
+    const tabStore = useTabStore()
+    const commBtnStatus = computed(() => tabStore.getTabByRootId(props.entryId)?.commStatus ?? 'none')
 
     const openComSetting = () => {
       showCommSetting.value = true
@@ -89,9 +93,10 @@ export default {
 
     const onCommSettingClose = (connected) => {
       showCommSetting.value = false
-      if (connected === true)       commBtnStatus.value = 'connected'
-      else if (connected === false) commBtnStatus.value = 'failed'
-      else                          commBtnStatus.value = 'none'
+      let status = 'none'
+      if (connected === true)       status = 'connected'
+      else if (connected === false) status = 'failed'
+      tabStore.setCommStatus(props.entryId, status)
     }
 
     const entryPanelRef = ref(null)
