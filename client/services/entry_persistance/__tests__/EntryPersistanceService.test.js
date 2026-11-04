@@ -229,14 +229,30 @@ describe('EntryPersistanceService round trip', () => {
     expect(ctx.entryManager.getLayout(block1Id)).toBeUndefined()
   })
 
-  it('loadRecipe returns null when the user cancels the open dialog', async () => {
+  it('pickRecipe returns null when the user cancels the open dialog', async () => {
     const ctx = await createContext()
     addBlock(ctx, ctx.rootId, 'Add', 0)
 
-    const result = await ctx.service.loadRecipe(ctx.rootId)
+    const result = await ctx.service.pickRecipe()
 
     expect(result).toBeNull()
     expect(ctx.entryManager.getChildren(ctx.rootId)).toHaveLength(1)
+  })
+
+  it('pickRecipe returns the picked file without touching entries', async () => {
+    const ctx = await createContext()
+    const addBlockId = addBlock(ctx, ctx.rootId, 'Add', 0)
+    const recipe = ctx.service.buildRecipe(ctx.rootId)
+    ctx.entryManager.clearEntries(ctx.rootId)
+    const otherBlockId = addBlock(ctx, ctx.rootId, 'Mul', 0)
+    const picked = { fileName: 'foo.json', data: recipe }
+    ctx.service.platformService.openRecipe = async () => picked
+
+    const result = await ctx.service.pickRecipe()
+
+    expect(result).toBe(picked)
+    expect(ctx.entryManager.getChildren(ctx.rootId)).toEqual([otherBlockId])
+    expect(ctx.entryManager.isAlive(addBlockId)).toBe(false)
   })
 
   it('saveRecipe returns null when the user cancels the save dialog', async () => {
@@ -246,20 +262,6 @@ describe('EntryPersistanceService round trip', () => {
     const result = await ctx.service.saveRecipe(ctx.rootId, 'My recipe')
 
     expect(result).toBeNull()
-  })
-
-  it('loadRecipe restores the picked file into the given root', async () => {
-    const ctx = await createContext()
-    addBlock(ctx, ctx.rootId, 'Add', 0)
-    const recipe = ctx.service.buildRecipe(ctx.rootId)
-    ctx.entryManager.clearEntries(ctx.rootId)
-    ctx.service.platformService.openRecipe = async () => ({ data: recipe })
-
-    const report = await ctx.service.loadRecipe(ctx.rootId)
-
-    expect(report.entryCount).toBe(1)
-    const childIds = ctx.entryManager.getChildren(ctx.rootId)
-    expect(childIds.map(id => ctx.entryManager.getEntryName(id))).toEqual(['Add'])
   })
 
   it('saveRecipe builds the given root\'s recipe and suggests "recipe.json" by default', async () => {

@@ -305,7 +305,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
 
 ---
 
-### [Open] Phase 6: Loadの新規タブ化とタブのラベル
+### [Resolved] Phase 6: Loadの新規タブ化とタブのラベル
 
 **目的:** LoadをFR6どおり新規タブに読み込む形にし、`EntryPersistanceService.loadRecipe()`を廃止して`pickRecipe()`に分離する。Save時の提案名とラベル更新を含め、タブのラベル規則(設計書 セクション6「タブのラベル」)を完成させる。
 
@@ -453,3 +453,10 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - 本ノート2のとおり、`ExecutionLogView`のルート行判定は`tabs`の`rootEntryId`との一致のみで行う。閉じたタブの過去の実行ログではルートコンテナ行が表示される。
     - `MenuArea.vue`の暫定のLoad(アクティブタブへの上書き)では、`activeTab === null`のときもボタンは有効のままで、クリックしても何もしない(計画どおり。Phase 6で新規タブへのロードに置き換える)。
     - 完了条件のうち`npm run electron:start`での手動確認(タブの作成・切替・削除、10タブ上限、確認ダイアログ、実行中ロック、子プロセス終了、Save)は自動実行環境(ディスプレイ無し)のため未実施。タブバー・xボタン・+ボタン上限・空状態は`MainArea.test.js`、Save対象は`MenuArea.test.js`、ルート行の除外は`ExecutionLogView.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。
+18. **Phase 6実装時の補足**:
+    - `createTab()`が`null`を返した場合(10タブ)の`setError()`の文言は計画に定義が無いため、暫定的に`'Cannot open more tabs.'`とした(`useEntryOperation.js` `loadRecipe()`)。
+    - `picked.fileName`が空・未定義の場合(通常はElectron/Web版とも必ず設定される)は、ラベルを渡さず`createTab()`の既定ラベル(`Recipe N`)を使う。拡張子を除く処理(`useEntryOperation.js`のローカル関数`toLabel()`)は最後の`.`以降を除き、先頭の`.`のみの名前(例: `.json`)はそのまま使う。
+    - `saveRecipe(rootId)`で該当タブが無い場合は提案名を渡さず、`EntryPersistanceService.saveRecipe()`の既定(`recipe.json`)になる。
+    - `MenuArea.vue`は`entryManager`を使わなくなったため`inject('entryManager')`を削除した。
+    - アプリコードからの`getRoot()`呼び出しが無いこと(Acceptance Criteriaの追加基準)を`grep`で確認した(残るのは`EntryHandlerFacade.getRoot()`/`EntryHierarchyHandler.getRoot()`の定義のみ)。
+    - 完了条件のうち`npm run electron:start`および`npm run web:build && npm run web:start`での手動確認(新規タブへのLoad、キャンセル、10タブでのLoad無効、0タブからのLoad、Saveの提案名とラベル更新、壊れたレシピのエラー表示)は自動実行環境(ディスプレイ無し)のため未実施。`useEntryOperation.test.js`・`MenuArea.test.js` `MenuArea Load button`・`EntryPersistanceService.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。

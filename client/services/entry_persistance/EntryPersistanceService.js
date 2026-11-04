@@ -51,14 +51,11 @@ export default class EntryPersistanceService {
   }
 
   /**
-   * Let the user pick a recipe file and restore it into the given root.
-   * Interim API: to be replaced by pickRecipe() when Load opens a new tab.
-   * @param {string} rootId - ID of the live root entry to restore into
-   * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }|null>} null if canceled
+   * Let the user pick a recipe file. Does not touch the entries; restoring the
+   * picked data is up to the caller (see restoreRecipe()).
+   * @returns {Promise<{ fileName: string, data: Object }|null>} null if canceled
    */
-  async loadRecipe(rootId) {
-    const picked = await this.platformService.openRecipe()
-    if (!picked) return null
-    return this.restoreRecipe(picked.data, rootId)
+  async pickRecipe() {
+    return this.platformService.openRecipe()
   }
 }

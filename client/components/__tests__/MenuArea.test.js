@@ -4,7 +4,7 @@ import { mount, flushPromises } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import MenuArea from '@/components/MenuArea.vue'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
-import { useTabStore } from '@/stores/useTabStore.js'
+import { useTabStore, MAX_TABS } from '@/stores/useTabStore.js'
 import { useSystemState } from '@/composables/useSystemState.js'
 
 let entryManager
@@ -22,7 +22,8 @@ beforeEach(() => {
   }
   entryPersistanceService = {
     saveRecipe: vi.fn().mockResolvedValue('recipe.json'),
-    loadRecipe: vi.fn().mockResolvedValue(null)
+    pickRecipe: vi.fn().mockResolvedValue(null),
+    restoreRecipe: vi.fn().mockResolvedValue({ entryCount: 0, connectionCount: 0, warnings: [] })
   }
   const app = createApp({})
   app.provide('entryManager', entryManager)
@@ -87,5 +88,39 @@ describe('MenuArea Save button', () => {
 
     expect(entryPersistanceService.saveRecipe.mock.calls[0][0]).toBe(t2.rootEntryId)
     expect(entryPersistanceService.saveRecipe.mock.calls[0][0]).not.toBe(t1.rootEntryId)
+  })
+})
+
+describe('MenuArea Load button', () => {
+  it('is disabled when there are 10 tabs', () => {
+    for (let i = 0; i < MAX_TABS; i++) store.createTab()
+    const wrapper = mountMenuArea()
+
+    expect(wrapper.find('.menu-load-btn').attributes('disabled')).toBeDefined()
+  })
+
+  it.each([0, 1, MAX_TABS - 1])('is enabled with %i tabs', (count) => {
+    for (let i = 0; i < count; i++) store.createTab()
+    const wrapper = mountMenuArea()
+
+    expect(wrapper.find('.menu-load-btn').attributes('disabled')).toBeUndefined()
+  })
+
+  it('loads into a new tab without asking for confirmation', async () => {
+    const tab = store.createTab()
+    const blockId = entryManager.addEntry('container', 'Sub')
+    entryManager.moveEntry(blockId, tab.rootEntryId, 0)
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    entryPersistanceService.pickRecipe.mockResolvedValue({ fileName: 'foo.json', data: {} })
+    const wrapper = mountMenuArea()
+
+    await wrapper.find('.menu-load-btn').trigger('click')
+    await flushPromises()
+
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(store.tabs).toHaveLength(2)
+    expect(store.activeTab.label).toBe('foo')
+    expect(entryPersistanceService.restoreRecipe).toHaveBeenCalledWith({}, store.activeTab.rootEntryId)
+    expect(entryManager.getChildren(tab.rootEntryId)).toEqual([blockId])
   })
 })
