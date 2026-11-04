@@ -5,6 +5,20 @@ import { useSystemState } from '../composables/useSystemState'
 export const MAX_TABS = 10
 
 /**
+ * Turn a file name or full path (either `/` or `\` separated) into a tab label:
+ * the last path segment without its extension. A name that is only a leading-dot
+ * extension (e.g. `.json`) is kept as is.
+ * @param {string} [fileName]
+ * @returns {string|undefined} undefined if no name is given (createTab() then falls back to `Recipe N`)
+ */
+export function labelFromFileName(fileName) {
+  if (!fileName) return undefined
+  const baseName = fileName.split(/[\\/]/).pop()
+  const dot = baseName.lastIndexOf('.')
+  return dot > 0 ? baseName.slice(0, dot) : baseName
+}
+
+/**
  * Store of the MainArea tabs. Each tab owns one root entry (rootEntryId) in the ECS.
  * Root entries for tabs must be created / removed only through createTab() / closeTab()
  * so that `tabs` and the ECS roots stay consistent.
@@ -110,6 +124,17 @@ export const useTabStore = defineStore('tab', () => {
     if (tab) tab.label = label
   }
 
+  /**
+   * Sets the tab's label from a saved/loaded file name (see labelFromFileName()).
+   * Does nothing if no file name is given (e.g. the user canceled the save).
+   * @param {string} rootId
+   * @param {string} [fileName]
+   */
+  function setTabLabelFromFileName(rootId, fileName) {
+    const label = labelFromFileName(fileName)
+    if (label) setTabLabel(rootId, label)
+  }
+
   function setScrollTop(rootId, scrollTop) {
     const tab = getTabByRootId(rootId)
     if (tab) tab.scrollTop = scrollTop
@@ -128,6 +153,7 @@ export const useTabStore = defineStore('tab', () => {
     getTabByRootId,
     setCommStatus,
     setTabLabel,
+    setTabLabelFromFileName,
     setScrollTop
   }
 })

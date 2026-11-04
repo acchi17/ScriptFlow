@@ -1,21 +1,8 @@
 import { ref, inject } from 'vue'
 import { useSystemState } from './useSystemState'
-import { useTabStore } from '../stores/useTabStore'
+import { useTabStore, labelFromFileName } from '../stores/useTabStore'
 
 const lastReport = ref(null)
-
-/**
- * Turn a file name or full path (either `/` or `\` separated) into a tab label:
- * the last path segment without its extension.
- * @param {string} [fileName]
- * @returns {string|undefined} undefined if no name is given
- */
-function toLabel(fileName) {
-  if (!fileName) return undefined
-  const baseName = fileName.split(/[\\/]/).pop()
-  const dot = baseName.lastIndexOf('.')
-  return dot > 0 ? baseName.slice(0, dot) : baseName
-}
 
 /**
  * Vue-side glue for EntryExecutionService and EntryPersistanceService: executing
@@ -75,9 +62,7 @@ export function useEntryOperation() {
     try {
       const tab = tabStore.getTabByRootId(rootId)
       const savedName = await entryPersistanceService.saveRecipe(rootId, tab?.label)
-      if (savedName) {
-        tabStore.setTabLabel(rootId, toLabel(savedName))
-      }
+      tabStore.setTabLabelFromFileName(rootId, savedName)
     } catch (error) {
       setError(error.message)
     } finally {
@@ -98,7 +83,7 @@ export function useEntryOperation() {
       const picked = await entryPersistanceService.pickRecipe()
       if (!picked) return false
 
-      tab = tabStore.createTab(toLabel(picked.fileName))
+      tab = tabStore.createTab(labelFromFileName(picked.fileName))
       if (!tab) {
         setError('Cannot open more tabs.')
         return false

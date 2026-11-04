@@ -455,7 +455,7 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - 完了条件のうち`npm run electron:start`での手動確認(タブの作成・切替・削除、10タブ上限、確認ダイアログ、実行中ロック、子プロセス終了、Save)は自動実行環境(ディスプレイ無し)のため未実施。タブバー・xボタン・+ボタン上限・空状態は`MainArea.test.js`、Save対象は`MenuArea.test.js`、ルート行の除外は`ExecutionLogView.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。
 18. **Phase 6実装時の補足**:
     - `createTab()`が`null`を返した場合(10タブ)の`setError()`の文言は計画に定義が無いため、暫定的に`'Cannot open more tabs.'`とした(`useEntryOperation.js` `loadRecipe()`)。
-    - `picked.fileName`が空・未定義の場合(通常はElectron/Web版とも必ず設定される)は、ラベルを渡さず`createTab()`の既定ラベル(`Recipe N`)を使う。拡張子を除く処理(`useEntryOperation.js`のローカル関数`toLabel()`)は最後の`.`以降を除き、先頭の`.`のみの名前(例: `.json`)はそのまま使う。
+    - `picked.fileName`が空・未定義の場合(通常はElectron/Web版とも必ず設定される)は、ラベルを渡さず`createTab()`の既定ラベル(`Recipe N`)を使う。拡張子を除く処理(`useTabStore.js`のエクスポート関数`labelFromFileName()`)は最後の`.`以降を除き、先頭の`.`のみの名前(例: `.json`)はそのまま使う。ファイル名からのラベル決定はタブのラベル規則であるため、既定ラベル(`createTab()`の`Recipe N`)と同じ`useTabStore.js`に置いた。Save後のラベル更新は`useTabStore.setTabLabelFromFileName(rootId, fileName)`で行い、`useEntryOperation.js`はファイル名をそのまま渡すだけでラベルの組み立て方には関与しない。
     - `saveRecipe(rootId)`で該当タブが無い場合は提案名を渡さず、`EntryPersistanceService.saveRecipe()`の既定(`recipe.json`)になる。
     - `MenuArea.vue`は`entryManager`を使わなくなったため`inject('entryManager')`を削除した。
     - アプリコードからの`getRoot()`呼び出しが無いこと(Acceptance Criteriaの追加基準)を`grep`で確認した(残るのは`EntryHandlerFacade.getRoot()`/`EntryHierarchyHandler.getRoot()`の定義のみ)。

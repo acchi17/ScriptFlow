@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createApp } from 'vue'
 import { createPinia, setActivePinia } from 'pinia'
-import { useTabStore, MAX_TABS } from '@/stores/useTabStore.js'
+import { useTabStore, MAX_TABS, labelFromFileName } from '@/stores/useTabStore.js'
 import { useSystemState } from '@/composables/useSystemState.js'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
 
@@ -298,6 +298,54 @@ describe('useTabStore.setTabLabel', () => {
     store.createTab()
     store.setTabLabel('unknown', 'x')
     expect(store.tabs[0].label).toBe('Recipe 1')
+  })
+})
+
+describe('labelFromFileName', () => {
+  it('drops the extension of a plain file name', () => {
+    expect(labelFromFileName('foo.json')).toBe('foo')
+  })
+
+  it('drops only the last extension', () => {
+    expect(labelFromFileName('foo.bar.json')).toBe('foo.bar')
+  })
+
+  it('takes the last segment of a `/` or `\\` separated path', () => {
+    expect(labelFromFileName('/home/user/recipes/baz.json')).toBe('baz')
+    expect(labelFromFileName('C:\\recipes\\baz.json')).toBe('baz')
+  })
+
+  it('keeps a name without an extension', () => {
+    expect(labelFromFileName('foo')).toBe('foo')
+  })
+
+  it('keeps a leading-dot-only name as is', () => {
+    expect(labelFromFileName('.json')).toBe('.json')
+  })
+
+  it('returns undefined for an empty or missing name', () => {
+    expect(labelFromFileName('')).toBeUndefined()
+    expect(labelFromFileName(undefined)).toBeUndefined()
+    expect(labelFromFileName(null)).toBeUndefined()
+  })
+})
+
+describe('useTabStore.setTabLabelFromFileName', () => {
+  it('sets the label of the matching tab from the file name', () => {
+    const store = useTabStore()
+    const t1 = store.createTab()
+    const t2 = store.createTab()
+    store.setTabLabelFromFileName(t2.rootEntryId, 'C:\\recipes\\saved.json')
+    expect(store.getTabByRootId(t1.rootEntryId).label).toBe('Recipe 1')
+    expect(store.getTabByRootId(t2.rootEntryId).label).toBe('saved')
+  })
+
+  it('keeps the label when no file name is given', () => {
+    const store = useTabStore()
+    const tab = store.createTab()
+    store.setTabLabelFromFileName(tab.rootEntryId, null)
+    store.setTabLabelFromFileName(tab.rootEntryId, '')
+    expect(tab.label).toBe('Recipe 1')
   })
 })
 
