@@ -2,9 +2,23 @@
   <div class="main-area">
     <div class="main-content" :class="{ 'executing': isExecuting }">
       <div class="tab-bar">
-        <div class="tab active">
-          <span class="tab-label">Recipe</span>
+        <div
+          v-for="tab in tabs"
+          :key="tab.id"
+          class="tab"
+          :class="{ active: tab.id === activeTabId }"
+          :data-tab-id="tab.id"
+          @click="onTabClick(tab)"
+        >
+          <span class="tab-label" :title="tab.label">{{ tab.label }}</span>
+          <button class="tab-close-btn" title="Close Tab" @click.stop="onCloseTab(tab)"></button>
         </div>
+        <button
+          class="tab-add-btn"
+          title="New Tab"
+          :disabled="isTabLimitReached"
+          @click="onAddTab"
+        ></button>
       </div>
       <div class="tab-content">
         <RecipeItem
@@ -13,6 +27,9 @@
           class="tab-pane"
           :entry-id="tab.rootEntryId"
         />
+        <div v-if="visibleTabs.length === 0" class="tab-empty-state">
+          {{ emptyStateMessage }}
+        </div>
       </div>
       <div v-show="showLog" class="log-popup">
         <ExecutionLogView />
@@ -22,11 +39,14 @@
 </template>
 
 <script>
+import { inject } from 'vue'
 import { storeToRefs } from 'pinia'
 import RecipeItem from './RecipeItem.vue'
 import ExecutionLogView from './ExecutionLogView.vue'
 import { useSystemState } from '../composables/useSystemState'
 import { useTabStore } from '../stores/useTabStore'
+
+const EMPTY_STATE_MESSAGE = 'Click + or Load to create a tab.'
 
 export default {
   name: 'MainArea',
@@ -36,13 +56,42 @@ export default {
   },
   setup() {
     const { isExecuting, showLog } = useSystemState()
+    const entryManager = inject('entryManager')
     const tabStore = useTabStore()
-    const { visibleTabs } = storeToRefs(tabStore)
+    const { tabs, activeTabId, visibleTabs, isTabLimitReached } = storeToRefs(tabStore)
 
-    // Start with one empty tab, as before multi-tab support.
+    // Start with one empty tab.
     tabStore.createTab()
 
-    return { isExecuting, showLog, visibleTabs }
+    function onTabClick(tab) {
+      tabStore.setActiveTab(tab.id)
+    }
+
+    function onAddTab() {
+      tabStore.createTab()
+    }
+
+    // Asks for confirmation only when the tab holds entries; an empty tab closes at once.
+    async function onCloseTab(tab) {
+      if (entryManager.getChildren(tab.rootEntryId).length > 0) {
+        const confirmed = window.confirm('Closing this tab discards its recipe. Continue?')
+        if (!confirmed) return
+      }
+      await tabStore.closeTab(tab.id)
+    }
+
+    return {
+      isExecuting,
+      showLog,
+      tabs,
+      activeTabId,
+      visibleTabs,
+      isTabLimitReached,
+      emptyStateMessage: EMPTY_STATE_MESSAGE,
+      onTabClick,
+      onAddTab,
+      onCloseTab
+    }
   }
 }
 </script>
@@ -75,15 +124,23 @@ export default {
   border-bottom: var(--main-tab-border);
 }
 
+/* Tabs shrink (down to min-width) so that MAX_TABS tabs fit in the bar. */
 .tab {
   height: calc(var(--main-tab-bar-height) - 6px);
-  min-width: 160px;
+  flex: 0 1 200px;
+  min-width: 80px;
   max-width: 240px;
-  padding: 0 8px;
+  padding: 0 4px 0 8px;
   display: flex;
   align-items: center;
+  gap: 4px;
   border-radius: 12px 12px 0 0;
   background-color: var(--main-bg-color);
+  cursor: pointer;
+}
+
+.tab:not(.active):hover {
+  background-color: rgba(0, 0, 0, 0.05);
 }
 
 .tab.active {
@@ -103,6 +160,43 @@ export default {
   white-space: nowrap;
 }
 
+.tab-close-btn,
+.tab-add-btn {
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background-color: transparent;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  cursor: pointer;
+}
+
+.tab-close-btn {
+  width: 16px;
+  height: 16px;
+  background-image: var(--close-icon-image);
+}
+
+.tab-add-btn {
+  width: 20px;
+  height: 20px;
+  margin: 0 0 5px 6px;
+  background-image: var(--plus-icon-image);
+}
+
+.tab-close-btn:hover,
+.tab-add-btn:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tab-add-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
 .tab-content {
   height: calc(100% - var(--main-tab-bar-height));
   display: flex;
@@ -113,6 +207,16 @@ export default {
   flex: 1;
   min-width: 0;
   height: 100%;
+}
+
+.tab-empty-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  color: var(--main-tab-font-color);
+  background-color: var(--recipe-bg-color);
 }
 
 .log-popup {

@@ -2,7 +2,7 @@
   <div class="menu-area">
     <div class="menu-left">
       <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting" @click.stop="onLoadRecipe"></button>
-      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting" @click.stop="onSaveRecipe"></button>
+      <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting || !tabStore.activeTab" @click.stop="onSaveRecipe"></button>
     </div>
     <div class="menu-right">
       <div class="rect-item">
@@ -37,6 +37,7 @@ import { inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useSystemState } from '../composables/useSystemState'
 import { useEntryOperation } from '../composables/useEntryOperation'
+import { useTabStore } from '../stores/useTabStore'
 
 export default {
   name: 'MenuArea',
@@ -50,18 +51,23 @@ export default {
     const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
     const entryManager = inject('entryManager')
     const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
+    const tabStore = useTabStore()
 
-    const onSaveRecipe = async () => {
-      // Interim: target root is resolved via getRoot() until the tab store provides it
-      await saveRecipe(entryManager.getRoot())
+    async function onSaveRecipe() {
+      const activeTab = tabStore.activeTab
+      if (!activeTab) return
+      await saveRecipe(activeTab.rootEntryId)
       if (lastError.value) {
         window.alert(`Failed to save recipe: ${lastError.value}`)
       }
     }
 
-    const onLoadRecipe = async () => {
-      const rootEntryId = entryManager.getRoot()
-      if (rootEntryId && entryManager.getChildren(rootEntryId).length > 0) {
+    // Interim: loads into the active tab (overwriting it) until Load creates a new tab.
+    async function onLoadRecipe() {
+      const activeTab = tabStore.activeTab
+      if (!activeTab) return
+      const rootEntryId = activeTab.rootEntryId
+      if (entryManager.getChildren(rootEntryId).length > 0) {
         const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
         if (!confirmed) return
       }
@@ -79,6 +85,7 @@ export default {
       showLog,
       toggleLog,
       isExecuting,
+      tabStore,
       onSaveRecipe,
       onLoadRecipe
     }
