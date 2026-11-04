@@ -1,7 +1,7 @@
 <template>
   <div class="menu-area">
     <div class="menu-left">
-      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting" @click.stop="onLoadRecipe"></button>
+      <button class="menu-btn menu-load-btn" title="Load" :disabled="isExecuting || tabStore.isTabLimitReached" @click.stop="onLoadRecipe"></button>
       <button class="menu-btn menu-save-btn" title="Save" :disabled="isExecuting || !tabStore.activeTab" @click.stop="onSaveRecipe"></button>
     </div>
     <div class="menu-right">
@@ -33,7 +33,6 @@
 </template>
 
 <script>
-import { inject } from 'vue'
 import { useDraggable } from '../composables/useDraggable'
 import { useSystemState } from '../composables/useSystemState'
 import { useEntryOperation } from '../composables/useEntryOperation'
@@ -49,7 +48,6 @@ export default {
       event.dataTransfer.setData('sourceId', undefined)
     })
     const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
-    const entryManager = inject('entryManager')
     const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
     const tabStore = useTabStore()
 
@@ -62,16 +60,9 @@ export default {
       }
     }
 
-    // Interim: loads into the active tab (overwriting it) until Load creates a new tab.
+    // Loads into a new tab, so nothing is overwritten and no confirmation is needed.
     async function onLoadRecipe() {
-      const activeTab = tabStore.activeTab
-      if (!activeTab) return
-      const rootEntryId = activeTab.rootEntryId
-      if (entryManager.getChildren(rootEntryId).length > 0) {
-        const confirmed = window.confirm('Loading a recipe replaces the current one. Continue?')
-        if (!confirmed) return
-      }
-      const loaded = await loadRecipe(rootEntryId)
+      const loaded = await loadRecipe()
       if (lastError.value) {
         window.alert(`Failed to load recipe: ${lastError.value}`)
       } else if (loaded && lastReport.value?.warnings?.length) {

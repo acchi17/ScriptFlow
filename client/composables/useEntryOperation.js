@@ -1,5 +1,6 @@
 import { ref, inject } from 'vue'
 import { useSystemState } from './useSystemState'
+import { useTabStore, labelFromFileName } from '../stores/useTabStore'
 
 const lastReport = ref(null)
 
@@ -11,7 +12,7 @@ const lastReport = ref(null)
 export function useEntryOperation() {
   const entryExecutionService = inject('entryExecutionService')
   const entryPersistanceService = inject('entryPersistanceService')
-  const { setExecuting, resetState, setError, clearError } = useSystemState()
+  const { setExecuting, setError, clearError } = useSystemState()
 
   /**
    * Execute an entry (Block or Container)
@@ -50,14 +51,18 @@ export function useEntryOperation() {
   }
 
   /**
-   * Save the recipe of the given root.
+   * Save the recipe of the given root. The tab's label is suggested as the file
+   * name; on success the tab's label becomes the saved file name (without extension).
    * @param {string} rootId - ID of the root entry to save
    */
   const saveRecipe = async (rootId) => {
+    const tabStore = useTabStore()
     setExecuting(true)
     clearError()
     try {
-      await entryPersistanceService.saveRecipe(rootId)
+      const tab = tabStore.getTabByRootId(rootId)
+      const savedName = await entryPersistanceService.saveRecipe(rootId, tab?.label)
+      tabStore.setTabLabelFromFileName(rootId, savedName)
     } catch (error) {
       setError(error.message)
     } finally {
@@ -66,20 +71,32 @@ export function useEntryOperation() {
   }
 
   /**
-   * Let the user pick a recipe file and restore it into the given root.
-   * @param {string} rootId - ID of the root entry to restore into
-   * @returns {Promise<boolean>} true if a recipe was actually loaded (false if the user canceled)
+   * Let the user pick a recipe file and load it into a newly created tab.
+   * @returns {Promise<boolean>} true if a recipe was actually loaded (false if canceled or failed)
    */
-  const loadRecipe = async (rootId) => {
+  const loadRecipe = async () => {
+    const tabStore = useTabStore()
     setExecuting(true)
     clearError()
+    let tab = null
     try {
-      const report = await entryPersistanceService.loadRecipe(rootId)
-      if (!report) return false
-      resetState()
+      const picked = await entryPersistanceService.pickRecipe()
+      if (!picked) return false
+
+      tab = tabStore.createTab(labelFromFileName(picked.fileName))
+      if (!tab) {
+        setError('Cannot open more tabs.')
+        return false
+      }
+
+      const report = await entryPersistanceService.restoreRecipe(picked.data, tab.rootEntryId)
       lastReport.value = report
       return true
     } catch (error) {
+      if (tab) {
+        // Do not leave a partially restored recipe behind.
+        await tabStore.closeTab(tab.id)
+      }
       setError(error.message)
       return false
     } finally {
