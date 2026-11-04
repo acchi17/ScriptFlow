@@ -460,3 +460,9 @@ Phase 1〜3は互いに独立しており順不同で実施できる。Phase 6�
     - `MenuArea.vue`は`entryManager`を使わなくなったため`inject('entryManager')`を削除した。
     - アプリコードからの`getRoot()`呼び出しが無いこと(Acceptance Criteriaの追加基準)を`grep`で確認した(残るのは`EntryHandlerFacade.getRoot()`/`EntryHierarchyHandler.getRoot()`の定義のみ)。
     - 完了条件のうち`npm run electron:start`および`npm run web:build && npm run web:start`での手動確認(新規タブへのLoad、キャンセル、10タブでのLoad無効、0タブからのLoad、Saveの提案名とラベル更新、壊れたレシピのエラー表示)は自動実行環境(ディスプレイ無し)のため未実施。`useEntryOperation.test.js`・`MenuArea.test.js` `MenuArea Load button`・`EntryPersistanceService.test.js`で代替確認した。UI上での確認はレビュー時にお願いしたい。
+19. **Phase 7を`[Open]`のままとした理由(2026-11-04)**:
+    - コードとテストは実装済み。`RecipeItem.vue`に`onMounted`(`nextTick`後に`getTabByRootId(props.entryId)?.scrollTop ?? 0`を`.recipe-panel`へ設定)と`onBeforeUnmount`(`setScrollTop(props.entryId, scrollTop)`)を追加し、`RecipeItem.test.js` `RecipeItem scroll position`(3件)と`e2e-tests/main-area-tabs.spec.js` `MainArea tabs scroll position`を追加した。`npm test`・`npm run lint`は通る。
+    - 自動確認できる完了条件のうち`npm run test:e2e`(新規の`main-area-tabs.spec.js`と既存の`auto-scroll.spec.js`)が、自動実行環境の権限設定で`npm run test:e2e`/`npx playwright test`が承認待ちとなり実行できなかった。新規e2eテストは未実行のため、ラベルは`[Open]`のままとした。e2eを実行できる環境で通ることを確認できれば`[Resolved]`にしてよい。
+    - `recipePanelRef`が`null`の場合(通常は発生しない)は保存・復元とも何もしない。タブが既に`closeTab()`で除去されている場合のアンマウントでは`setScrollTop()`が何もしない(ユニットテストで確認)。
+    - RecipeItemとその子孫が`useTabStore().activeTab`を参照していないこと(Acceptance Criteriaの追加基準)を`grep`で確認した(`activeTab`の参照は`MainArea.vue`の`activeTabId`と`MenuArea.vue`のみ)。
+    - `npm run electron:start`での手動確認は自動実行環境(ディスプレイ無し)のため未実施。
