@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import { ref, computed, inject, watch, nextTick } from 'vue'
+import { ref, computed, inject, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { useEntryOperation } from '../composables/useEntryOperation'
 import { useSystemState } from '../composables/useSystemState'
 import { useAutoScroll } from '../composables/useAutoScroll'
@@ -131,6 +131,22 @@ export default {
         clearSelection()
       }
       nextTick(() => measureEntries())
+    })
+
+    // The scroll position is kept in this root's tab (found by entryId, never the active
+    // tab): saved once on unmount (not on every scroll event) and restored on mount.
+    // Restoring does not wait for measureEntries().
+    onMounted(() => {
+      nextTick(() => {
+        if (!recipePanelRef.value) return
+        recipePanelRef.value.scrollTop = tabStore.getTabByRootId(props.entryId)?.scrollTop ?? 0
+      })
+    })
+
+    // When the tab has already been removed (closeTab()), setScrollTop() does nothing.
+    onBeforeUnmount(() => {
+      if (!recipePanelRef.value) return
+      tabStore.setScrollTop(props.entryId, recipePanelRef.value.scrollTop)
     })
 
     const entryLayoutMap = computed(() => {

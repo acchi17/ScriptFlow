@@ -142,3 +142,64 @@ describe('RecipeItem comm status', () => {
     expect(second.find('.recipe-com-btn').classes()).toContain('recipe-com-btn--connected')
   })
 })
+
+describe('RecipeItem scroll position', () => {
+  // jsdom does not lay out, so scrollTop is stubbed with a plain backing value.
+  function stubScrollTop(element, initial = 0) {
+    let value = initial
+    const setter = vi.fn((v) => { value = v })
+    Object.defineProperty(element, 'scrollTop', {
+      configurable: true,
+      get: () => value,
+      set: setter
+    })
+    return setter
+  }
+
+  function setup() {
+    const entryManager = new EntryHandlerFacade()
+    const pinia = createTestPinia(entryManager)
+    const store = useTabStore()
+    const tab = store.createTab()
+    const other = store.createTab()
+    return { entryManager, pinia, store, tab, other }
+  }
+
+  it('saves the panel scrollTop to its tab on unmount', async () => {
+    const { entryManager, pinia, store, tab, other } = setup()
+    const spy = vi.spyOn(store, 'setScrollTop')
+    const wrapper = mountRecipe(entryManager, tab.rootEntryId, pinia)
+    await wrapper.vm.$nextTick()
+    stubScrollTop(wrapper.find('.recipe-panel').element, 80)
+
+    wrapper.unmount()
+
+    expect(spy).toHaveBeenCalledWith(tab.rootEntryId, 80)
+    expect(store.getTabByRootId(tab.rootEntryId).scrollTop).toBe(80)
+    expect(store.getTabByRootId(other.rootEntryId).scrollTop).toBe(0)
+  })
+
+  it('restores the scrollTop stored in its tab after mount', async () => {
+    const { entryManager, pinia, store, tab } = setup()
+    store.setScrollTop(tab.rootEntryId, 120)
+
+    const wrapper = mountRecipe(entryManager, tab.rootEntryId, pinia)
+    const setter = stubScrollTop(wrapper.find('.recipe-panel').element)
+    await wrapper.vm.$nextTick()
+
+    expect(setter).toHaveBeenCalledWith(120)
+    expect(wrapper.find('.recipe-panel').element.scrollTop).toBe(120)
+  })
+
+  it('does not throw when unmounted after its tab has been removed', async () => {
+    const { entryManager, pinia, store, tab } = setup()
+    const wrapper = mountRecipe(entryManager, tab.rootEntryId, pinia)
+    await wrapper.vm.$nextTick()
+    stubScrollTop(wrapper.find('.recipe-panel').element, 40)
+
+    await store.closeTab(tab.id)
+
+    expect(() => wrapper.unmount()).not.toThrow()
+    expect(store.getTabByRootId(tab.rootEntryId)).toBeNull()
+  })
+})
