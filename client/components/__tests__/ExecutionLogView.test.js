@@ -25,6 +25,7 @@ describe('ExecutionLogView root rows', () => {
     const app = createApp({})
     app.provide('entryManager', entryManager)
     app.provide('entryExecutionService', {})
+    app.provide('entryPersistanceService', {})
     const pinia = createPinia()
     app.use(pinia)
     setActivePinia(pinia)

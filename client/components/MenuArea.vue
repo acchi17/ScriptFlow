@@ -47,26 +47,28 @@ export default {
       event.dataTransfer.setData('entryName', event.currentTarget.dataset.entryName)
       event.dataTransfer.setData('sourceId', undefined)
     })
-    const { showLog, toggleLog, lastError } = useSystemState()
-    const { isExecuting, lastReport, saveRecipe, loadRecipe } = useEntryOperation()
+    const { showLog, toggleLog } = useSystemState()
+    const { isExecuting, execute } = useEntryOperation()
     const tabStore = useTabStore()
 
     async function onSaveRecipe() {
-      const activeTab = tabStore.activeTab
-      if (!activeTab) return
-      await saveRecipe(activeTab.rootEntryId)
-      if (lastError.value) {
-        window.alert(`Failed to save recipe: ${lastError.value}`)
+      if (!tabStore.activeTab) return
+      try {
+        await execute(() => tabStore.saveTab(tabStore.activeTabId))
+      } catch (e) {
+        window.alert(`Failed to save recipe: ${e.message}`)
       }
     }
 
     // Loads into a new tab, so nothing is overwritten and no confirmation is needed.
     async function onLoadRecipe() {
-      const loaded = await loadRecipe()
-      if (lastError.value) {
-        window.alert(`Failed to load recipe: ${lastError.value}`)
-      } else if (loaded && lastReport.value?.warnings?.length) {
-        console.warn('Recipe loaded with warnings:', lastReport.value.warnings)
+      try {
+        const report = await execute(() => tabStore.openRecipeInNewTab())
+        if (report?.warnings?.length) {
+          console.warn('Recipe loaded with warnings:', report.warnings)
+        }
+      } catch (e) {
+        window.alert(`Failed to load recipe: ${e.message}`)
       }
     }
 

@@ -31,6 +31,7 @@ function createTestPinia(entryManager, entryExecutionService = {}) {
   const app = createApp({})
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
+  app.provide('entryPersistanceService', {})
   const pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)

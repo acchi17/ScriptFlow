@@ -4,9 +4,6 @@ import { ref, computed, readonly, inject } from 'vue'
 const draggedItemIds = ref(new Set())
 const isDragging = ref(false)
 
-// error state
-const lastError = ref(null)
-
 // log visibility
 const showLog = ref(false)
 
@@ -24,10 +21,6 @@ export function useSystemState() {
   const deactivateDragging = () => { draggedItemIds.value.clear(); isDragging.value = false }
   const setDraggedIds = (ids) => { draggedItemIds.value = new Set(ids) }
   const hasDraggedIds = (id) => draggedItemIds.value.has(id)
-
-  // --- error state ---
-  const setError = (message) => { lastError.value = message }
-  const clearError = () => { lastError.value = null }
 
   // --- log visibility ---
   const toggleLog = () => { showLog.value = !showLog.value }
@@ -105,10 +98,6 @@ export function useSystemState() {
     deactivateDragging,
     setDraggedIds,
     hasDraggedIds,
-    // error
-    lastError: readonly(lastError),
-    setError,
-    clearError,
     // log
     showLog: readonly(showLog),
     toggleLog,
