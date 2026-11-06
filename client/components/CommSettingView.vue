@@ -55,7 +55,8 @@ export default {
 
   setup(props, { emit }) {
     const entryManager = inject('entryManager')
-    const { createSocket, releaseSocket } = useEntryOperation()
+    const entryExecutionService = inject('entryExecutionService')
+    const { execute } = useEntryOperation()
     const useTcpIp = ref(false)
     const ipParts  = ref('')
     const port     = ref('0')
@@ -74,9 +75,9 @@ export default {
 
       let connected = null
       if (useTcpIp.value) {
-        connected = await createSocket(props.entryId, host, portNum)
+        connected = await execute(() => entryExecutionService.createComm(props.entryId, host, portNum))
       } else {
-        await releaseSocket(props.entryId)
+        await execute(() => entryExecutionService.deleteComm(props.entryId))
       }
       emit('close', connected)
     }

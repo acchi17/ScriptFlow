@@ -4,10 +4,6 @@ import { ref, computed, readonly, inject } from 'vue'
 const draggedItemIds = ref(new Set())
 const isDragging = ref(false)
 
-// execution lock
-const isExecuting = ref(false)
-const executingRootEntryId = ref(null)
-
 // error state
 const lastError = ref(null)
 
@@ -28,13 +24,6 @@ export function useSystemState() {
   const deactivateDragging = () => { draggedItemIds.value.clear(); isDragging.value = false }
   const setDraggedIds = (ids) => { draggedItemIds.value = new Set(ids) }
   const hasDraggedIds = (id) => draggedItemIds.value.has(id)
-
-  // --- execution lock ---
-  const setExecuting = (value, entryId = null) => {
-    cancelConnection()
-    isExecuting.value = value
-    executingRootEntryId.value = value ? entryId : null
-  }
 
   // --- error state ---
   const setError = (message) => { lastError.value = message }
@@ -116,10 +105,6 @@ export function useSystemState() {
     deactivateDragging,
     setDraggedIds,
     hasDraggedIds,
-    // execution
-    isExecuting: readonly(isExecuting),
-    executingRootEntryId: readonly(executingRootEntryId),
-    setExecuting,
     // error
     lastError: readonly(lastError),
     setError,

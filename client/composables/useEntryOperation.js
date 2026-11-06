@@ -1,53 +1,38 @@
-import { ref, inject } from 'vue'
+import { ref, readonly, inject } from 'vue'
 import { useSystemState } from './useSystemState'
 import { useTabStore, labelFromFileName } from '../stores/useTabStore'
+
+// Execution lock. Kept at module level so every caller of useEntryOperation()
+// shares one app-wide lock (MainArea/SideArea overlays, drag & drop, Run/Load/Save buttons).
+const isExecuting = ref(false)
 
 const lastReport = ref(null)
 
 /**
- * Vue-side glue for EntryExecutionService and EntryPersistanceService: executing
- * entries, saving/loading recipes, and the last load report. Busy/error state is
- * shared with useSystemState (isExecuting/lastError).
+ * Busy-state handling for long-running operations: execute() runs any async
+ * function while holding the app-wide execution lock (isExecuting), and
+ * saveRecipe()/loadRecipe() wrap EntryPersistanceService with it. Error state is
+ * shared with useSystemState (lastError).
  */
 export function useEntryOperation() {
-  const entryExecutionService = inject('entryExecutionService')
   const entryPersistanceService = inject('entryPersistanceService')
-  const { setExecuting, setError, clearError } = useSystemState()
+  const { cancelConnection, setError, clearError } = useSystemState()
 
   /**
-   * Execute an entry (Block or Container)
-   * @param {string} entryId Id of the entry to execute
+   * Run an async function while isExecuting is true. isExecuting is turned off
+   * when the function settles, whether it resolves or throws.
+   * @param {Function} asyncFn Async function to run
+   * @param {...*} args Arguments passed to asyncFn
+   * @returns {Promise<*>} The value asyncFn resolves to
    */
-  const executeEntry = async (entryId) => {
-    if (!entryId) return
-
-    setExecuting(true, entryId)
+  async function execute(asyncFn, ...args) {
+    cancelConnection()
+    isExecuting.value = true
     try {
-      await entryExecutionService.executeEntry(entryId)
+      return await asyncFn(...args)
     } finally {
-      await new Promise(resolve => setTimeout(resolve, 500))
-      setExecuting(false)
+      isExecuting.value = false
     }
-  }
-
-  /**
-   * Create and connect a socket for an entry.
-   * @param {string} entryId
-   * @param {string} host
-   * @param {number} port
-   * @returns {Promise<boolean>}
-   */
-  const createSocket = async (entryId, host, port) => {
-    return await entryExecutionService.createComm(entryId, host, port)
-  }
-
-  /**
-   * Close the socket held by an entry.
-   * @param {string} entryId
-   * @returns {Promise<boolean>}
-   */
-  const releaseSocket = async (entryId) => {
-    return await entryExecutionService.deleteComm(entryId)
   }
 
   /**
@@ -55,61 +40,58 @@ export function useEntryOperation() {
    * name; on success the tab's label becomes the saved file name (without extension).
    * @param {string} rootId - ID of the root entry to save
    */
-  const saveRecipe = async (rootId) => {
+  async function saveRecipe(rootId) {
     const tabStore = useTabStore()
-    setExecuting(true)
     clearError()
-    try {
-      const tab = tabStore.getTabByRootId(rootId)
-      const savedName = await entryPersistanceService.saveRecipe(rootId, tab?.label)
-      tabStore.setTabLabelFromFileName(rootId, savedName)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setExecuting(false)
-    }
+    await execute(async () => {
+      try {
+        const tab = tabStore.getTabByRootId(rootId)
+        const savedName = await entryPersistanceService.saveRecipe(rootId, tab?.label)
+        tabStore.setTabLabelFromFileName(rootId, savedName)
+      } catch (error) {
+        setError(error.message)
+      }
+    })
   }
 
   /**
    * Let the user pick a recipe file and load it into a newly created tab.
    * @returns {Promise<boolean>} true if a recipe was actually loaded (false if canceled or failed)
    */
-  const loadRecipe = async () => {
+  async function loadRecipe() {
     const tabStore = useTabStore()
-    setExecuting(true)
     clearError()
-    let tab = null
-    try {
-      const picked = await entryPersistanceService.pickRecipe()
-      if (!picked) return false
+    return execute(async () => {
+      let tab = null
+      try {
+        const picked = await entryPersistanceService.pickRecipe()
+        if (!picked) return false
 
-      tab = tabStore.createTab(labelFromFileName(picked.fileName))
-      if (!tab) {
-        setError('Cannot open more tabs.')
+        tab = tabStore.createTab(labelFromFileName(picked.fileName))
+        if (!tab) {
+          setError('Cannot open more tabs.')
+          return false
+        }
+
+        const report = await entryPersistanceService.restoreRecipe(picked.data, tab.rootEntryId)
+        lastReport.value = report
+        return true
+      } catch (error) {
+        if (tab) {
+          // Do not leave a partially restored recipe behind.
+          await tabStore.closeTab(tab.id)
+        }
+        setError(error.message)
         return false
       }
-
-      const report = await entryPersistanceService.restoreRecipe(picked.data, tab.rootEntryId)
-      lastReport.value = report
-      return true
-    } catch (error) {
-      if (tab) {
-        // Do not leave a partially restored recipe behind.
-        await tabStore.closeTab(tab.id)
-      }
-      setError(error.message)
-      return false
-    } finally {
-      setExecuting(false)
-    }
+    })
   }
 
   return {
-    executeEntry,
+    isExecuting: readonly(isExecuting),
+    execute,
     lastReport,
     saveRecipe,
-    loadRecipe,
-    createSocket,
-    releaseSocket
+    loadRecipe
   }
 }

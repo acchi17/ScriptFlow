@@ -44,6 +44,7 @@ import { storeToRefs } from 'pinia'
 import RecipeItem from './RecipeItem.vue'
 import ExecutionLogView from './ExecutionLogView.vue'
 import { useSystemState } from '../composables/useSystemState'
+import { useEntryOperation } from '../composables/useEntryOperation'
 import { useTabStore } from '../stores/useTabStore'
 
 const EMPTY_STATE_MESSAGE = 'Click + or Load to create a tab.'
@@ -55,7 +56,8 @@ export default {
     ExecutionLogView
   },
   setup() {
-    const { isExecuting, showLog } = useSystemState()
+    const { showLog } = useSystemState()
+    const { isExecuting } = useEntryOperation()
     const entryManager = inject('entryManager')
     const tabStore = useTabStore()
     const { tabs, activeTabId, visibleTabs, isTabLimitReached } = storeToRefs(tabStore)

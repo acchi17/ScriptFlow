@@ -12,7 +12,7 @@
 <script>
 import BlockListView from './BlockListView.vue';
 import EntryView from './EntryView.vue';
-import { useSystemState } from '../composables/useSystemState';
+import { useEntryOperation } from '../composables/useEntryOperation';
 
 export default {
   name: 'SideArea',
@@ -25,7 +25,7 @@ export default {
     refreshKey: { type: Number, default: 0 }
   },
   setup() {
-    const { isExecuting } = useSystemState()
+    const { isExecuting } = useEntryOperation()
     return { isExecuting }
   }
 }

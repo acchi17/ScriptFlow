@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useSystemState } from './useSystemState'
+import { useEntryOperation } from './useEntryOperation'
 
 /**
  * Provides drag functionality as a composable function
@@ -7,6 +8,7 @@ import { useSystemState } from './useSystemState'
  */
 export function useDraggable() {
   const dragDropState = useSystemState()
+  const { isExecuting } = useEntryOperation()
   // Dragging state
   const isDragging = ref(false)
   
@@ -26,7 +28,7 @@ export function useDraggable() {
    * @param {DragEvent} event - The drag event
    */
   const onDragStart = (event) => {
-    if (dragDropState.isExecuting.value) {
+    if (isExecuting.value) {
       event.preventDefault()
       return
     }

@@ -1,5 +1,6 @@
 import { ref, computed } from 'vue'
 import { useSystemState } from './useSystemState'
+import { useEntryOperation } from './useEntryOperation'
 
 /**
  * Provides drop functionality as a composable function
@@ -7,6 +8,7 @@ import { useSystemState } from './useSystemState'
  */
 export function useDroppable() {
   const dragDropState = useSystemState()
+  const { isExecuting } = useEntryOperation()
   // State indicating whether drag is entering the area
   const isDragEntering = ref(false)
   
@@ -24,7 +26,7 @@ export function useDroppable() {
   const isDroppable = (entryId) => {
     return computed(() => {
       // Not droppable if currently executing an entry
-      if (dragDropState.isExecuting.value) return false
+      if (isExecuting.value) return false
       // Not droppable if no dragging is occurring
       if (!dragDropState.isDragging.value) {
         return false

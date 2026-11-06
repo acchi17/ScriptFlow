@@ -49,7 +49,6 @@ beforeEach(async () => {
   store = app.runWithContext(() => useTabStore())
   systemState = app.runWithContext(() => useSystemState())
   // useSystemState holds module-level state; start every test from a clean one.
-  systemState.setExecuting(false)
   systemState.clearError()
   operation = app.runWithContext(() => useEntryOperation())
 })
@@ -78,6 +77,38 @@ function buildSampleRecipe(metaName) {
 function childNames(rootId) {
   return entryManager.getChildren(rootId).map(id => entryManager.getEntryName(id))
 }
+
+describe('useEntryOperation.execute', () => {
+  it('holds isExecuting while the function runs and returns its result', async () => {
+    let executingDuringCall = null
+    const fn = vi.fn(async (a, b) => {
+      executingDuringCall = operation.isExecuting.value
+      return a + b
+    })
+
+    const result = await operation.execute(fn, 1, 2)
+
+    expect(fn).toHaveBeenCalledWith(1, 2)
+    expect(result).toBe(3)
+    expect(executingDuringCall).toBe(true)
+    expect(operation.isExecuting.value).toBe(false)
+  })
+
+  it('releases isExecuting and rethrows when the function throws', async () => {
+    await expect(operation.execute(async () => { throw new Error('boom') })).rejects.toThrow('boom')
+
+    expect(operation.isExecuting.value).toBe(false)
+  })
+
+  it('shares isExecuting between callers', async () => {
+    const other = app.runWithContext(() => useEntryOperation())
+    let otherDuringCall = null
+
+    await operation.execute(async () => { otherDuringCall = other.isExecuting.value })
+
+    expect(otherDuringCall).toBe(true)
+  })
+})
 
 describe('useEntryOperation.loadRecipe', () => {
   it('does not create a tab and returns false when the user cancels', async () => {
@@ -152,14 +183,14 @@ describe('useEntryOperation.loadRecipe', () => {
     let executingDuringPick = null
     const pick = platformService.openRecipe.getMockImplementation()
     platformService.openRecipe.mockImplementation(async () => {
-      executingDuringPick = systemState.isExecuting.value
+      executingDuringPick = operation.isExecuting.value
       return pick()
     })
 
     await operation.loadRecipe()
 
     expect(executingDuringPick).toBe(true)
-    expect(systemState.isExecuting.value).toBe(false)
+    expect(operation.isExecuting.value).toBe(false)
   })
 })
 
@@ -211,6 +242,6 @@ describe('useEntryOperation.saveRecipe', () => {
 
     expect(systemState.lastError.value).toBe('disk full')
     expect(store.getTabByRootId(tab.rootEntryId).label).toBe('Recipe 1')
-    expect(systemState.isExecuting.value).toBe(false)
+    expect(operation.isExecuting.value).toBe(false)
   })
 })

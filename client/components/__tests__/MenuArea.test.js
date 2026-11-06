@@ -35,7 +35,6 @@ beforeEach(() => {
 
   // useSystemState holds module-level state; start every test from a clean one.
   const systemState = app.runWithContext(() => useSystemState())
-  systemState.setExecuting(false)
   systemState.clearError()
 })
 
