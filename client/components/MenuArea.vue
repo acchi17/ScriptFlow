@@ -47,8 +47,8 @@ export default {
       event.dataTransfer.setData('entryName', event.currentTarget.dataset.entryName)
       event.dataTransfer.setData('sourceId', undefined)
     })
-    const { showLog, toggleLog, isExecuting, lastError } = useSystemState()
-    const { lastReport, saveRecipe, loadRecipe } = useEntryOperation()
+    const { showLog, toggleLog, lastError } = useSystemState()
+    const { isExecuting, lastReport, saveRecipe, loadRecipe } = useEntryOperation()
     const tabStore = useTabStore()
 
     async function onSaveRecipe() {

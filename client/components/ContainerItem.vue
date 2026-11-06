@@ -57,10 +57,10 @@ export default {
       onDragEnd,
       setOnDragStartCallback
     } = useDraggable()
-    const { executeEntry } = useEntryOperation()
+    const { isExecuting, execute } = useEntryOperation()
     const entryManager = inject('entryManager')
+    const entryExecutionService = inject('entryExecutionService')
     const {
-      isExecuting,
       getSelectedEntryId,
       setSelection,
       clearSelection,
@@ -116,7 +116,7 @@ export default {
       
       try {
         // Execute the entry using EntryExecutionService
-        await executeEntry(props.entryId)
+        await execute(() => entryExecutionService.executeEntry(props.entryId))
         console.log('Container execution completed')
       } catch (error) {
         console.error('Error executing container:', error)

@@ -70,15 +70,16 @@ export default {
 
   setup(props) {
     const entryManager = inject('entryManager')
-    const { executeEntry } = useEntryOperation()
-    const { isExecuting, cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
+    const entryExecutionService = inject('entryExecutionService')
+    const { isExecuting, execute } = useEntryOperation()
+    const { cancelConnection, getSelectedEntryId, clearSelection } = useSystemState()
 
     const clearRecipe = () => {
       entryManager.clearEntries(props.entryId)
     }
 
     const executeRecipe = () => {
-      executeEntry(props.entryId)
+      execute(() => entryExecutionService.executeEntry(props.entryId))
     }
 
     const showCommSetting = ref(false)
