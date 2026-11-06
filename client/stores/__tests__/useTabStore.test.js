@@ -20,6 +20,8 @@ beforeEach(() => {
   app = createApp({})
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
+  // saveTab()/openRecipeInNewTab() are tested in useTabStore.recipe.test.js
+  app.provide('entryPersistanceService', {})
   const pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)

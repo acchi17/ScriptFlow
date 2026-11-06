@@ -23,7 +23,8 @@ function mountMainArea() {
           createComm: vi.fn(),
           deleteComm: vi.fn().mockResolvedValue(false),
           shutdownRunner: vi.fn().mockResolvedValue(undefined)
-        }
+        },
+        entryPersistanceService: {}
       },
       stubs: {
         RecipeItem: RecipeItemStub,

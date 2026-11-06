@@ -26,6 +26,7 @@ export function labelFromFileName(fileName) {
 export const useTabStore = defineStore('tab', () => {
   const entryManager = inject('entryManager')
   const entryExecutionService = inject('entryExecutionService')
+  const entryPersistanceService = inject('entryPersistanceService')
   const { resetState } = useSystemState()
 
   // state
@@ -140,6 +141,46 @@ export const useTabStore = defineStore('tab', () => {
     if (tab) tab.scrollTop = scrollTop
   }
 
+  /**
+   * Saves the tab's recipe. The tab's label is suggested as the file name; on success
+   * the tab's label becomes the saved file name (without extension).
+   * Errors from the save are passed through to the caller.
+   *
+   * @param {string} tabId
+   * @returns {Promise<string|null>} the saved file name/path, or null if the tab does not
+   *   exist or the user canceled
+   */
+  async function saveTab(tabId) {
+    const tab = tabs.value.find(t => t.id === tabId)
+    if (!tab) return null
+    const savedName = await entryPersistanceService.saveRecipe(tab.rootEntryId, tab.label)
+    setTabLabelFromFileName(tab.rootEntryId, savedName)
+    return savedName ?? null
+  }
+
+  /**
+   * Lets the user pick a recipe file and restores it into a newly created (and active) tab
+   * labeled with the file name. If restoring fails, the created tab is closed so that no
+   * partially restored recipe is left behind, and the error is rethrown.
+   *
+   * @returns {Promise<object|null>} the restore report, or null if the user canceled
+   * @throws {Error} if no more tabs can be created, or if picking/restoring fails
+   */
+  async function openRecipeInNewTab() {
+    const picked = await entryPersistanceService.pickRecipe()
+    if (!picked) return null
+
+    const tab = createTab(labelFromFileName(picked.fileName))
+    if (!tab) throw new Error('Cannot open more tabs.')
+
+    try {
+      return await entryPersistanceService.restoreRecipe(picked.data, tab.rootEntryId)
+    } catch (e) {
+      await closeTab(tab.id)
+      throw e
+    }
+  }
+
   return {
     tabs,
     activeTabId,
@@ -154,6 +195,8 @@ export const useTabStore = defineStore('tab', () => {
     setCommStatus,
     setTabLabel,
     setTabLabelFromFileName,
-    setScrollTop
+    setScrollTop,
+    saveTab,
+    openRecipeInNewTab
   }
 })

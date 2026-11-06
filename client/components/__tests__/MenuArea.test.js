@@ -5,7 +5,6 @@ import { createPinia, setActivePinia } from 'pinia'
 import MenuArea from '@/components/MenuArea.vue'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
 import { useTabStore, MAX_TABS } from '@/stores/useTabStore.js'
-import { useSystemState } from '@/composables/useSystemState.js'
 
 let entryManager
 let entryExecutionService
@@ -28,14 +27,11 @@ beforeEach(() => {
   const app = createApp({})
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
+  app.provide('entryPersistanceService', entryPersistanceService)
   pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)
   store = useTabStore()
-
-  // useSystemState holds module-level state; start every test from a clean one.
-  const systemState = app.runWithContext(() => useSystemState())
-  systemState.clearError()
 })
 
 afterEach(() => {
@@ -88,6 +84,18 @@ describe('MenuArea Save button', () => {
     expect(entryPersistanceService.saveRecipe.mock.calls[0][0]).toBe(t2.rootEntryId)
     expect(entryPersistanceService.saveRecipe.mock.calls[0][0]).not.toBe(t1.rootEntryId)
   })
+
+  it('alerts with the error message when saving fails', async () => {
+    store.createTab()
+    entryPersistanceService.saveRecipe.mockRejectedValue(new Error('disk full'))
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const wrapper = mountMenuArea()
+
+    await wrapper.find('.menu-save-btn').trigger('click')
+    await flushPromises()
+
+    expect(alertSpy).toHaveBeenCalledWith('Failed to save recipe: disk full')
+  })
 })
 
 describe('MenuArea Load button', () => {
@@ -121,5 +129,31 @@ describe('MenuArea Load button', () => {
     expect(store.activeTab.label).toBe('foo')
     expect(entryPersistanceService.restoreRecipe).toHaveBeenCalledWith({}, store.activeTab.rootEntryId)
     expect(entryManager.getChildren(tab.rootEntryId)).toEqual([blockId])
+  })
+
+  it('alerts with the error message and leaves no new tab when loading fails', async () => {
+    const tab = store.createTab()
+    entryPersistanceService.pickRecipe.mockResolvedValue({ fileName: 'foo.json', data: {} })
+    entryPersistanceService.restoreRecipe.mockRejectedValue(new Error('bad recipe'))
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {})
+    const wrapper = mountMenuArea()
+
+    await wrapper.find('.menu-load-btn').trigger('click')
+    await flushPromises()
+
+    expect(alertSpy).toHaveBeenCalledWith('Failed to load recipe: bad recipe')
+    expect(store.tabs.map(t => t.id)).toEqual([tab.id])
+  })
+
+  it('logs restore warnings to the console', async () => {
+    entryPersistanceService.pickRecipe.mockResolvedValue({ fileName: 'foo.json', data: {} })
+    entryPersistanceService.restoreRecipe.mockResolvedValue({ entryCount: 0, connectionCount: 0, warnings: ['w1'] })
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const wrapper = mountMenuArea()
+
+    await wrapper.find('.menu-load-btn').trigger('click')
+    await flushPromises()
+
+    expect(warnSpy).toHaveBeenCalledWith('Recipe loaded with warnings:', ['w1'])
   })
 })
