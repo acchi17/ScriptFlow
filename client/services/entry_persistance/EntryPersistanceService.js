@@ -23,30 +23,30 @@ export default class EntryPersistanceService {
   }
 
   /**
-   * @param {string} rootId - ID of the root entry to serialise
+   * @param {string} entryId - ID of the entry to serialise
    * @returns {Object} recipe object
    */
-  buildRecipe(rootId) {
-    return this._serializer.buildRecipe(rootId)
+  buildRecipe(entryId) {
+    return this._serializer.buildRecipe(entryId)
   }
 
   /**
    * @param {Object} data - Parsed recipe object
-   * @param {string} rootId - ID of the live root entry to restore into
+   * @param {string} entryId - ID of the live entry to restore into
    * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }>}
    */
-  async restoreRecipe(data, rootId) {
-    return this._deserializer.restoreRecipe(data, rootId)
+  async restoreRecipe(data, entryId) {
+    return this._deserializer.restoreRecipe(data, entryId)
   }
 
   /**
-   * Build the recipe of the given root and let the user pick where to save it.
-   * @param {string} rootId - ID of the root entry to save
+   * Build the recipe of the given entry and let the user pick where to save it.
+   * @param {string} entryId - ID of the entry to save
    * @param {string} name - Suggested file name (without extension)
    * @returns {Promise<string|null>} chosen path/name, or null if canceled
    */
-  async saveRecipe(rootId, name = '') {
-    const data = this.buildRecipe(rootId)
+  async saveRecipe(entryId, name = '') {
+    const data = this.buildRecipe(entryId)
     return this.platformService.saveRecipeAs(data, `${name || 'recipe'}.json`)
   }
 

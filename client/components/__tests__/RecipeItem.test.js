@@ -15,7 +15,7 @@ const CommSettingViewStub = {
 
 const ConnectionViewStub = {
   name: 'ConnectionView',
-  props: { rootId: { type: String, required: true } },
+  props: { entryId: { type: String, required: true } },
   template: '<svg class="connection-view-stub" />'
 }
 
@@ -58,13 +58,13 @@ function mountRecipe(entryManager, entryId, pinia = createTestPinia(entryManager
 }
 
 describe('RecipeItem layouts', () => {
-  it('passes its entryId to ConnectionView as root-id', () => {
+  it('passes its entryId to ConnectionView as entry-id', () => {
     const entryManager = new EntryHandlerFacade()
     const rootId = createRoot(entryManager)
 
     const wrapper = mountRecipe(entryManager, rootId)
 
-    expect(wrapper.findComponent(ConnectionViewStub).props('rootId')).toBe(rootId)
+    expect(wrapper.findComponent(ConnectionViewStub).props('entryId')).toBe(rootId)
   })
 
   it('calls clearEntries with its entryId when the Clear button is clicked', async () => {

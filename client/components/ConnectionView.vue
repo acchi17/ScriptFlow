@@ -32,8 +32,7 @@ export default {
   components: { ConnectionItem },
 
   props: {
-    // ID of the root entry whose connections are drawn
-    rootId: { type: String, required: true }
+    entryId: { type: String, required: true }
   },
 
   setup(props) {
@@ -41,10 +40,9 @@ export default {
 
     const connectionsWithLanes = computed(() => {
       entryManager.connectionsTick.value
-      // ?. since the root (and its tick) may be removed before this component unmounts
-      entryManager.getLayoutsTick(props.rootId)?.value
-      if (!entryManager.isRoot(props.rootId)) return []
-      const connections = entryManager.getConnections(props.rootId)
+      entryManager.getLayoutsTick(props.entryId)?.value
+      if (!entryManager.isRoot(props.entryId)) return []
+      const connections = entryManager.getConnections(props.entryId)
 
       const withCoords = []
       for (const conn of connections) {

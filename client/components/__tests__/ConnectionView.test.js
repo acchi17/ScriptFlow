@@ -30,7 +30,7 @@ const ConnectionItemStub = {
 
 function mountView(entryManager, rootId) {
   return mount(ConnectionView, {
-    props: { rootId },
+    props: { entryId: rootId },
     global: {
       provide: { entryManager },
       stubs: { ConnectionItem: ConnectionItemStub }

@@ -34,37 +34,37 @@ export default class RecipeDeserializer {
    * Restore a recipe object into the live managers.
    * Only the given root is cleared and restored; other roots are not affected.
    * @param {Object} data - Parsed recipe object
-   * @param {string} rootId - ID of the live root entry to restore into
+   * @param {string} entryId - ID of the live entry to restore into
    * @returns {Promise<{ entryCount: number, connectionCount: number, warnings: string[] }>}
-   * @throws {Error} If the format is unsupported or rootId is not a registered root
+   * @throws {Error} If the format is unsupported or entryId is not a registered root
    *   (thrown before the ECS is modified)
    */
-  async restoreRecipe(data, rootId) {
+  async restoreRecipe(data, entryId) {
     const recipe = this._migrate(data)
     const warnings = []
 
-    if (!this.entryManager.isRoot(rootId)) {
-      throw new Error(`RecipeDeserializer.restoreRecipe: "${rootId}" is not a root entry`)
+    if (!this.entryManager.isRoot(entryId)) {
+      throw new Error(`RecipeDeserializer.restoreRecipe: "${entryId}" is not a root entry`)
     }
 
-    this.entryManager.clearEntries(rootId)
-    await this.entryExecutionService.deleteComm(rootId)
+    this.entryManager.clearEntries(entryId)
+    await this.entryExecutionService.deleteComm(entryId)
 
-    const idMap = new Map([[recipe.root.id, rootId]])
-    this.entryManager.setEntryName(rootId, recipe.root.name)
-    this.entryManager.setEntryLabel(rootId, recipe.root.label ?? '')
-    this.entryManager.setEntryComment(rootId, recipe.root.comment ?? '')
+    const idMap = new Map([[recipe.root.id, entryId]])
+    this.entryManager.setEntryName(entryId, recipe.root.name)
+    this.entryManager.setEntryLabel(entryId, recipe.root.label ?? '')
+    this.entryManager.setEntryComment(entryId, recipe.root.comment ?? '')
 
     const savedChildren = Array.isArray(recipe.root.children) ? recipe.root.children : []
     savedChildren.forEach((childNode, index) => {
-      this._restoreEntries(childNode, rootId, index, idMap, warnings)
+      this._restoreEntries(childNode, entryId, index, idMap, warnings)
     })
 
     this._restoreConnections(recipe, idMap, warnings)
     await this._restoreComm(recipe.root, idMap)
 
-    const entryCount = this.entryManager.getAllDescendants(rootId).length - 1
-    const connectionCount = this.entryManager.getConnections(rootId).length
+    const entryCount = this.entryManager.getAllDescendants(entryId).length - 1
+    const connectionCount = this.entryManager.getConnections(entryId).length
 
     return { entryCount, connectionCount, warnings }
   }

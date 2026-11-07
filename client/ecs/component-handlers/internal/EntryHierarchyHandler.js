@@ -85,7 +85,7 @@ export default class EntryHierarchyHandler {
 
   /**
    * Get the children of a container
-   * @param {string} entryId - ID of the container
+   * @param {string} entryId - ID of the parent entry
    * @returns {Array<string>} Child entry IDs of the container, or an empty array if not a registered container
    */
   getChildren(entryId) {
@@ -114,7 +114,7 @@ export default class EntryHierarchyHandler {
 
   /**
    * Get the sequence number (1-based visual position) of an entry.
-   * @param {string} entryId
+   * @param {string} entryId - ID of the entry
    * @returns {number|null} Sequence number or null if not found
    */
   getSequenceNumber(entryId) {
@@ -125,12 +125,12 @@ export default class EntryHierarchyHandler {
    * Get the reactive counter for one root's tree, incremented on every structural
    * change (add/remove/reorder/move) within it. Watch this to react to mutations
    * in a specific tree without traversing it, and without being notified about
-   * unrelated roots' changes. Undefined if rootId was never registered as a root.
-   * @param {string} rootId
+   * unrelated roots' changes. Undefined if entryId was never registered as a root.
+   * @param {string} entryId - ID of the entry
    * @returns {import('vue').Ref<number>|undefined}
    */
-  getHierarchyTick(rootId) {
-    return this._hierarchyTicks.get(rootId);
+  getHierarchyTick(entryId) {
+    return this._hierarchyTicks.get(entryId);
   }
 
   /**
@@ -159,14 +159,14 @@ export default class EntryHierarchyHandler {
   /**
    * Unregister an entry as a root, clearing its isRoot flag if still present
    * and dropping its hierarchy tick so it doesn't linger after removal.
-   * @param {string} rootId
+   * @param {string} entryId
    */
-  unsetRoot(rootId) {
-    const hierarchy = this._hierarchies.get(rootId);
+  unsetRoot(entryId) {
+    const hierarchy = this._hierarchies.get(entryId);
     if (hierarchy) {
       hierarchy.isRoot = false;
     }
-    this._hierarchyTicks.delete(rootId);
+    this._hierarchyTicks.delete(entryId);
   }
 
   /**
@@ -270,10 +270,10 @@ export default class EntryHierarchyHandler {
   /**
    * Rebuild the sequence number map for one root's tree using DFS, restarting
    * belonging to the same root, so other roots' numbers are left untouched.
-   * @param {string|null} rootId
+   * @param {string|null} entryId - ID of the entry to rebuild
    */
-  rebuildSequenceNumbers(rootId) {
-    const hierarchy = this._hierarchies.get(rootId);
+  rebuildSequenceNumbers(entryId) {
+    const hierarchy = this._hierarchies.get(entryId);
     if (hierarchy?.isRoot && hierarchy.children !== null) {
       let counter = 0;
       const traverse = (childIds) => {
@@ -286,7 +286,7 @@ export default class EntryHierarchyHandler {
       };
       traverse(hierarchy.children);
     }
-    const tick = this.getHierarchyTick(rootId);
+    const tick = this.getHierarchyTick(entryId);
     if (tick) tick.value++;
   }
 }

@@ -34,7 +34,7 @@
           </div>
         </div>
         <div class="connection-panel">
-          <ConnectionView :root-id="entryId" />
+          <ConnectionView :entry-id="entryId" />
         </div>
       </div>
     </div>

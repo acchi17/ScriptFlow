@@ -14,13 +14,13 @@ const DEFAULT_COMM = { useTcpIp: false, host: '127.0.0.1', port: 8080 }
  * connection handlers.
  */
 export default class EntryHandlerFacade {
-  constructor(world = new World(), entryDefnitionStore = null) {
+  constructor(world = new World(), entryDefinitionStore = null) {
     // ECS world holding entry components
     this._world = world;
     // Component store holding entry info (name/label/comment) data
     this._entryInfos = world.getStore('entryInfos');
     // Provides block definitions (parameters, command) for entries
-    this.entryDefnitionStore = entryDefnitionStore;
+    this.entryDefinitionStore = entryDefinitionStore;
     // Handles parent-child tree structure between entries
     this.hierarchyHandler = new EntryHierarchyHandler(world);
     // Handles parameter values and types of entries
@@ -56,6 +56,16 @@ export default class EntryHandlerFacade {
       this.paramHandler.removeParamDef(childId);
       this._world.despawn(childId);
     }
+  }
+
+  /**
+   * Bump the layout tick of a entry, if it exists.
+   * @param {string} entryId - ID of the entry
+   * @private
+   */
+  _bumpLayoutsTick(entryId) {
+    const tick = this._layoutsTicks.get(entryId);
+    if (tick) tick.value++;
   }
   // #endregion
 
@@ -127,47 +137,25 @@ export default class EntryHandlerFacade {
    */
   getEntryCommand(entryId) {
     const entryName = this.getEntryName(entryId);
-    return this.entryDefnitionStore?.getBlockDefinition(entryName)?.command;
+    return this.entryDefinitionStore?.getBlockDefinition(entryName)?.command;
   }
   // #endregion
   
   // #region Entry layout related
   /**
-   * Throw if rootId is not a registered root.
-   * @param {string} rootId
-   * @param {string} methodName - Caller name used in the error message
-   * @private
-   */
-  _assertRoot(rootId, methodName) {
-    if (!this.isRoot(rootId)) {
-      throw new Error(`EntryHandlerFacade.${methodName}: "${rootId}" is not a root entry`);
-    }
-  }
-
-  /**
-   * Bump the layout tick of a root, if it exists.
-   * @param {string} rootId
-   * @private
-   */
-  _bumpLayoutsTick(rootId) {
-    const tick = this._layoutsTicks.get(rootId);
-    if (tick) tick.value++;
-  }
-
-  /**
    * Get the reactive counter for one root's layouts, incremented whenever a layout
    * belonging to that root is set or cleared. Read this inside a computed() to react
    * to layout changes of a specific root without deep reactivity.
-   * @param {string} rootId
-   * @returns {import('vue').Ref<number>|undefined} The tick, or undefined if rootId is not a registered root
+   * @param {string} entryId - ID of the entry
+   * @returns {import('vue').Ref<number>|undefined} The tick, or undefined if entryId is not a registered root
    */
-  getLayoutsTick(rootId) {
-    return this._layoutsTicks.get(rootId);
+  getLayoutsTick(entryId) {
+    return this._layoutsTicks.get(entryId);
   }
 
   /**
    * Record the measured Y position and height of an entry's header element.
-   * The owning root is resolved via getRootOf() and stored with the layout.
+   * The owning root is resolved via getRootOf() to bump its tick.
    * Entries that don't belong to any root are ignored.
    * @param {string} entryId
    * @param {number} y
@@ -176,45 +164,41 @@ export default class EntryHandlerFacade {
   addLayout(entryId, y, height) {
     const rootId = this.getRootOf(entryId);
     if (!rootId) return;
-    this._layouts.add(entryId, { y, height, rootId });
+    this._layouts.add(entryId, { y, height });
     this._bumpLayoutsTick(rootId);
   }
 
   /**
    * Get the measured layout of an entry.
-   * @param {string} entryId
-   * @returns {{ y: number, height: number, rootId: string } | undefined}
+   * @param {string} entryId - ID of the entry
+   * @returns {{ y: number, height: number } | undefined}
    */
   getLayout(entryId) {
     return this._layouts.get(entryId);
   }
 
   /**
-   * Get all recorded layouts belonging to the given root.
-   * @param {string} rootId - ID of a registered root entry
-   * @returns {Array<[string, { y: number, height: number, rootId: string }]>}
-   * @throws {Error} If rootId is not a registered root
+   * Get the layouts of an entry and all its descendants.
+   * @param {string} entryId - ID of the entry
+   * @returns {Array<[string, { y: number, height: number }]>}
    */
-  getAllLayouts(rootId) {
-    this._assertRoot(rootId, 'getAllLayouts');
-    return Array.from(this._layouts.entries()).filter(([, layout]) => layout.rootId === rootId);
+  getAllLayouts(entryId) {
+    return this.hierarchyHandler.getAllDescendants(entryId)
+      .filter(id => this._layouts.get(id))
+      .map(id => [id, this._layouts.get(id)]);
   }
 
   /**
    * Clear the recorded layouts belonging to the given root. Other roots' layouts are kept.
-   * @param {string} rootId - ID of a registered root entry
-   * @throws {Error} If rootId is not a registered root
+   * No-op if entryId is not a registered root.
+   * @param {string} entryId - ID of the entry
    */
-  clearLayouts(rootId) {
-    this._assertRoot(rootId, 'clearLayouts');
-    const entryIds = [];
-    for (const [entryId, layout] of this._layouts.entries()) {
-      if (layout.rootId === rootId) entryIds.push(entryId);
+  clearLayouts(entryId) {
+    if (!this.isRoot(entryId)) return;
+    for (const id of this.hierarchyHandler.getAllDescendants(entryId)) {
+      this._layouts.remove(id);
     }
-    for (const entryId of entryIds) {
-      this._layouts.remove(entryId);
-    }
-    this._bumpLayoutsTick(rootId);
+    this._bumpLayoutsTick(entryId);
   }
   // #endregion
 
@@ -245,11 +229,11 @@ export default class EntryHandlerFacade {
    * Get the reactive counter for one root's tree, incremented on every structural
    * change (add/remove/reorder/move) within it. Watch this to react to mutations
    * in a specific tree without traversing it.
-   * @param {string} rootId
+   * @param {string} entryId - ID of the entry
    * @returns {import('vue').Ref<number>|undefined}
    */
-  getHierarchyTick(rootId) {
-    return this.hierarchyHandler.getHierarchyTick(rootId);
+  getHierarchyTick(entryId) {
+    return this.hierarchyHandler.getHierarchyTick(entryId);
   }
 
   /**
@@ -346,12 +330,12 @@ export default class EntryHandlerFacade {
     this._entryInfos.add(entryId, { name, label: '', comment: '' });
     if (type === 'block') {
       this.hierarchyHandler.initialize(entryId, true);
-      const defaultParams = this.entryDefnitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
+      const defaultParams = this.entryDefinitionStore?.getBlockParamDef(name) ?? { input: {}, output: {} };
       this.paramHandler.setInputParamDef(entryId, defaultParams.input);
       this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
     } else if (type === 'container') {
       this.hierarchyHandler.initialize(entryId, false);
-      const defaultParams = this.entryDefnitionStore?.getContainerParamDef(name) ?? { input: {}, output: {} };
+      const defaultParams = this.entryDefinitionStore?.getContainerParamDef(name) ?? { input: {}, output: {} };
       this.paramHandler.setInputParamDef(entryId, defaultParams.input);
       this.paramHandler.setOutputParamDef(entryId, defaultParams.output);
     }
@@ -424,21 +408,21 @@ export default class EntryHandlerFacade {
   }
 
   /**
-   * Remove all descendants of the given root entry (the root itself is kept).
+   * Remove all descendants of the given entry (the entry itself is kept).
    * Other roots and their descendants/connections are not affected.
-   * @param {string} rootId - ID of a registered root entry
+   * @param {string} entryId - ID of a registered root entry
    * @returns {boolean} Whether clearing was successful
-   * @throws {Error} If rootId is not a registered root
+   * @throws {Error} If entryId is not a registered root
    */
-  clearEntries(rootId) {
-    if (!this.isRoot(rootId)) {
-      throw new Error(`EntryHandlerFacade.clearEntries: "${rootId}" is not a root entry`);
+  clearEntries(entryId) {
+    if (!this.isRoot(entryId)) {
+      throw new Error(`EntryHandlerFacade.clearEntries: "${entryId}" is not a root entry`);
     }
 
-    this._removeDescendants(rootId);
+    this._removeDescendants(entryId);
 
     // Root itself isn't despawned, so its children array must be cleared explicitly.
-    this.hierarchyHandler.clearChildren(rootId);
+    this.hierarchyHandler.clearChildren(entryId);
 
     return true;
   }
@@ -574,17 +558,17 @@ export default class EntryHandlerFacade {
 
   /**
    * Get the connections whose both endpoints belong to the given root.
-   * @param {string} rootId - ID of a registered root entry
+   * @param {string} entryId - ID of the entry
    * @returns {Array<Object>}
-   * @throws {Error} If rootId is not a registered root
+   * @throws {Error} If entryId is not a registered root
    */
-  getConnections(rootId) {
-    if (!this.isRoot(rootId)) {
-      throw new Error(`EntryHandlerFacade.getConnections: "${rootId}" is not a root entry`);
+  getConnections(entryId) {
+    if (!this.isRoot(entryId)) {
+      throw new Error(`EntryHandlerFacade.getConnections: "${entryId}" is not a root entry`);
     }
     return this.connectionHandler.getConnections().filter(conn =>
-      this.getRootOf(conn.output.entryId) === rootId &&
-      this.getRootOf(conn.input.entryId) === rootId
+      this.getRootOf(conn.output.entryId) === entryId &&
+      this.getRootOf(conn.input.entryId) === entryId
     );
   }
 

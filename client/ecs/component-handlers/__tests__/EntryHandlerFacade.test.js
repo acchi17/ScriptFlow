@@ -418,7 +418,7 @@ describe('EntryHandlerFacade layouts', () => {
 
     expect(idsA.sort()).toEqual([t.blockA1Id, t.blockA2Id].sort())
     expect(idsB).toEqual([t.blockB1Id])
-    expect(t.entryManager.getLayout(t.blockA1Id)).toEqual({ y: 10, height: 20, rootId: t.rootAId })
+    expect(t.entryManager.getLayout(t.blockA1Id)).toEqual({ y: 10, height: 20 })
   })
 
   it("keeps other roots' layouts when clearing one root", () => {
@@ -431,7 +431,7 @@ describe('EntryHandlerFacade layouts', () => {
     expect(t.entryManager.getAllLayouts(t.rootAId)).toEqual([])
     expect(t.entryManager.getLayout(t.blockA1Id)).toBeUndefined()
     expect(t.entryManager.getAllLayouts(t.rootBId)).toEqual([
-      [t.blockB1Id, { y: 30, height: 20, rootId: t.rootBId }]
+      [t.blockB1Id, { y: 30, height: 20 }]
     ])
   })
 
@@ -463,14 +463,12 @@ describe('EntryHandlerFacade layouts', () => {
     expect(t.entryManager.getLayoutsTick(t.rootBId)).toBeDefined()
   })
 
-  it('throws from clearLayouts/getAllLayouts when rootId is missing or not a root', () => {
+  it('does nothing in clearLayouts when rootId is missing or not a root', () => {
     const t = createTwoRoots()
     t.entryManager.addLayout(t.blockA1Id, 10, 20)
 
-    expect(() => t.entryManager.clearLayouts()).toThrow(/not a root entry/)
-    expect(() => t.entryManager.clearLayouts(t.blockA1Id)).toThrow(/not a root entry/)
-    expect(() => t.entryManager.getAllLayouts()).toThrow(/not a root entry/)
-    expect(() => t.entryManager.getAllLayouts(t.blockA1Id)).toThrow(/not a root entry/)
+    expect(() => t.entryManager.clearLayouts()).not.toThrow()
+    expect(() => t.entryManager.clearLayouts(t.blockA1Id)).not.toThrow()
     expect(t.entryManager.getLayout(t.blockA1Id)).toBeDefined()
   })
 })
