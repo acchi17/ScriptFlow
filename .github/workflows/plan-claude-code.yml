@@ -45,8 +45,8 @@ jobs:
           files=""
           for f in doc/design/draft/*.md; do
             [ -f "$f" ] || continue
-            # Fully resolved = at least one [Resolved], no [Open] left, and no plan yet
-            if grep -qF '[Resolved]' "$f" && ! grep -qF '[Open]' "$f" \
+            # Fully resolved = no [Open] left (a draft with no design considerations counts too) and no plan yet
+            if ! grep -qF '[Open]' "$f" \
               && [ ! -f "doc/design/impl-plan/$(basename "$f" .md)-plan.md" ]; then
               files="$files $f"
             fi

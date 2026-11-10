@@ -1,4 +1,4 @@
-name: Claude Code Reminder
+name: Remind Design Considerations
 on:
   schedule:
     - cron: "0 18 * * 0-4"

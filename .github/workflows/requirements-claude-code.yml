@@ -1,0 +1,129 @@
+name: Requirements Hearing
+on:
+  # Creating an issue with labels also fires "labeled", so "opened" is not needed
+  issues:
+    types: [labeled]
+  issue_comment:
+    types: [created]
+
+# One run per issue at a time; a reply posted during a run is handled by the next run
+concurrency:
+  group: requirements-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  hearing:
+    # Comments by AI are posted with GITHUB_TOKEN and never trigger workflows; the actor check also excludes bots
+    if: |
+      contains(github.event.issue.labels.*.name, 'requirements') &&
+      !github.event.issue.pull_request &&
+      github.actor == github.repository_owner &&
+      (github.event_name == 'issue_comment' || github.event.label.name == 'requirements')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+      pull-requests: write
+      id-token: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      ISSUE: ${{ github.event.issue.number }}
+      DRAFT_BRANCH: requirements/issue-${{ github.event.issue.number }}
+    steps:
+      - name: Extract base branch from issue title
+        id: branch
+        env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          # The "[branch] ..." title format is required by the downstream find-targets workflow
+          if [[ "$ISSUE_TITLE" =~ ^\[([A-Za-z0-9._/-]+)\] ]]; then
+            branch="${BASH_REMATCH[1]}"
+          else
+            gh issue comment "$ISSUE" --body 'Issue title must start with "[branch name]" (e.g. "[main] Add X"). Fix the title and comment again.'
+            exit 1
+          fi
+          # Create the branch from the default branch if it does not exist yet
+          if ! gh api "repos/$GH_REPO/branches/$branch" --silent 2>/dev/null; then
+            sha=$(gh api "repos/$GH_REPO/git/ref/heads/$DEFAULT_BRANCH" --jq '.object.sha')
+            gh api "repos/$GH_REPO/git/refs" -f ref="refs/heads/$branch" -f sha="$sha" --silent
+            gh issue comment "$ISSUE" --body "Branch \`$branch\` did not exist, so it was created from \`$DEFAULT_BRANCH\`."
+          fi
+          echo "name=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.branch.outputs.name }}
+
+      - name: Hear requirements or write the draft
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          base_branch: ${{ steps.branch.outputs.name }}
+          prompt: |
+            You are the requirements analyst for this project. Do not write implementation code.
+            Issue #${{ env.ISSUE }} describes something the user wants to achieve. Turn it into requirements
+            through a hearing held in the issue comments.
+
+            1. Read the issue and its whole comment history with `gh issue view ${{ env.ISSUE }} --comments`.
+               The history is the hearing so far: your earlier questions and the user's answers.
+            2. Investigate the code related to the request. Anything the code can answer must not be asked.
+            3. Decide the next action:
+               - If the user's latest comment is "/finalize", or the requirements are settled enough
+                 (purpose, scope, impact on UI/data/existing flows, constraints and acceptance criteria are
+                 clear), write the draft (step 4).
+               - Otherwise post one comment with `gh issue comment ${{ env.ISSUE }}` containing 3-5 questions.
+                 Pick the viewpoints that are still unclear: scope, purpose/background, priority
+                 (correctness / implementation cost / extensibility), impact scope, constraints, acceptance criteria.
+                 Prefer yes/no or multiple-choice questions, give your recommended answer for each, and
+                 number them so the user can answer briefly (e.g. "1: A, 2: yes").
+                 Do not repeat questions that are already answered. End the comment by noting that
+                 commenting "/finalize" writes the draft with the remaining points left open.
+                 Then stop; do not write any file.
+            4. Write the draft at doc/design/draft/<feature-name-in-kebab-case>.md, in the same language as the issue:
+               - Background and purpose
+               - Functional requirements (numbered)
+               - Out of scope
+               - Acceptance criteria mapped to the functional requirements
+               - Design considerations: one heading per point to be decided, labeled "[Open]" or "[Resolved]"
+                 (e.g. "### [Open] Where to store X"). Mark a point "[Resolved]" only when the hearing decided it,
+                 and record the decision and its reason. For each "[Open]" point, list the options, their
+                 trade-offs and your recommendation.
+               - Reference code by file path and identifier, never by line number
+               Only write that single file. Do not post a comment; the workflow reports the result.
+          claude_args: >-
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Write,Bash(gh issue view:*),Bash(gh issue comment:*)"
+
+      - name: Stage the draft
+        id: stage
+        run: |
+          # Only the draft folder is committed, even if AI agent touched other files
+          git add doc/design/draft/
+          file=$(git diff --cached --name-only | head -n 1)
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - name: Call commit-and-pr action
+        if: steps.stage.outputs.file != ''
+        uses: ./.github/actions/commit-and-pr
+        with:
+          branch: ${{ env.DRAFT_BRANCH }}
+          base: ${{ steps.branch.outputs.name }}
+          commit-message: "docs: add requirements draft ${{ steps.stage.outputs.file }}"
+          pr-title: "Requirements draft: ${{ steps.stage.outputs.file }}"
+          pr-body: |
+            Requirements draft written from the hearing in #${{ env.ISSUE }}.
+
+            Refs #${{ env.ISSUE }}
+
+      - name: Hand the issue over to the design-considerations workflows
+        if: steps.stage.outputs.file != ''
+        env:
+          FILE: ${{ steps.stage.outputs.file }}
+        run: |
+          gh label create design-considerations --color 0E8A16 2>/dev/null || true
+          # Removing "requirements" ends the hearing; "design-considerations" is picked up by find-targets
+          gh issue edit "$ISSUE" --remove-label requirements --add-label design-considerations
+          gh issue comment "$ISSUE" --body "Requirements draft written to \`$FILE\` (PR from \`$DRAFT_BRANCH\`). Remaining [Open] points will be reminded here."
