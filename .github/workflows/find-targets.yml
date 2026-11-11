@@ -30,8 +30,7 @@ jobs:
           list=$(gh issue list --label design-considerations --state open \
             --author "$REMIND_USER" --json number,title --limit 50 \
             | jq -c '[ .[]
-                | (.title | capture("^\\[(?<b>[^\\]]+)\\]")?) as $c
-                | {issue: .number, branch: $c.b} ]
-                | map(select(.branch | test("^[A-Za-z0-9._/-]+$")))')
+                | (.title | capture("^\\[(?<b>[A-Za-z0-9._/-]+)\\]")?) as $c
+                | {issue: .number, branch: $c.b} ]')
           echo "targets=$list" >> "$GITHUB_OUTPUT"
           echo "count=$(echo "$list" | jq length)" >> "$GITHUB_OUTPUT"
