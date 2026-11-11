@@ -1,6 +1,5 @@
 name: Requirements Hearing
 on:
-  # Creating an issue with labels also fires "labeled", so "opened" is not needed
   issues:
     types: [labeled]
   issue_comment:
@@ -13,7 +12,7 @@ concurrency:
 
 jobs:
   hearing:
-    # Comments by AI are posted with GITHUB_TOKEN and never trigger workflows; the actor check also excludes bots
+    # Only the repository owner drives the hearing; this also ignores Claude's own comments (posted as a bot)
     if: |
       contains(github.event.issue.labels.*.name, 'requirements') &&
       !github.event.issue.pull_request &&
@@ -101,7 +100,8 @@ jobs:
         id: stage
         run: |
           # Only the draft folder is committed, even if AI agent touched other files
-          git add doc/design/draft/
+          # A hearing turn writes no file, so the folder may not exist (git add would fail on a missing path)
+          [ -d doc/design/draft ] && git add doc/design/draft/
           file=$(git diff --cached --name-only | head -n 1)
           echo "file=$file" >> "$GITHUB_OUTPUT"
 
