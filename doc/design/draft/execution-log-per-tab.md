@@ -46,8 +46,8 @@ This shared log was a deliberate choice in `doc/design/completed/main-area-multi
 | AC-5 | Pressing `Clear` while tab 1 is active empties tab 1's log. Tab 2's log is unchanged when the user switches to it. | FR-5 |
 | AC-6 | After a tab is closed, its tree no longer exists in `ExecutionLogService`, and the other tabs' trees are unchanged. | FR-6 |
 | AC-7 | When the log panel is open and the user switches tabs, the panel stays open and shows the new tab's log. Toggling it closed hides it for every tab. | FR-7 |
-| AC-8 | When the total number of records across all tabs goes over 1000, the total is brought back to 1000 or fewer by removing the oldest top-level executions (with their descendants) across all tabs. The only exception is a single top-level execution that is still being recorded and alone has more than 1000 records; it is not removed by the cleanup. | FR-8 |
-| AC-9 | Unit tests (`client/components/__tests__/ExecutionLogView.test.js`, a new `client/services/log/__tests__/ExecutionLogService.test.js`, and `client/stores/__tests__/useTabStore.test.js`) are updated or added to cover AC-1 to AC-8, and `npm test` passes. | all |
+| AC-8 | When the total number of records across all tabs goes over 1000, the total is brought back to 1000 or fewer by removing the oldest records. The total never grows past the cap after any single `addLog()`. | FR-8 |
+| AC-9 | Existing unit tests (`client/components/__tests__/ExecutionLogView.test.js` and the service tests) are updated or extended to cover AC-1 to AC-8, and `npm test` passes. | all |
 
 ## Design Considerations
 
@@ -78,39 +78,44 @@ Reason: the user asked for it explicitly. It also makes per-tab Clear and discar
 ### [Resolved] Service API shape
 Decision: option A (chosen on the issue). The service gets `rootEntryId` parameters: `getLogs(rootEntryId)`, `clearLogs(rootEntryId)`, and a new `removeLogs(rootEntryId)`. `addLog()` / `updateLog()` keep their signatures and resolve the root internally.
 - `getLogs(rootEntryId)` returns a readonly reactive view of that root's tree. It returns an empty tree when the root has no records or `rootEntryId` is `null`/`undefined`. `ExecutionLogView` uses `computed(() => executionLogService.getLogs(tabStore.activeTab?.rootEntryId))`, so the content follows the active tab.
-- `clearLogs(rootEntryId)` empties that root's tree. `removeLogs(rootEntryId)` deletes the tree and its key; it is the hook called on tab close.
+- `clearLogs(rootEntryId)` empties that root's tree. `removeLogs(rootEntryId)` deletes the tree and its key; it can be used when a tab closes.
 - Option B (`getLogs()` returns the whole map, the view picks `map[activeRootId]`) is not used, because it exposes the internal structure to the view.
 Reason: the view does not depend on the internal map, and the API is easy to unit-test.
 
-### [Resolved] How `updateLog()` finds the right tree
-Decision: option A. The service keeps an index `executionId → rootEntryId`. It is filled in `addLog()`, and its entries are removed whenever records are removed (cap cleanup, `clearLogs()`, `removeLogs()`).
-Reason: the lookup does not depend on the entry still existing and does not scan every tree. The same index is reused to resolve the root of child records (next point). Execution IDs are already unique across tabs: `client/main.js` creates one `EntryExecutionService` for all tabs, and `EntryExecutionService._generateExecutionId()` combines `_sessionId` with a sequence counter shared by all tabs.
+### [Open] How `updateLog()` finds the right tree
+`updateLog(executionId, result)` gets only the execution ID. Options:
+- A. Keep an index `executionId → rootEntryId`, filled in `addLog()` and removed during cleanup, clear, and tab removal.
+- B. Search all trees (`_findExecution` over every root). There are at most 10 tabs and 1000 records in total.
+- C. Resolve with `entryManager.getRootOf(entryId)`. This fails if the entry was deleted while it was running, and `updateLog` does not get `entryId` anyway.
+- **Recommendation: A**, or B if simplicity matters more. Both avoid depending on the entry still existing. Note that execution IDs (`EntryExecutionService._generateExecutionId()`) must be unique across tabs. This should be confirmed during design.
 
-### [Resolved] Where the root is resolved, and executions whose root cannot be found
-Decision: options A + C. The root is resolved inside `ExecutionLogService.addLog()`; `EntryExecutionService` is not changed.
-- A record with `parentExecutionId` uses its parent's root, taken from the `executionId → rootEntryId` index.
-- A top-level record, or a child whose parent is no longer in the index, uses `entryManager.getRootOf(entryId)`.
-- If no root can be found (no `entryManager`, as in some tests, or `getRootOf()` returns nothing), the record goes into a fallback tree under the key `null`. The view never shows it, because `activeTab.rootEntryId` is never `null`. It counts toward the global cap like any other tree and is removed by the cap cleanup like any other tree.
-Reason: no signature change in `EntryExecutionService`, a child always lands in the same tree as its parent, and records are never dropped silently.
+### [Open] Where the root is resolved, and executions whose root cannot be found
+FR-2 resolves the root inside `ExecutionLogService.addLog()` through `entryManager.getRootOf(entryId)`. Options:
+- A. Resolve inside `addLog()` (no signature change in `EntryExecutionService`).
+- B. `EntryExecutionService.executeEntry()` resolves the root (it already does this in `_executeBlock()`) and passes `rootEntryId` to `addLog()`.
+- C. Child records use the parent's root (taken from `parentExecutionId`) rather than calling `getRootOf()` again.
+- Edge case: if `getRootOf()` returns nothing (the service is used without an `entryManager`, as in tests), the record could be dropped, or it could go into a fallback key such as `null`.
+- **Recommendation: A combined with C** (the top-level record calls `getRootOf()`, children inherit the parent's root). Use a `null` fallback key so that records are never lost silently. The view never shows that key.
 
-### [Resolved] How the global cap removes records across trees
-Decision: option A. When the total goes over `_maxLogs`, the service removes the globally oldest top-level executions (compared by `timestamp`, together with their descendants) across all trees, up to `_cleanupBatchSize` of them. If the total is still above the cap after that batch, it keeps removing the oldest top-level executions until the total is at or below the cap.
-- Exception: the top-level execution that the new record belongs to is never removed by this cleanup, so a running execution cannot lose its own parent records. If that one execution alone has more than `_maxLogs` records, the total may stay above the cap until the next cleanup after it ends (AC-8 is worded accordingly).
-- The service keeps a running total counter (updated on add, cleanup, `clearLogs()` and `removeLogs()`) instead of recounting every tree on each `addLog()` (`_getExecutionCount()`).
-Reason: it keeps today's "oldest first" behavior, is fair across tabs, and the merge only runs across ≤10 tree heads.
+### [Open] How the global cap removes records across trees
+Today `_cleanupExecutions()` removes the oldest top-level executions (with all their descendants) from the single `rootExecutions`. With several trees, options:
+- A. Remove the globally oldest top-level executions (by `timestamp`/`startTime`) across all trees until the batch size is reached.
+- B. Remove from the tree that has the most records.
+- C. Remove from the tree that the new record was added to.
+- Trade-offs: A keeps today's "oldest first" behavior and is fair across tabs, at the cost of a merge across ≤10 tree heads. B and C are simpler, but a busy tab could wipe out its own recent history while an idle tab keeps old records (C), or the result is hard to predict (B).
+- **Recommendation: A.** Also consider keeping a running total counter instead of recounting everything on each `addLog()` (`_getExecutionCount()`). One more point: today a single huge top-level execution may leave the total above the cap after cleanup (only whole top-level executions are removed). Decide whether AC-8 allows this or whether a loop is needed.
 
-### [Resolved] Who discards the tree when a tab is closed
-Decision: option A. `useTabStore.closeTab()` calls `executionLogService.removeLogs(rootEntryId)`. The store gets the service with `inject('executionLogService')`, like the other services. The store tests (`client/stores/__tests__/useTabStore.test.js`, `useTabStore.recipe.test.js`) must then provide `executionLogService` (a stub is enough).
-Reason: `closeTab()` is already the single place where a tab's resources (socket, runner, root entry) are released, and the store's doc comment requires roots to be removed only there. `openRecipeInNewTab()` closes the tab when restoring fails, so it is covered automatically.
+### [Open] Who discards the tree when a tab is closed
+Options:
+- A. `useTabStore.closeTab()` calls `executionLogService.removeLogs(rootId)`. The store injects `executionLogService` the same way it injects the other services.
+- B. `ExecutionLogService` watches `useTabStore().tabs` and prunes trees whose root is gone.
+- C. `EntryHandlerFacade.removeEntry()` notifies listeners when a root is removed.
+- **Recommendation: A.** `closeTab()` is already the single place where a tab's resources (socket, runner, root entry) are released, and the store's doc comment requires roots to be removed only there. `openRecipeInNewTab()` closes the tab when restoring fails, so it is covered automatically.
 
-### [Resolved] Executions still running when the tab changes or closes
-Decision: `updateLog()` does nothing (no tree re-creation, no exception) when the `executionId` is not in the index or the record no longer exists. A child `addLog()` whose parent's tree was removed falls back to `getRootOf()` as described above. This is covered by a unit test.
-Reason: `MainArea.vue` sets `pointer-events: none` on `.main-content` while `isExecuting` is true, so switching or closing tabs during a run is normally blocked. This rule is only a safety net.
+### [Open] Executions still running when the tab changes or closes
+`MainArea.vue` sets `pointer-events: none` on `.main-content` while `isExecuting` is true, so switching or closing tabs during a run is normally blocked. If the tree is removed while a run is in progress anyway, `updateLog()` must do nothing for the missing record rather than recreate the tree or throw.
+- **Recommendation:** make `updateLog()` (and the index from the `updateLog()` point above) tolerant of missing records, and cover it with a unit test.
 
-### [Resolved] Effect on existing tests
-Decision:
-- Rewrite `client/components/__tests__/ExecutionLogView.test.js` for the per-root API: the stub `getLogs(rootEntryId)` returns per-root trees. Cover tab switching (AC-4), `Clear` calling `clearLogs()` with the active tab's `rootEntryId` (AC-5), and hiding only the active tab's root-container row.
-- Add `client/services/log/__tests__/ExecutionLogService.test.js` (there are no service tests today) for AC-1 to AC-3, AC-6, AC-8, the `null` fallback tree, and the tolerant `updateLog()`.
-- Extend `client/stores/__tests__/useTabStore.test.js` to check that `closeTab()` calls `removeLogs()` with the closed tab's `rootEntryId`.
-- No Playwright e2e test, because this behavior does not depend on real layout or drag-and-drop.
-Reason: unit tests cover every acceptance criterion at the lowest cost.
+### [Open] Effect on existing tests
+`client/components/__tests__/ExecutionLogView.test.js` and any `ExecutionLogService` tests assume one shared tree and the "hide root rows of all open tabs" rule.
+- **Recommendation:** rewrite them for the per-root API, and add tests for tab switching, per-tab Clear, removal on tab close, and the global cap across trees. A Playwright e2e test is optional, because this behavior does not depend on real layout or drag-and-drop.
