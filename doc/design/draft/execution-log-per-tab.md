@@ -89,13 +89,14 @@ Reason: the view does not depend on the internal map, and the API is easy to uni
 - C. Resolve with `entryManager.getRootOf(entryId)`. This fails if the entry was deleted while it was running, and `updateLog` does not get `entryId` anyway.
 - **Recommendation: A**, or B if simplicity matters more. Both avoid depending on the entry still existing. Note that execution IDs (`EntryExecutionService._generateExecutionId()`) must be unique across tabs. This should be confirmed during design.
 
-### [Open] Where the root is resolved, and executions whose root cannot be found
-FR-2 resolves the root inside `ExecutionLogService.addLog()` through `entryManager.getRootOf(entryId)`. Options:
-- A. Resolve inside `addLog()` (no signature change in `EntryExecutionService`).
-- B. `EntryExecutionService.executeEntry()` resolves the root (it already does this in `_executeBlock()`) and passes `rootEntryId` to `addLog()`.
-- C. Child records use the parent's root (taken from `parentExecutionId`) rather than calling `getRootOf()` again.
-- Edge case: if `getRootOf()` returns nothing (the service is used without an `entryManager`, as in tests), the record could be dropped, or it could go into a fallback key such as `null`.
-- **Recommendation: A combined with C** (the top-level record calls `getRootOf()`, children inherit the parent's root). Use a `null` fallback key so that records are never lost silently. The view never shows that key.
+### [Resolved] Where the root is resolved, and executions whose root cannot be found
+Decision: option A combined with C, with a `null` fallback key (chosen on the issue).
+- `ExecutionLogService.addLog()` resolves the root itself. The signatures of `addLog()` and of `EntryExecutionService` stay unchanged. The service already receives `entryManager` in its constructor (`client/main.js` `new ExecutionLogService(entryManager)`).
+- A top-level record (no `parentExecutionId`) gets its root from `entryManager.getRootOf(entryId)`.
+- A child record (with `parentExecutionId`) is filed under its parent's root and does not call `getRootOf()` again, so a parent and its children always land in the same tree. How the parent's root is looked up depends on the "How `updateLog()` finds the right tree" point below (an `executionId → rootEntryId` index, or a search over all trees).
+- If no root is found (no `entryManager`, as in tests, or `getRootOf()` returns nothing), the record goes into a fallback tree under the `null` key. The view never shows that key, because `getLogs(null)` returns an empty tree (see "Service API shape"). The `null` tree counts toward the global cap, so the cap cleanup also removes its records.
+- Option B (`EntryExecutionService.executeEntry()` passes `rootEntryId` to `addLog()`) is not used.
+Reason: no change to the `EntryExecutionService` API, parent and children never end up in different trees, and records are never dropped silently.
 
 ### [Open] How the global cap removes records across trees
 Today `_cleanupExecutions()` removes the oldest top-level executions (with all their descendants) from the single `rootExecutions`. With several trees, options:
