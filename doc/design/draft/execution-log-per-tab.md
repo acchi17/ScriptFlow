@@ -75,12 +75,12 @@ Reason: it is the simplest option and keeps the same memory bound as today.
 Decision: the service holds separate execution trees per root entry (the user's own comment on the issue), for example a reactive map `rootEntryId → { rootExecutions, executionsByParent }`. It does not keep one shared tree that gets filtered by root.
 Reason: the user asked for it explicitly. It also makes per-tab Clear and discarding on tab close simple: just delete that root's tree.
 
-### [Open] Service API shape
-The service needs a per-root API. Options:
-- A. Add `rootEntryId` parameters: `getLogs(rootEntryId)`, `clearLogs(rootEntryId)`, and a new `removeLogs(rootEntryId)` (or `clearLogs` also deletes the tree's key). `addLog()` / `updateLog()` keep their signatures and resolve the root internally.
-- B. `getLogs()` returns the whole map read-only, and the view picks `map[activeRootId]`.
-- Trade-offs: A keeps the view unaware of the internal structure and is easy to unit-test. B exposes internals, but one computed property covers reactivity.
-- **Recommendation: A.** If `getLogs(rootEntryId)` returns a computed/readonly ref, the view can wrap it in `computed(() => service.getLogs(activeTab?.rootEntryId))` so it re-evaluates when the active tab changes.
+### [Resolved] Service API shape
+Decision: option A (chosen on the issue). The service gets `rootEntryId` parameters: `getLogs(rootEntryId)`, `clearLogs(rootEntryId)`, and a new `removeLogs(rootEntryId)`. `addLog()` / `updateLog()` keep their signatures and resolve the root internally.
+- `getLogs(rootEntryId)` returns a readonly reactive view of that root's tree. It returns an empty tree when the root has no records or `rootEntryId` is `null`/`undefined`. `ExecutionLogView` uses `computed(() => executionLogService.getLogs(tabStore.activeTab?.rootEntryId))`, so the content follows the active tab.
+- `clearLogs(rootEntryId)` empties that root's tree. `removeLogs(rootEntryId)` deletes the tree and its key; it can be used when a tab closes.
+- Option B (`getLogs()` returns the whole map, the view picks `map[activeRootId]`) is not used, because it exposes the internal structure to the view.
+Reason: the view does not depend on the internal map, and the API is easy to unit-test.
 
 ### [Open] How `updateLog()` finds the right tree
 `updateLog(executionId, result)` gets only the execution ID. Options:
