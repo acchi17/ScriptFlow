@@ -87,7 +87,13 @@ Reason: the view does not depend on the internal map, and the API is easy to uni
 - A. Keep an index `executionId → rootEntryId`, filled in `addLog()` and removed during cleanup, clear, and tab removal.
 - B. Search all trees (`_findExecution` over every root). There are at most 10 tabs and 1000 records in total.
 - C. Resolve with `entryManager.getRootOf(entryId)`. This fails if the entry was deleted while it was running, and `updateLog` does not get `entryId` anyway.
-- **Recommendation: A**, or B if simplicity matters more. Both avoid depending on the entry still existing. Note that execution IDs (`EntryExecutionService._generateExecutionId()`) must be unique across tabs. This should be confirmed during design.
+- D. (proposed by the user on the issue) Keep a flat dictionary `_allExecutions`: `executionId → execution object`. `addLog()` registers each new execution object in it, and `updateLog()` gets the object from it directly and updates it in place. No tree lookup is needed at all.
+  - The execution object also stores `rootEntryId`, set in `addLog()`. A child record then gets its parent's root from `_allExecutions[parentExecutionId].rootEntryId` (see "Where the root is resolved").
+  - The dictionary must hold the reactive proxy of the object (for example `reactive(execution)`), not the raw object. If `updateLog()` changes the raw object, `ExecutionLogView` is not updated.
+  - The dictionary itself is a plain `Map`, not reactive. Nothing renders from it.
+  - Entries must be deleted in every removal path: cap cleanup (`_removeExecution()`), `clearLogs(rootEntryId)` and `removeLogs(rootEntryId)`. If one is missed, the removed object stays in memory and `updateLog()` silently updates an object that is no longer shown.
+  - Execution IDs are unique across tabs: there is one `EntryExecutionService` (`client/main.js`), and `_generateExecutionId()` uses `_sessionId` plus one shared counter.
+- **Recommendation: D.** It is option A with the object stored instead of the root ID: the same sync cost, but `updateLog()` and the child-root lookup both become one dictionary access, and `_findExecution()` can be removed. B stays the fallback if simplicity matters more.
 
 ### [Resolved] Where the root is resolved, and executions whose root cannot be found
 Decision: option A combined with C, with a `null` fallback key (chosen on the issue).
