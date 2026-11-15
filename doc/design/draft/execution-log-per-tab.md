@@ -82,18 +82,26 @@ Decision: option A (chosen on the issue). The service gets `rootEntryId` paramet
 - Option B (`getLogs()` returns the whole map, the view picks `map[activeRootId]`) is not used, because it exposes the internal structure to the view.
 Reason: the view does not depend on the internal map, and the API is easy to unit-test.
 
-### [Open] How `updateLog()` finds the right tree
-`updateLog(executionId, result)` gets only the execution ID. Options:
-- A. Keep an index `executionId → rootEntryId`, filled in `addLog()` and removed during cleanup, clear, and tab removal.
-- B. Search all trees (`_findExecution` over every root). There are at most 10 tabs and 1000 records in total.
-- C. Resolve with `entryManager.getRootOf(entryId)`. This fails if the entry was deleted while it was running, and `updateLog` does not get `entryId` anyway.
-- **Recommendation: A**, or B if simplicity matters more. Both avoid depending on the entry still existing. Note that execution IDs (`EntryExecutionService._generateExecutionId()`) must be unique across tabs. This should be confirmed during design.
+### [Resolved] How `updateLog()` finds the right tree
+Decision: option D (proposed by the user on the issue). `updateLog(executionId, result)` gets only the execution ID, so the service keeps a flat dictionary `_allExecutions`: `executionId → execution object`. `addLog()` registers each new execution object in it, and `updateLog()` gets the object from it directly and updates it in place. No tree lookup is needed at all.
+- The execution object also stores `rootEntryId`, set in `addLog()`. A child record then gets its parent's root from `_allExecutions[parentExecutionId].rootEntryId` (see "Where the root is resolved").
+- The dictionary must hold the reactive proxy of the object, for example `shallowReactive(execution)`, not the raw object. If `updateLog()` changes the raw object, `ExecutionLogView` is not updated. `shallowReactive` is enough because `updateLog()` only replaces top-level properties (`result`, `execTime`). The same proxy is pushed into the tree, and Vue keeps shallow proxies as is inside deep-reactive containers.
+  - This stays correct only while `updateLog()` (and any other code) replaces top-level fields instead of mutating inside them (for example `execution.result.output = …`). If that changes, use `reactive(execution)` instead.
+- The dictionary itself is a plain `Map`, not reactive. Nothing renders from it.
+- Entries must be deleted in every removal path: cap cleanup (`_removeExecution()`), `clearLogs(rootEntryId)` and `removeLogs(rootEntryId)`. If one is missed, the removed object stays in memory and `updateLog()` silently updates an object that is no longer shown.
+- Execution IDs are unique across tabs: there is one `EntryExecutionService` (`client/main.js`), and `_generateExecutionId()` uses `_sessionId` plus one shared counter.
+- Options not used:
+  - A. Keep an index `executionId → rootEntryId`, filled in `addLog()` and removed during cleanup, clear, and tab removal. D has the same sync cost but stores the object instead of the root ID.
+  - B. Search all trees (`_findExecution` over every root). There are at most 10 tabs and 1000 records in total. Simpler, but every update needs a search.
+  - C. Resolve with `entryManager.getRootOf(entryId)`. This fails if the entry was deleted while it was running, and `updateLog` does not get `entryId` anyway.
+
+Reason: `updateLog()` and the child-root lookup both become one dictionary access, and `_findExecution()` can be removed.
 
 ### [Resolved] Where the root is resolved, and executions whose root cannot be found
 Decision: option A combined with C, with a `null` fallback key (chosen on the issue).
 - `ExecutionLogService.addLog()` resolves the root itself. The signatures of `addLog()` and of `EntryExecutionService` stay unchanged. The service already receives `entryManager` in its constructor (`client/main.js` `new ExecutionLogService(entryManager)`).
 - A top-level record (no `parentExecutionId`) gets its root from `entryManager.getRootOf(entryId)`.
-- A child record (with `parentExecutionId`) is filed under its parent's root and does not call `getRootOf()` again, so a parent and its children always land in the same tree. How the parent's root is looked up depends on the "How `updateLog()` finds the right tree" point below (an `executionId → rootEntryId` index, or a search over all trees).
+- A child record (with `parentExecutionId`) is filed under its parent's root and does not call `getRootOf()` again, so a parent and its children always land in the same tree. The parent's root is read from `_allExecutions[parentExecutionId].rootEntryId` (see "How `updateLog()` finds the right tree").
 - If no root is found (no `entryManager`, as in tests, or `getRootOf()` returns nothing), the record goes into a fallback tree under the `null` key. The view never shows that key, because `getLogs(null)` returns an empty tree (see "Service API shape"). The `null` tree counts toward the global cap, so the cap cleanup also removes its records.
 - Option B (`EntryExecutionService.executeEntry()` passes `rootEntryId` to `addLog()`) is not used.
 Reason: no change to the `EntryExecutionService` API, parent and children never end up in different trees, and records are never dropped silently.
