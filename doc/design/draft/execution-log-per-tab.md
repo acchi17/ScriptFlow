@@ -114,12 +114,17 @@ Decision: the cap is applied per tree (the user's choice on the issue, see "Reco
 - Same as today, only whole top-level executions are removed, in one batch per `addLog()`. A tree can therefore stay above the cap when one top-level execution alone has more than 1000 records. AC-8 allows this. If that execution is still running, it can be removed with its children; later child records then find no parent in `_allExecutions` and go into the `null` tree, and `updateLog()` for removed records does nothing (see "Executions still running").
 Reason: it is simpler than any cross-tree option. It reuses today's cleanup logic per tree, and one tab's executions never remove another tab's logs.
 
-### [Open] Who discards the tree when a tab is closed
-Options:
-- A. `useTabStore.closeTab()` calls `executionLogService.removeLogs(rootId)`. The store injects `executionLogService` the same way it injects the other services.
-- B. `ExecutionLogService` watches `useTabStore().tabs` and prunes trees whose root is gone.
-- C. `EntryHandlerFacade.removeEntry()` notifies listeners when a root is removed.
-- **Recommendation: A.** `closeTab()` is already the single place where a tab's resources (socket, runner, root entry) are released, and the store's doc comment requires roots to be removed only there. `openRecipeInNewTab()` closes the tab when restoring fails, so it is covered automatically.
+### [Resolved] Who discards the tree when a tab is closed
+Decision: option A (chosen on the issue). `useTabStore.closeTab()` calls `executionLogService.removeLogs(rootId)`.
+- The store gets the service with `inject('executionLogService')`, the same way it already injects `entryManager`, `entryExecutionService` and `entryPersistanceService`. `client/main.js` already provides `executionLogService`, so no wiring change is needed there.
+- `removeLogs(rootId)` is called in the synchronous part of `closeTab()`, next to `entryManager.removeEntry(rootId)`, after the `deleteComm()` / `shutdownRunner()` awaits. So the root entry, its log tree and the tab are removed together without a render in between, and the runner is already shut down when the tree is removed.
+- `openRecipeInNewTab()` calls `closeTab()` when restoring fails, so that path also discards the tree.
+- The store tests (`useTabStore.test.js`, `useTabStore.recipe.test.js`) must provide a stub `executionLogService` (at least `removeLogs`), because `inject()` returns `undefined` otherwise.
+- Options not used:
+  - B. `ExecutionLogService` watches `useTabStore().tabs` and prunes trees whose root is gone. The service would depend on a Pinia store and Vue reactivity, and the cleanup would be asynchronous and implicit.
+  - C. `EntryHandlerFacade.removeEntry()` notifies listeners when a root is removed. This needs a new listener mechanism in the ECS layer only for this, and splits the release logic between `closeTab()` and an event.
+
+Reason: `closeTab()` is already the single place where a tab's resources (socket, runner, root entry) are released, and the store's doc comment requires roots to be removed only there. The call is explicit and easy to unit-test.
 
 ### [Open] Executions still running when the tab changes or closes
 `MainArea.vue` sets `pointer-events: none` on `.main-content` while `isExecuting` is true, so switching or closing tabs during a run is normally blocked. If the tree is removed while a run is in progress anyway, `updateLog()` must do nothing for the missing record rather than recreate the tree or throw.
