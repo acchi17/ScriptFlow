@@ -23,14 +23,13 @@ This shared log was a deliberate choice in `doc/design/completed/main-area-multi
 5. **FR-5: Clear works on the active tab only.** The `Clear` button in `ExecutionLogView` deletes only the active tab's logs. Logs of other tabs are kept.
 6. **FR-6: Closing a tab discards its logs.** When a tab is closed (`useTabStore.closeTab()`), the execution tree of its root entry is discarded.
 7. **FR-7: The panel open/closed state stays global.** `showLog` / `toggleLog()` in `useSystemState.js` stays one global flag shared by all tabs. Only the content of the panel follows the active tab.
-8. **FR-8: The record cap stays global.** The 1000-record cap (`_maxLogs`) still counts records across **all** root trees together, so memory use stays bounded the same way it is today. When the cap is exceeded, the oldest records are removed in batches (`_cleanupBatchSize`).
+8. **FR-8: The record cap applies to each tree.** The 1000-record cap (`_maxLogs`) applies to each root tree separately. When a tree goes over the cap, the oldest top-level executions of **that tree** (with all their descendants) are removed in batches (`_cleanupBatchSize`). Other trees are not touched. Memory use is bounded by 1000 records per tree: at most 10 tabs plus the `null` fallback tree, so up to 11,000 records.
 
 ## Out of Scope
 
 - An "All tabs" view, a tab column, or a tab filter in the log view (issue answer 1: A).
 - Keeping or showing logs of closed tabs (answer 3: A).
 - Remembering the log panel's open/closed state per tab (answer 4: A).
-- A separate record cap for each tab (answer 5: A).
 - Saving logs to disk or exporting them.
 - Changing which columns the log table shows or how it formats them.
 - Clearing logs as part of `RecipeItem.vue` `clearRecipe()` (clearing the recipe's entries). Today that does not touch the log, and that stays the same.
@@ -46,7 +45,7 @@ This shared log was a deliberate choice in `doc/design/completed/main-area-multi
 | AC-5 | Pressing `Clear` while tab 1 is active empties tab 1's log. Tab 2's log is unchanged when the user switches to it. | FR-5 |
 | AC-6 | After a tab is closed, its tree no longer exists in `ExecutionLogService`, and the other tabs' trees are unchanged. | FR-6 |
 | AC-7 | When the log panel is open and the user switches tabs, the panel stays open and shows the new tab's log. Toggling it closed hides it for every tab. | FR-7 |
-| AC-8 | When the total number of records across all tabs goes over 1000, the total is brought back to 1000 or fewer by removing the oldest records. The total never grows past the cap after any single `addLog()`. | FR-8 |
+| AC-8 | When one tab's tree goes over 1000 records, the oldest top-level executions of that tree (with their descendants) are removed in a batch, and the other tabs' trees are unchanged. The removed records are also gone from `_allExecutions`. As today, the tree can stay above 1000 only when its remaining top-level executions are too few to remove (for example, one execution that alone has more than 1000 records). | FR-8 |
 | AC-9 | Existing unit tests (`client/components/__tests__/ExecutionLogView.test.js` and the service tests) are updated or extended to cover AC-1 to AC-8, and `npm test` passes. | all |
 
 ## Design Considerations
@@ -68,8 +67,8 @@ Decision: it stays one global toggle (answer 4: A).
 Reason: this keeps the current UI. Only the content depends on the tab.
 
 ### [Resolved] Record cap
-Decision: there is one cap of 1000 records across all tabs (answer 5: A).
-Reason: it is the simplest option and keeps the same memory bound as today.
+Decision: the 1000-record cap (`_maxLogs`) applies to each execution tree separately. This replaces the earlier hearing answer 5: A (one global cap); the user changed it on the issue.
+Reason: each tree can be capped on its own with today's logic, and no cleanup across trees is needed. One tab's runs never remove another tab's logs. The memory bound grows from 1000 to 1000 per tree (at most 10 tabs plus the `null` tree), which is acceptable.
 
 ### [Resolved] Data structure in `ExecutionLogService`
 Decision: the service holds separate execution trees per root entry (the user's own comment on the issue), for example a reactive map `rootEntryId → { rootExecutions, executionsByParent }`. It does not keep one shared tree that gets filtered by root.
@@ -102,17 +101,18 @@ Decision: option A combined with C, with a `null` fallback key (chosen on the is
 - `ExecutionLogService.addLog()` resolves the root itself. The signatures of `addLog()` and of `EntryExecutionService` stay unchanged. The service already receives `entryManager` in its constructor (`client/main.js` `new ExecutionLogService(entryManager)`).
 - A top-level record (no `parentExecutionId`) gets its root from `entryManager.getRootOf(entryId)`.
 - A child record (with `parentExecutionId`) is filed under its parent's root and does not call `getRootOf()` again, so a parent and its children always land in the same tree. The parent's root is read from `_allExecutions[parentExecutionId].rootEntryId` (see "How `updateLog()` finds the right tree").
-- If no root is found (no `entryManager`, as in tests, or `getRootOf()` returns nothing), the record goes into a fallback tree under the `null` key. The view never shows that key, because `getLogs(null)` returns an empty tree (see "Service API shape"). The `null` tree counts toward the global cap, so the cap cleanup also removes its records.
+- If no root is found (no `entryManager`, as in tests, or `getRootOf()` returns nothing), the record goes into a fallback tree under the `null` key. The view never shows that key, because `getLogs(null)` returns an empty tree (see "Service API shape"). The `null` tree has its own per-tree cap, so its old records are removed like those of any other tree.
 - Option B (`EntryExecutionService.executeEntry()` passes `rootEntryId` to `addLog()`) is not used.
 Reason: no change to the `EntryExecutionService` API, parent and children never end up in different trees, and records are never dropped silently.
 
-### [Open] How the global cap removes records across trees
-Today `_cleanupExecutions()` removes the oldest top-level executions (with all their descendants) from the single `rootExecutions`. With several trees, options:
-- A. Remove the globally oldest top-level executions (by `timestamp`/`startTime`) across all trees until the batch size is reached.
-- B. Remove from the tree that has the most records.
-- C. Remove from the tree that the new record was added to.
-- Trade-offs: A keeps today's "oldest first" behavior and is fair across tabs, at the cost of a merge across ≤10 tree heads. B and C are simpler, but a busy tab could wipe out its own recent history while an idle tab keeps old records (C), or the result is hard to predict (B).
-- **Recommendation: A.** Also consider keeping a running total counter instead of recounting everything on each `addLog()` (`_getExecutionCount()`). One more point: today a single huge top-level execution may leave the total above the cap after cleanup (only whole top-level executions are removed). Decide whether AC-8 allows this or whether a loop is needed.
+### [Resolved] How the cap removes records
+Decision: the cap is applied per tree (the user's choice on the issue, see "Record cap"). Options A to C of the earlier "global cap across trees" point (globally oldest first, largest tree first, tree that just received the record) are no longer needed.
+- After `addLog()` files a record into a tree, it counts the records of **that tree only**. If the count is over `_maxLogs`, `_cleanupExecutions(tree, _cleanupBatchSize)` removes the oldest top-level executions of that tree, as it does today. No merge across trees and no running total counter are needed. Counting one tree (at most about 1000 records) on each `addLog()` costs the same as today.
+- `_getExecutionCount()`, `_cleanupExecutions()` and `_removeExecution()` take the tree as a parameter instead of using one shared `_executionsTree`.
+- `_removeExecution()` must also delete each removed execution and its descendants from `_allExecutions` (see "How `updateLog()` finds the right tree").
+- The `null` fallback tree has its own cap like any other tree.
+- Same as today, only whole top-level executions are removed, in one batch per `addLog()`. A tree can therefore stay above the cap when one top-level execution alone has more than 1000 records. AC-8 allows this. If that execution is still running, it can be removed with its children; later child records then find no parent in `_allExecutions` and go into the `null` tree, and `updateLog()` for removed records does nothing (see "Executions still running").
+Reason: it is simpler than any cross-tree option. It reuses today's cleanup logic per tree, and one tab's executions never remove another tab's logs.
 
 ### [Open] Who discards the tree when a tab is closed
 Options:
@@ -127,4 +127,4 @@ Options:
 
 ### [Open] Effect on existing tests
 `client/components/__tests__/ExecutionLogView.test.js` and any `ExecutionLogService` tests assume one shared tree and the "hide root rows of all open tabs" rule.
-- **Recommendation:** rewrite them for the per-root API, and add tests for tab switching, per-tab Clear, removal on tab close, and the global cap across trees. A Playwright e2e test is optional, because this behavior does not depend on real layout or drag-and-drop.
+- **Recommendation:** rewrite them for the per-root API, and add tests for tab switching, per-tab Clear, removal on tab close, and the per-tree cap (a full tree is trimmed, other trees are unchanged). A Playwright e2e test is optional, because this behavior does not depend on real layout or drag-and-drop.
