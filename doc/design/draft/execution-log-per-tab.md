@@ -46,7 +46,7 @@ This shared log was a deliberate choice in `doc/design/completed/main-area-multi
 | AC-6 | After a tab is closed, its tree no longer exists in `ExecutionLogService`, and the other tabs' trees are unchanged. | FR-6 |
 | AC-7 | When the log panel is open and the user switches tabs, the panel stays open and shows the new tab's log. Toggling it closed hides it for every tab. | FR-7 |
 | AC-8 | When one tab's tree goes over 1000 records, the oldest top-level executions of that tree (with their descendants) are removed in a batch, and the other tabs' trees are unchanged. The removed records are also gone from `_allExecutions`. As today, the tree can stay above 1000 only when its remaining top-level executions are too few to remove (for example, one execution that alone has more than 1000 records). | FR-8 |
-| AC-9 | Existing unit tests (`client/components/__tests__/ExecutionLogView.test.js` and the service tests) are updated or extended to cover AC-1 to AC-8, and `npm test` passes. | all |
+| AC-9 | `client/components/__tests__/ExecutionLogView.test.js` is rewritten, a new `client/services/log/__tests__/ExecutionLogService.test.js` is added, and `client/stores/__tests__/useTabStore.test.js` / `useTabStore.recipe.test.js` are extended, so that AC-1 to AC-8 are covered, and `npm test` passes. | all |
 
 ## Design Considerations
 
@@ -140,6 +140,12 @@ Decision: option A (chosen on the issue). The service tolerates records and tree
   - C. Block `closeTab()` and `Clear` while `isExecuting` is true. It couples the store and view to execution state, and the cap cleanup can still remove a running top-level execution, so the service would still need A's tolerance.
 Reason: simple, never throws, never brings a removed tree back, and it matches the existing decisions about the `null` tree and the cap. Stale orphaned records in the hidden `null` tree are bounded by its own cap.
 
-### [Open] Effect on existing tests
-`client/components/__tests__/ExecutionLogView.test.js` and any `ExecutionLogService` tests assume one shared tree and the "hide root rows of all open tabs" rule.
-- **Recommendation:** rewrite them for the per-root API, and add tests for tab switching, per-tab Clear, removal on tab close, and the per-tree cap (a full tree is trimmed, other trees are unchanged). A Playwright e2e test is optional, because this behavior does not depend on real layout or drag-and-drop.
+### [Resolved] Effect on existing tests
+Decision: option A (chosen on the issue). Rewrite the existing tests for the per-root API and add new tests so that AC-1 to AC-8 are covered by unit tests. No Playwright e2e test.
+- `client/components/__tests__/ExecutionLogView.test.js`: rewrite for the per-root model. The view reads `getLogs(activeTab?.rootEntryId)` instead of one shared tree, and the "hide root rows of all open tabs" rule is replaced by "hide the active tab's root-container row". Cover tab switching (AC-4, including the empty view with no tabs), per-tab `Clear` (AC-5) and the panel staying open across tab switches (AC-7).
+- `client/services/log/__tests__/ExecutionLogService.test.js` (new; the service has no tests today): cover separate trees per `rootEntryId` (AC-1), single block/container runs and child records landing in the owning tab's tree (AC-2), `updateLog()` through `_allExecutions` (AC-3), `clearLogs()` / `removeLogs()` and `_allExecutions` sync (AC-5, AC-6), the per-tree cap (a full tree is trimmed and its removed records leave `_allExecutions`, other trees are unchanged; AC-8), the `null` fallback tree, and the three tests listed in "Executions still running".
+- `client/stores/__tests__/useTabStore.test.js` and `useTabStore.recipe.test.js`: provide a stub `executionLogService` (at least `removeLogs`). Add a test in `useTabStore.test.js` that `closeTab()` calls `removeLogs(rootId)` (AC-6).
+- Options not used:
+  - B. Small changes to the existing tests only. AC-9 would not be met, and the cap and running-execution edge cases would stay untested.
+  - C. Option A plus a Playwright e2e test. This behavior does not depend on real layout, scrolling or drag-and-drop, so an e2e test adds run time without covering anything the unit tests miss.
+Reason: meets AC-9, keeps the tests fast, and places each test next to the module that owns the behavior (service, view, tab store).
