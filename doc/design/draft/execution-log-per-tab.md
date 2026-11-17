@@ -126,9 +126,19 @@ Decision: option A (chosen on the issue). `useTabStore.closeTab()` calls `execut
 
 Reason: `closeTab()` is already the single place where a tab's resources (socket, runner, root entry) are released, and the store's doc comment requires roots to be removed only there. The call is explicit and easy to unit-test.
 
-### [Open] Executions still running when the tab changes or closes
-`MainArea.vue` sets `pointer-events: none` on `.main-content` while `isExecuting` is true, so switching or closing tabs during a run is normally blocked. If the tree is removed while a run is in progress anyway, `updateLog()` must do nothing for the missing record rather than recreate the tree or throw.
-- **Recommendation:** make `updateLog()` (and the index from the `updateLog()` point above) tolerant of missing records, and cover it with a unit test.
+### [Resolved] Executions still running when the tab changes or closes
+Decision: option A (chosen on the issue). The service tolerates records and trees that were removed while a run is still in progress.
+- A run's tree or records can be removed during the run by `removeLogs()` (tab close), `clearLogs()` (`Clear`) or the per-tree cap cleanup. `MainArea.vue` sets `pointer-events: none` on `.main-content` while `isExecuting` is true, which normally blocks tab switching, closing and `Clear` during a run, but the service does not rely on that UI guard.
+- `updateLog(executionId, result)` does nothing when `_allExecutions` has no entry for `executionId`. It does not recreate the tree and does not throw. This is the same "skip if not found" behavior as today's `_findExecution()`-based check, with the lookup replaced by `_allExecutions.get()`.
+- `addLog()` for a child record whose `parentExecutionId` is no longer in `_allExecutions` files the record under the `null` fallback tree, as described in "Where the root is resolved" and "How the cap removes records". The removed tree is not recreated.
+- Required unit tests (in `client/services/log/__tests__/ExecutionLogService.test.js`):
+  - `updateLog()` after `removeLogs(rootEntryId)` does nothing, does not throw, and does not recreate the tree.
+  - `updateLog()` after `clearLogs(rootEntryId)` does nothing and leaves the tree empty.
+  - A child record added after its parent was removed by the cap goes into the `null` tree, and `getLogs()` of the original root does not show it.
+- Options not used:
+  - B. Same as A, but drop orphaned child records instead of filing them under `null`. This conflicts with the decision that records are never dropped silently.
+  - C. Block `closeTab()` and `Clear` while `isExecuting` is true. It couples the store and view to execution state, and the cap cleanup can still remove a running top-level execution, so the service would still need A's tolerance.
+Reason: simple, never throws, never brings a removed tree back, and it matches the existing decisions about the `null` tree and the cap. Stale orphaned records in the hidden `null` tree are bounded by its own cap.
 
 ### [Open] Effect on existing tests
 `client/components/__tests__/ExecutionLogView.test.js` and any `ExecutionLogService` tests assume one shared tree and the "hide root rows of all open tabs" rule.
