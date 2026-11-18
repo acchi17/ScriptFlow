@@ -103,6 +103,8 @@ graph TD
 
 **Goal:** FR-1 to FR-5, FR-7, FR-8: one tree per root entry, root resolved in `addLog()`, per-tree cap, and a view that shows and clears only the active tab's tree.
 
+**Status:** At the reviewer's request on the Phase 1 PR (#89), the `ExecutionLogService` and `ExecutionLogView.vue` changes of this phase were moved into that PR, together with the service tests and a reduced `ExecutionLogView.test.js` (active tab, Clear). N1 was decided there: `clearLogs(null/undefined)` and `removeLogs(null/undefined)` do nothing. Still open in this phase: the rest of the `ExecutionLogView.test.js` cases (empty panel with no tabs, nested sandwich rows, single block run, AC-7 panel visibility) and the manual checks.
+
 **Files to change:**
 
 - `client/services/log/ExecutionLogService.js`

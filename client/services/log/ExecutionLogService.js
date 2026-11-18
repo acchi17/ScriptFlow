@@ -1,8 +1,10 @@
-import { ref, readonly, shallowReactive } from 'vue';
+import { reactive, readonly, shallowReactive } from 'vue';
 
 /**
  * Execution Log Service
- * Manages execution history for entry executions (Block or Container)
+ * Manages execution history for entry executions (Block or Container).
+ * Keeps one execution tree per root entry (one per tab), plus a `null`
+ * fallback tree for records whose root cannot be resolved.
  */
 export default class ExecutionLogService {
   /**
@@ -11,19 +13,44 @@ export default class ExecutionLogService {
    */
   constructor(entryManager = null) {
     this.entryManager = entryManager;
-    // Hierarchical structure of execution logs
-    this._executionsTree = ref({
-      rootExecutions: [], // Top-level executions
-      executionsByParent: {} // Dictionary of execution IDs and their parent IDs
-    });
-    // Flat, non-reactive dictionary of every execution record in the tree
+    // Reactive map of execution trees: rootEntryId (or null) -> { rootExecutions, executionsByParent }.
+    // A Map is used so that the null fallback key does not collide with a string key.
+    this._trees = reactive(new Map());
+    // Flat, non-reactive dictionary of every execution record in every tree
     // (executionId -> shallowReactive execution). Used by updateLog() to find
-    // a record without searching the tree.
+    // a record, and by addLog() to resolve a child record's root.
     this._allExecutions = new Map();
-    // Maximum number of logs to keep
+    // Readonly empty tree returned by getLogs() when there is no tree to show
+    this._emptyTree = readonly({ rootExecutions: [], executionsByParent: {} });
+    // Maximum number of logs to keep per tree
     this._maxLogs = 1000;
     // Number of logs to remove in batch when cleanup is triggered
     this._cleanupBatchSize = 100;
+  }
+
+  /**
+   * Get the tree of a root entry, creating it on first use
+   * @param {string|null} rootEntryId Root entry ID, or null for the fallback tree
+   * @returns {Object} Reactive execution tree ({ rootExecutions, executionsByParent })
+   * @private
+   */
+  _getOrCreateTree(rootEntryId) {
+    if (!this._trees.has(rootEntryId)) {
+      this._trees.set(rootEntryId, { rootExecutions: [], executionsByParent: {} });
+    }
+    return this._trees.get(rootEntryId);
+  }
+
+  /**
+   * Remove every record of a tree from _allExecutions (the tree itself is untouched)
+   * @param {Object} tree Execution tree ({ rootExecutions, executionsByParent })
+   * @private
+   */
+  _forgetTreeRecords(tree) {
+    tree.rootExecutions.forEach(exec => this._allExecutions.delete(exec.executionId));
+    for (const parentId in tree.executionsByParent) {
+      tree.executionsByParent[parentId].forEach(exec => this._allExecutions.delete(exec.executionId));
+    }
   }
 
   /**
@@ -84,34 +111,76 @@ export default class ExecutionLogService {
     }
   }
 
+
   /**
-   * Clear all execution logs
-   * Removes all entries from the log history, clears the hierarchy structure
-   * and the flat execution dictionary
+   * Clear the execution logs of one root entry
+   * Empties that root's tree and removes its records from the flat execution
+   * dictionary. Other trees are untouched. Does nothing when rootEntryId is
+   * null/undefined (the hidden fallback tree is only trimmed by its cap) or
+   * when the root has no tree yet (no tree is created).
+   * @param {string} rootEntryId Root entry ID
    */
-  clearLogs() {
+  clearLogs(rootEntryId) {
     try {
-      this._executionsTree.value = {
-        rootExecutions: [],
-        executionsByParent: {}
-      };
-      this._allExecutions.clear();
+      if (rootEntryId === null || rootEntryId === undefined) {
+        return;
+      }
+      const tree = this._trees.get(rootEntryId);
+      if (!tree) {
+        return;
+      }
+      this._forgetTreeRecords(tree);
+      tree.rootExecutions = [];
+      tree.executionsByParent = {};
     } catch (error) {
       console.error(`[${this.constructor.name}] clearLogs() failed: ${error.message}`);
     }
   }
 
   /**
-   * Get execution logs
-   * @returns {Object} Readonly reactive reference to the execution tree
+   * Remove the execution tree of one root entry (e.g. when its tab is closed)
+   * Removes its records from the flat execution dictionary and deletes the tree.
+   * Does nothing for null/undefined or an unknown root.
+   * @param {string} rootEntryId Root entry ID
    */
-  getLogs() {
-    // Return the internal execution tree as a readonly reactive reference
-    return readonly(this._executionsTree);
+  removeLogs(rootEntryId) {
+    try {
+      if (rootEntryId === null || rootEntryId === undefined) {
+        return;
+      }
+      const tree = this._trees.get(rootEntryId);
+      if (!tree) {
+        return;
+      }
+      this._forgetTreeRecords(tree);
+      this._trees.delete(rootEntryId);
+    } catch (error) {
+      console.error(`[${this.constructor.name}] removeLogs() failed: ${error.message}`);
+    }
   }
 
   /**
-   * Add a execution log and build hierarchy structure
+   * Get the execution logs of one root entry
+   * The lookup goes through the reactive map, so a computed calling this
+   * re-runs when that root's tree is created or removed.
+   * @param {string} rootEntryId Root entry ID
+   * @returns {Object} Readonly reactive execution tree ({ rootExecutions, executionsByParent }).
+   *   An empty tree when rootEntryId is null/undefined or the root has no tree.
+   */
+  getLogs(rootEntryId) {
+    if (rootEntryId === null || rootEntryId === undefined) {
+      return this._emptyTree;
+    }
+    const tree = this._trees.get(rootEntryId);
+    return tree ? readonly(tree) : this._emptyTree;
+  }
+
+  /**
+   * Add a execution log to the tree of its root entry
+   * The owning root is resolved here:
+   * - child records (parentExecutionId set) go into the parent's tree;
+   * - top-level records go into the tree of entryManager.getRootOf(entryId);
+   * - records whose root cannot be resolved go into the null fallback tree.
    * @param {string} entryId ID of the entry being executed (Block or Container)
    * @param {Object} inputParams Input parameters of the entry at execution time (optional)
    * @param {string} executionId Execution ID (received from EntryExecutionService)
@@ -119,6 +188,13 @@ export default class ExecutionLogService {
    */
   addLog(entryId, inputParams, executionId, parentExecutionId = null) {
     try {
+      // Resolve the owning root entry.
+      // A parent missing from _allExecutions (removed by the cap, clearLogs() or
+      // removeLogs()) gives null, so the record goes into the fallback tree.
+      const rootEntryId = parentExecutionId
+        ? (this._allExecutions.get(parentExecutionId)?.rootEntryId ?? null)
+        : (this.entryManager?.getRootOf(entryId) ?? null);
+
       // Create execution log.
       // The record is wrapped with shallowReactive() and the same proxy is stored
       // both in the tree and in _allExecutions, so that updateLog() changes are
@@ -127,6 +203,7 @@ export default class ExecutionLogService {
       const execution = shallowReactive({
         executionId: executionId,
         parentExecutionId: parentExecutionId,
+        rootEntryId: rootEntryId,
         timestamp: new Date(),
         entryId: entryId,
         entryName: this.entryManager?.getEntryName(entryId),
@@ -136,7 +213,7 @@ export default class ExecutionLogService {
         execTime: null,
         startTime: performance.now()
       });
-      const tree = this._executionsTree.value;
+      const tree = this._getOrCreateTree(rootEntryId);
 
       // Build hierarchy structure immediately
       if (parentExecutionId) {
@@ -152,7 +229,7 @@ export default class ExecutionLogService {
       // Register the same proxy in the flat dictionary
       this._allExecutions.set(executionId, execution);
 
-      // Maintain maximum execution limit
+      // Maintain maximum execution limit of this tree only
       const totalCount = this._getExecutionCount(tree);
       if (totalCount > this._maxLogs) {
         // Remove batch size logs when exceeding maximum

@@ -62,10 +62,11 @@ export default {
   setup() {
     const tabStore = useTabStore();
     const executionLogService = inject('executionLogService');
-    const logs = executionLogService.getLogs();
+    // Execution tree of the active tab's root entry (empty tree when no tab is open)
+    const logs = computed(() => executionLogService.getLogs(tabStore.activeTab?.rootEntryId));
 
     function clearLogs() {
-      executionLogService.clearLogs();
+      executionLogService.clearLogs(tabStore.activeTab?.rootEntryId);
     }
 
     function entryRowClass(entry) {
@@ -122,11 +123,11 @@ export default {
       const result = [];
       try {
         const executionsTree = logs.value;
-        // Root containers of every open tab are hidden; only their children are listed.
-        const rootEntryIds = new Set(tabStore.tabs.map(tab => tab.rootEntryId));
+        // The active tab's root container row is hidden; only its children are listed.
+        const activeRootEntryId = tabStore.activeTab?.rootEntryId;
         for (let i = executionsTree.rootExecutions.length - 1; i >= 0; i--) {
           const execution = executionsTree.rootExecutions[i];
-          const isRootContainer = rootEntryIds.has(execution.entryId);
+          const isRootContainer = execution.entryId === activeRootEntryId;
           if (!isRootContainer) {
             result.push({ type: 'entry', key: `entry_${execution.executionId}`, data: execution });
           }
