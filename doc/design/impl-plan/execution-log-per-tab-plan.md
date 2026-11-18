@@ -62,7 +62,7 @@ graph TD
 
 ---
 
-## [Open] Phase 1: Flat execution dictionary and tree-parameterized helpers (refactor)
+## [Resolved] Phase 1: Flat execution dictionary and tree-parameterized helpers (refactor)
 
 **Goal:** Prepare `ExecutionLogService` for several trees without changing behavior. There is still one shared tree, and the public API is unchanged.
 
