@@ -116,7 +116,7 @@ graph TD
   - `updateLog(executionId, result)`: unchanged from Phase 1 (lookup through `_allExecutions`; never recreates a tree).
   - `getLogs(rootEntryId)`: if `rootEntryId` is `null`/`undefined`, or no tree exists for it, return a readonly empty tree. Otherwise return `readonly(tree)` from the reactive map. The lookup must go through the reactive map so that a `computed` calling `getLogs(id)` re-runs when that root's tree is created, replaced or deleted.
   - `clearLogs(rootEntryId)`: delete every record of that tree from `_allExecutions`, then empty the tree. Other trees and their `_allExecutions` entries are untouched. For `null`/`undefined` see Notes for reviewer N1.
-  - New `removeLogs(rootEntryId)`: delete every record of that tree from `_allExecutions`, then delete the tree and its key. Unknown root: no-op.
+  - New `removeLogs(rootEntryId)`: call `clearLogs(rootEntryId)` (which deletes every record of that tree from `_allExecutions`), then delete the tree and its key with `_trees.delete(rootEntryId)`. Unknown root: no-op. `null`/`undefined`: no-op (the fallback tree is not deleted).
   - Keep the existing try/catch + `console.error` style in public methods.
 - `client/components/ExecutionLogView.vue`
   - `const logs = computed(() => executionLogService.getLogs(tabStore.activeTab?.rootEntryId))`. `transformedLogs` reads `logs.value` (now the tree object itself, not a ref).

@@ -138,8 +138,9 @@ export default class ExecutionLogService {
 
   /**
    * Remove the execution tree of one root entry (e.g. when its tab is closed)
-   * Removes its records from the flat execution dictionary and deletes the tree.
-   * Does nothing for null/undefined or an unknown root.
+   * Clears the tree with clearLogs() (which removes its records from the flat
+   * execution dictionary), then deletes the tree itself.
+   * Does nothing for null/undefined (the fallback tree is kept) or an unknown root.
    * @param {string} rootEntryId Root entry ID
    */
   removeLogs(rootEntryId) {
@@ -147,11 +148,7 @@ export default class ExecutionLogService {
       if (rootEntryId === null || rootEntryId === undefined) {
         return;
       }
-      const tree = this._trees.get(rootEntryId);
-      if (!tree) {
-        return;
-      }
-      this._forgetTreeRecords(tree);
+      this.clearLogs(rootEntryId);
       this._trees.delete(rootEntryId);
     } catch (error) {
       console.error(`[${this.constructor.name}] removeLogs() failed: ${error.message}`);
