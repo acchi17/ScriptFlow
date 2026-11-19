@@ -161,7 +161,7 @@ graph TD
 
 ---
 
-## [Open] Phase 3: Discard a tab's log tree in `closeTab()`
+## [Resolved] Phase 3: Discard a tab's log tree in `closeTab()`
 
 **Goal:** FR-6: closing a tab removes its root's tree from `ExecutionLogService`.
 

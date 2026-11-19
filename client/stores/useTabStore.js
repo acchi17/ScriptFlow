@@ -27,6 +27,7 @@ export const useTabStore = defineStore('tab', () => {
   const entryManager = inject('entryManager')
   const entryExecutionService = inject('entryExecutionService')
   const entryPersistanceService = inject('entryPersistanceService')
+  const executionLogService = inject('executionLogService')
   const { resetState } = useSystemState()
 
   // state
@@ -68,8 +69,8 @@ export const useTabStore = defineStore('tab', () => {
   }
 
   /**
-   * Closes a tab: releases its socket and script-runner, removes its root entry, and
-   * removes the tab. Host-side failures are logged and do not prevent the tab from closing.
+   * Closes a tab: releases its socket and script-runner, removes its root entry,
+   * discards its execution log tree (ExecutionLogService.removeLogs()), and removes the tab. Host-side failures are logged and do not prevent the tab from closing.
    * Never asks for confirmation.
    *
    * @param {string} tabId
@@ -96,6 +97,7 @@ export const useTabStore = defineStore('tab', () => {
     const index = tabs.value.findIndex(t => t.id === tabId)
     if (index === -1) return
     entryManager.removeEntry(rootId)
+    executionLogService.removeLogs(rootId)
     tabs.value.splice(index, 1)
     if (activeTabId.value === tabId) {
       setActiveTab(tabs.value[0]?.id ?? null)
