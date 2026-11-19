@@ -99,7 +99,7 @@ graph TD
 
 ---
 
-## [Open] Phase 2: Per-root execution trees and active-tab log view
+## [Resolved] Phase 2: Per-root execution trees and active-tab log view
 
 **Goal:** FR-1 to FR-5, FR-7, FR-8: one tree per root entry, root resolved in `addLog()`, per-tree cap, and a view that shows and clears only the active tab's tree.
 
