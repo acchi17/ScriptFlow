@@ -17,8 +17,7 @@ export default class ExecutionLogService {
     // A Map is used so that the null fallback key does not collide with a string key.
     this._trees = reactive(new Map());
     // Flat, non-reactive dictionary of every execution record in every tree
-    // (executionId -> shallowReactive execution). Used by updateLog() to find
-    // a record, and by addLog() to resolve a child record's root.
+    // (executionId -> shallowReactive execution). Used by updateLog() to find a record.
     this._allExecutions = new Map();
     // Readonly empty tree returned by getLogs() when there is no tree to show
     this._emptyTree = readonly({ rootExecutions: [], executionsByParent: {} });
@@ -177,10 +176,9 @@ export default class ExecutionLogService {
 
   /**
    * Add a execution log to the tree of its root entry
-   * The owning root is resolved here:
-   * - child records (parentExecutionId set) go into the parent's tree;
-   * - top-level records go into the tree of entryManager.getRootOf(entryId);
-   * - records whose root cannot be resolved go into the null fallback tree.
+   * The owning root is resolved only by entryManager.getRootOf(entryId), for
+   * both top-level and child records. Records whose root cannot be resolved
+   * (no entryManager, or getRootOf() returns null) go into the null fallback tree.
    * @param {string} entryId ID of the entry being executed (Block or Container)
    * @param {Object} inputParams Input parameters of the entry at execution time (optional)
    * @param {string} executionId Execution ID (received from EntryExecutionService)
@@ -188,12 +186,8 @@ export default class ExecutionLogService {
    */
   addLog(entryId, inputParams, executionId, parentExecutionId = null) {
     try {
-      // Resolve the owning root entry.
-      // A parent missing from _allExecutions (removed by the cap, clearLogs() or
-      // removeLogs()) gives null, so the record goes into the fallback tree.
-      const rootEntryId = parentExecutionId
-        ? (this._allExecutions.get(parentExecutionId)?.rootEntryId ?? null)
-        : (this.entryManager?.getRootOf(entryId) ?? null);
+      // Resolve the owning root entry from the entry hierarchy only
+      const rootEntryId = this.entryManager?.getRootOf(entryId) ?? null;
 
       // Create execution log.
       // The record is wrapped with shallowReactive() and the same proxy is stored

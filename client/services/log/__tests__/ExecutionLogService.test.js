@@ -60,13 +60,13 @@ describe('ExecutionLogService per-root trees', () => {
     expect(service.getLogs(rootA).rootExecutions).toHaveLength(0);
   });
 
-  it('resolves a child record from its parent without calling getRootOf()', () => {
+  it('resolves a child record with getRootOf(entryId), not from its parent record', () => {
     const child = createChild(entryManager, rootA);
     service.addLog(rootA, {}, 'a0');
     const spy = vi.spyOn(entryManager, 'getRootOf');
     service.addLog(child, {}, 'a1', 'a0');
 
-    expect(spy).not.toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledWith(child);
     expect(service._allExecutions.get('a1').rootEntryId).toBe(rootA);
   });
 
@@ -290,15 +290,19 @@ describe('ExecutionLogService per-tree cap', () => {
     expect(service._trees.get(null).rootExecutions).toHaveLength(901);
   });
 
-  it('files a child whose parent was removed by the cap into the null tree', () => {
+  it('files a child whose parent was removed by the cap into the root tree of its entry', () => {
+    const child = createChild(entryManager, rootA);
     for (let i = 0; i < 1001; i++) {
       service.addLog(rootA, {}, `x${i}`);
     }
-    service.addLog('late-child', {}, 'late', 'x0');
+    service.addLog(child, {}, 'late', 'x0');
 
-    expect(service._allExecutions.get('late').rootEntryId).toBeNull();
-    expect(service._trees.get(null).executionsByParent.x0.map(e => e.executionId)).toEqual(['late']);
-    expect(service.getLogs(rootA).executionsByParent.x0).toBeUndefined();
+    const tree = service.getLogs(rootA);
+    expect(service._allExecutions.get('late').rootEntryId).toBe(rootA);
+    expect(tree.executionsByParent.x0.map(e => e.executionId)).toEqual(['late']);
+    // The parent is gone, so the record is not reachable from rootExecutions
+    expect(tree.rootExecutions.some(e => e.executionId === 'x0')).toBe(false);
+    expect(service._trees.has(null)).toBe(false);
   });
 });
 
