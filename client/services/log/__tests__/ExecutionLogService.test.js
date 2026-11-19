@@ -102,7 +102,7 @@ describe('ExecutionLogService.updateLog', () => {
 
   it('updates result and execTime of a top-level and a child record', () => {
     service.addLog(rootA, {}, 'x1');
-    service.addLog('b1', {}, 'x2', 'x1');
+    service.addLog(createChild(entryManager, rootA), {}, 'x2', 'x1');
     service.updateLog('x2', { success: false });
 
     const tree = service.getLogs(rootA);
@@ -117,7 +117,7 @@ describe('ExecutionLogService.updateLog', () => {
 
   it('makes an update visible reactively through getLogs()', () => {
     service.addLog(rootA, {}, 'x1');
-    service.addLog('b1', {}, 'x2', 'x1');
+    service.addLog(createChild(entryManager, rootA), {}, 'x2', 'x1');
     const logs = computed(() => service.getLogs(rootA));
 
     const topResult = computed(() => logs.value.rootExecutions[0]?.result);
@@ -159,9 +159,9 @@ describe('ExecutionLogService.clearLogs', () => {
     rootA = createRoot(entryManager);
     rootB = createRoot(entryManager);
     service.addLog(rootA, {}, 'a0');
-    service.addLog('a-child', {}, 'a1', 'a0');
+    service.addLog(createChild(entryManager, rootA, 'a-child'), {}, 'a1', 'a0');
     service.addLog(rootB, {}, 'b0');
-    service.addLog('b-child', {}, 'b1', 'b0');
+    service.addLog(createChild(entryManager, rootB, 'b-child'), {}, 'b1', 'b0');
   });
 
   it('empties only the given root tree and its _allExecutions entries', () => {
@@ -208,7 +208,7 @@ describe('ExecutionLogService.removeLogs', () => {
     rootA = createRoot(entryManager);
     rootB = createRoot(entryManager);
     service.addLog(rootA, {}, 'a0');
-    service.addLog('a-child', {}, 'a1', 'a0');
+    service.addLog(createChild(entryManager, rootA, 'a-child'), {}, 'a1', 'a0');
     service.addLog(rootB, {}, 'b0');
   });
 
@@ -266,9 +266,10 @@ describe('ExecutionLogService per-tree cap', () => {
 
   it('removes descendants of a removed container from the tree and _allExecutions', () => {
     service.addLog(rootA, {}, 'p0');
-    service.addLog('c1', {}, 'p1', 'p0');
-    service.addLog('b2', {}, 'p2', 'p1');
-    service.addLog('b3', {}, 'p3', 'p0');
+    const c1 = createChild(entryManager, rootA, 'c1');
+    service.addLog(c1, {}, 'p1', 'p0');
+    service.addLog(createChild(entryManager, c1, 'b2'), {}, 'p2', 'p1');
+    service.addLog(createChild(entryManager, rootA, 'b3'), {}, 'p3', 'p0');
     for (let i = 0; i < 997; i++) {
       service.addLog(rootA, {}, `x${i}`);
     }
