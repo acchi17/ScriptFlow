@@ -1,8 +1,10 @@
-import { ref, readonly } from 'vue';
+import { reactive, readonly, shallowReactive } from 'vue';
 
 /**
  * Execution Log Service
- * Manages execution history for entry executions (Block or Container)
+ * Manages execution history for entry executions (Block or Container).
+ * Keeps one execution tree per root entry (one per tab), plus a `null`
+ * fallback tree for records whose root cannot be resolved.
  */
 export default class ExecutionLogService {
   /**
@@ -11,79 +13,91 @@ export default class ExecutionLogService {
    */
   constructor(entryManager = null) {
     this.entryManager = entryManager;
-    // Hierarchical structure of execution logs
-    this._executionsTree = ref({
-      rootExecutions: [], // Top-level executions
-      executionsByParent: {} // Dictionary of execution IDs and their parent IDs
-    });
-    // Maximum number of logs to keep
+    // Reactive map of execution trees: rootEntryId (or null) -> { rootExecutions, executionsByParent }.
+    // A Map is used so that the null fallback key does not collide with a string key.
+    this._trees = reactive(new Map());
+    // Flat, non-reactive dictionary of every execution record in every tree
+    // (executionId -> shallowReactive execution). Used by updateLog() to find a record.
+    this._allExecutions = new Map();
+    // Readonly empty tree returned by getLogs() when there is no tree to show
+    this._emptyTree = readonly({ rootExecutions: [], executionsByParent: {} });
+    // Maximum number of logs to keep per tree
     this._maxLogs = 1000;
     // Number of logs to remove in batch when cleanup is triggered
     this._cleanupBatchSize = 100;
   }
 
   /**
-   * Get the current number of execution logs
-   * @returns {number} The count of log executions
+   * Get the tree of a root entry, creating it on first use
+   * @param {string|null} rootEntryId Root entry ID, or null for the fallback tree
+   * @returns {Object} Reactive execution tree ({ rootExecutions, executionsByParent })
    * @private
    */
-  _getExecutionCount() {
-    let count = this._executionsTree.value.rootExecutions.length;
-    for (const parentId in this._executionsTree.value.executionsByParent) {
-      count += this._executionsTree.value.executionsByParent[parentId].length;
+  _getOrCreateTree(rootEntryId) {
+    if (!this._trees.has(rootEntryId)) {
+      this._trees.set(rootEntryId, { rootExecutions: [], executionsByParent: {} });
+    }
+    return this._trees.get(rootEntryId);
+  }
+
+  /**
+   * Remove every record of a tree from _allExecutions (the tree itself is untouched)
+   * @param {Object} tree Execution tree ({ rootExecutions, executionsByParent })
+   * @private
+   */
+  _forgetTreeRecords(tree) {
+    tree.rootExecutions.forEach(exec => this._allExecutions.delete(exec.executionId));
+    for (const parentId in tree.executionsByParent) {
+      tree.executionsByParent[parentId].forEach(exec => this._allExecutions.delete(exec.executionId));
+    }
+  }
+
+  /**
+   * Get the current number of execution logs in a tree
+   * @param {Object} tree Execution tree ({ rootExecutions, executionsByParent })
+   * @returns {number} The count of log executions in the tree
+   * @private
+   */
+  _getExecutionCount(tree) {
+    let count = tree.rootExecutions.length;
+    for (const parentId in tree.executionsByParent) {
+      count += tree.executionsByParent[parentId].length;
     }
     return count;
   }
 
   /**
-   * Remove a execution log and all its descendants from hierarchy structure
+   * Remove an execution log and all its descendants from a tree
+   * The execution and every descendant are also removed from _allExecutions.
+   * The caller removes the execution itself from its parent list in the tree.
+   * @param {Object} tree Execution tree ({ rootExecutions, executionsByParent })
    * @param {string} executionId Execution ID to remove
    * @private
    */
-  _removeExecution(executionId) {
+  _removeExecution(tree, executionId) {
     // Get all child executions
-    const children = this._executionsTree.value.executionsByParent[executionId] || [];
+    const children = tree.executionsByParent[executionId] || [];
     // Recursively remove all descendants
     children.forEach(child => {
-      this._removeExecution(child.executionId);
+      this._removeExecution(tree, child.executionId);
     });
     // Remove this execution's children from the dictionary
-    delete this._executionsTree.value.executionsByParent[executionId];
+    delete tree.executionsByParent[executionId];
+    // Remove this execution from the flat dictionary
+    this._allExecutions.delete(executionId);
   }
 
   /**
-   * Find a execution log in the hierarchy structure
-   * @param {string} executionId Execution ID to find
-   * @returns {Object} Found execution entry or null
-   * @private
-   */
-  _findExecution(executionId) {
-    // Search in root executions
-    const rootExecution = this._executionsTree.value.rootExecutions.find(e => e.executionId === executionId);
-    if (rootExecution) {
-      return rootExecution;
-    }
-    // Search in children executions
-    for (const parentId in this._executionsTree.value.executionsByParent) {
-      const children = this._executionsTree.value.executionsByParent[parentId];
-      const childExecution = children.find(e => e.executionId === executionId);
-      if (childExecution) {
-        return childExecution;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Remove execution logs from hierarchy structure
+   * Remove the oldest top-level execution logs (and their descendants) from a tree
+   * @param {Object} tree Execution tree ({ rootExecutions, executionsByParent })
    * @param {number|null} count Number of logs to remove, null to do nothing
    * @private
    */
-  _cleanupExecutions(count) {
+  _cleanupExecutions(tree, count) {
     if (count === null) {
       return;
     }
-    const rootExecutions = this._executionsTree.value.rootExecutions;
+    const rootExecutions = tree.rootExecutions;
     if (rootExecutions.length > 0 && count > 0) {
       // Calculate number of entries to remove (oldest entries are at the beginning)
       const numberOfLogsToRemove = Math.min(count, rootExecutions.length);
@@ -91,49 +105,96 @@ export default class ExecutionLogService {
       const removedExecutions = rootExecutions.splice(0, numberOfLogsToRemove);
       // Remove children entries and all descendants associated with removed parent entries
       removedExecutions.forEach(exec => {
-        this._removeExecution(exec.executionId);
+        this._removeExecution(tree, exec.executionId);
       });
     }
   }
 
+
   /**
-   * Clear all execution logs
-   * Removes all entries from the log history and clears the hierarchy structure
+   * Clear the execution logs of one root entry
+   * Empties that root's tree and removes its records from the flat execution
+   * dictionary. Other trees are untouched. Does nothing when rootEntryId is
+   * null/undefined (the hidden fallback tree is only trimmed by its cap) or
+   * when the root has no tree yet (no tree is created).
+   * @param {string} rootEntryId Root entry ID
    */
-  clearLogs() {
+  clearLogs(rootEntryId) {
     try {
-      this._executionsTree.value = {
-        rootExecutions: [],
-        executionsByParent: {}
-      };
+      if (rootEntryId === null || rootEntryId === undefined) {
+        return;
+      }
+      const tree = this._trees.get(rootEntryId);
+      if (!tree) {
+        return;
+      }
+      this._forgetTreeRecords(tree);
+      tree.rootExecutions = [];
+      tree.executionsByParent = {};
     } catch (error) {
       console.error(`[${this.constructor.name}] clearLogs() failed: ${error.message}`);
     }
   }
 
   /**
-   * Get execution logs
-   * @returns {Object} Readonly reactive reference to the execution tree
+   * Remove the execution tree of one root entry (e.g. when its tab is closed)
+   * Clears the tree with clearLogs() (which removes its records from the flat
+   * execution dictionary), then deletes the tree itself.
+   * Does nothing for null/undefined (the fallback tree is kept) or an unknown root.
+   * @param {string} rootEntryId Root entry ID
    */
-  getLogs() {
-    // Return the internal execution tree as a readonly reactive reference
-    return readonly(this._executionsTree);
+  removeLogs(rootEntryId) {
+    try {
+      if (rootEntryId === null || rootEntryId === undefined) {
+        return;
+      }
+      this.clearLogs(rootEntryId);
+      this._trees.delete(rootEntryId);
+    } catch (error) {
+      console.error(`[${this.constructor.name}] removeLogs() failed: ${error.message}`);
+    }
   }
 
   /**
-   * Add a execution log and build hierarchy structure
+   * Get the execution logs of one root entry
+   * The lookup goes through the reactive map, so a computed calling this
+   * re-runs when that root's tree is created or removed.
+   * @param {string} rootEntryId Root entry ID
+   * @returns {Object} Readonly reactive execution tree ({ rootExecutions, executionsByParent }).
+   *   An empty tree when rootEntryId is null/undefined or the root has no tree.
+   */
+  getLogs(rootEntryId) {
+    if (rootEntryId === null || rootEntryId === undefined) {
+      return this._emptyTree;
+    }
+    const tree = this._trees.get(rootEntryId);
+    return tree ? readonly(tree) : this._emptyTree;
+  }
+
+  /**
+   * Add a execution log to the tree of its root entry
+   * The owning root is resolved only by entryManager.getRootOf(entryId), for
+   * both top-level and child records. Records whose root cannot be resolved
+   * (no entryManager, or getRootOf() returns null) go into the null fallback tree.
    * @param {string} entryId ID of the entry being executed (Block or Container)
+   * @param {Object} inputParams Input parameters of the entry at execution time (optional)
    * @param {string} executionId Execution ID (received from EntryExecutionService)
    * @param {string} parentExecutionId Parent entry's execution ID (optional)
-   * @param {Object} inputParams Input parameters of the entry at execution time (optional)
-   * @returns {string} Execution ID that can be used later to update the log
    */
   addLog(entryId, inputParams, executionId, parentExecutionId = null) {
     try {
-      // Create execution log
-      const execution = {
+      // Resolve the owning root entry from the entry hierarchy only
+      const rootEntryId = this.entryManager?.getRootOf(entryId) ?? null;
+
+      // Create execution log.
+      // The record is wrapped with shallowReactive() and the same proxy is stored
+      // both in the tree and in _allExecutions, so that updateLog() changes are
+      // seen by the view. updateLog() must only replace top-level fields
+      // (result, execTime); if nested mutation is ever added, switch to reactive().
+      const execution = shallowReactive({
         executionId: executionId,
         parentExecutionId: parentExecutionId,
+        rootEntryId: rootEntryId,
         timestamp: new Date(),
         entryId: entryId,
         entryName: this.entryManager?.getEntryName(entryId),
@@ -142,25 +203,28 @@ export default class ExecutionLogService {
         result: null,
         execTime: null,
         startTime: performance.now()
-      };
+      });
+      const tree = this._getOrCreateTree(rootEntryId);
 
       // Build hierarchy structure immediately
       if (parentExecutionId) {
         // Add to parent's children
-        if (!this._executionsTree.value.executionsByParent[parentExecutionId]) {
-          this._executionsTree.value.executionsByParent[parentExecutionId] = [];
+        if (!tree.executionsByParent[parentExecutionId]) {
+          tree.executionsByParent[parentExecutionId] = [];
         }
-        this._executionsTree.value.executionsByParent[parentExecutionId].push(execution);
+        tree.executionsByParent[parentExecutionId].push(execution);
       } else {
         // Add to root executions
-        this._executionsTree.value.rootExecutions.push(execution);
+        tree.rootExecutions.push(execution);
       }
+      // Register the same proxy in the flat dictionary
+      this._allExecutions.set(executionId, execution);
 
-      // Maintain maximum execution limit
-      const totalCount = this._getExecutionCount();
+      // Maintain maximum execution limit of this tree only
+      const totalCount = this._getExecutionCount(tree);
       if (totalCount > this._maxLogs) {
         // Remove batch size logs when exceeding maximum
-        this._cleanupExecutions(this._cleanupBatchSize);
+        this._cleanupExecutions(tree, this._cleanupBatchSize);
       }
     } catch (error) {
       console.error(`[${this.constructor.name}] addLog() failed: ${error.message}`);
@@ -170,14 +234,15 @@ export default class ExecutionLogService {
   /**
    * Update a execution log
    * This method is called when an entry completes execution
-   * It updates the log with the execution result
+   * It updates the log with the execution result.
+   * Does nothing when the execution ID is unknown (e.g. removed by the cap or clearLogs()).
    * @param {string} executionId Execution ID
    * @param {Object} result Execution result
    */
   updateLog(executionId, result) {
     try {
-      // Find and update the execution entry in hierarchy structure
-      const execution = this._findExecution(executionId);
+      // Find the execution record through the flat dictionary; do nothing if missing
+      const execution = this._allExecutions.get(executionId);
       if (execution) {
         const execTime = performance.now() - execution.startTime;
         execution.result = result;
