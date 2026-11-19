@@ -11,6 +11,7 @@ let entryManager
 let entryExecutionService
 let platformService
 let entryPersistanceService
+let executionLogService
 let store
 
 beforeEach(async () => {
@@ -37,6 +38,8 @@ beforeEach(async () => {
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
   app.provide('entryPersistanceService', entryPersistanceService)
+  executionLogService = { removeLogs: vi.fn() }
+  app.provide('executionLogService', executionLogService)
   const pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)
@@ -112,11 +115,21 @@ describe('useTabStore.openRecipeInNewTab', () => {
     const existing = store.createTab()
     const badRecipe = { ...buildSampleRecipe(), formatVersion: 999 }
     platformService.openRecipe.mockResolvedValue({ fileName: 'broken.json', data: badRecipe })
+    let createdRootId = null
+    const originalRestore = entryPersistanceService.restoreRecipe.bind(entryPersistanceService)
+    vi.spyOn(entryPersistanceService, 'restoreRecipe').mockImplementation((data, rootId) => {
+      createdRootId = rootId
+      return originalRestore(data, rootId)
+    })
 
     await expect(store.openRecipeInNewTab()).rejects.toThrow()
 
     expect(store.tabs.map(t => t.id)).toEqual([existing.id])
     expect(store.activeTabId).toBe(existing.id)
+    expect(createdRootId).not.toBeNull()
+    expect(createdRootId).not.toBe(existing.rootEntryId)
+    expect(executionLogService.removeLogs).toHaveBeenCalledTimes(1)
+    expect(executionLogService.removeLogs).toHaveBeenCalledWith(createdRootId)
   })
 
   it('throws and does not restore when no more tabs can be created', async () => {

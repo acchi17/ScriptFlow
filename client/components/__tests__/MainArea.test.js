@@ -24,7 +24,8 @@ function mountMainArea() {
           deleteComm: vi.fn().mockResolvedValue(false),
           shutdownRunner: vi.fn().mockResolvedValue(undefined)
         },
-        entryPersistanceService: {}
+        entryPersistanceService: {},
+        executionLogService: { removeLogs: vi.fn() }
       },
       stubs: {
         RecipeItem: RecipeItemStub,

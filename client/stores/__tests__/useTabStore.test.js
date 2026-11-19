@@ -4,10 +4,12 @@ import { createPinia, setActivePinia } from 'pinia'
 import { useTabStore, MAX_TABS, labelFromFileName } from '@/stores/useTabStore.js'
 import { useSystemState } from '@/composables/useSystemState.js'
 import EntryHandlerFacade from '@/ecs/component-handlers/EntryHandlerFacade.js'
+import ExecutionLogService from '@/services/log/ExecutionLogService.js'
 
 let app
 let entryManager
 let entryExecutionService
+let executionLogService
 let systemState
 
 beforeEach(() => {
@@ -22,6 +24,8 @@ beforeEach(() => {
   app.provide('entryExecutionService', entryExecutionService)
   // saveTab()/openRecipeInNewTab() are tested in useTabStore.recipe.test.js
   app.provide('entryPersistanceService', {})
+  executionLogService = { removeLogs: vi.fn() }
+  app.provide('executionLogService', executionLogService)
   const pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)
@@ -123,7 +127,7 @@ describe('useTabStore.createTab', () => {
 })
 
 describe('useTabStore.closeTab', () => {
-  it('calls deleteComm, shutdownRunner, then removeEntry with the same rootId', async () => {
+  it('calls deleteComm, shutdownRunner, then removeEntry and removeLogs with the same rootId', async () => {
     const store = useTabStore()
     const tab = store.createTab()
     const order = []
@@ -134,14 +138,17 @@ describe('useTabStore.closeTab', () => {
       order.push(['removeEntry', id])
       return original(id)
     })
+    executionLogService.removeLogs.mockImplementation((id) => { order.push(['removeLogs', id]) })
 
     await store.closeTab(tab.id)
 
     expect(order).toEqual([
       ['deleteComm', tab.rootEntryId],
       ['shutdownRunner', tab.rootEntryId],
-      ['removeEntry', tab.rootEntryId]
+      ['removeEntry', tab.rootEntryId],
+      ['removeLogs', tab.rootEntryId]
     ])
+    expect(executionLogService.removeLogs).toHaveBeenCalledTimes(1)
     expect(entryManager.isRoot(tab.rootEntryId)).toBe(false)
   })
 
@@ -156,6 +163,7 @@ describe('useTabStore.closeTab', () => {
     await store.closeTab(tab.id)
 
     expect(removeSpy).toHaveBeenCalledWith(tab.rootEntryId)
+    expect(executionLogService.removeLogs).toHaveBeenCalledWith(tab.rootEntryId)
     expect(store.tabs).toHaveLength(0)
     expect(errorSpy).toHaveBeenCalledTimes(2)
   })
@@ -224,6 +232,34 @@ describe('useTabStore.closeTab', () => {
     await store.closeTab('unknown')
     expect(store.tabs).toHaveLength(1)
     expect(entryExecutionService.deleteComm).not.toHaveBeenCalled()
+    expect(executionLogService.removeLogs).not.toHaveBeenCalled()
+  })
+
+  it('discards the closed tab\'s log tree and keeps other tabs\' trees (real ExecutionLogService)', async () => {
+    const realService = new ExecutionLogService(entryManager)
+    const realApp = createApp({})
+    realApp.provide('entryManager', entryManager)
+    realApp.provide('entryExecutionService', entryExecutionService)
+    realApp.provide('entryPersistanceService', {})
+    realApp.provide('executionLogService', realService)
+    const pinia = createPinia()
+    realApp.use(pinia)
+    setActivePinia(pinia)
+    const store = useTabStore()
+    const t1 = store.createTab()
+    const t2 = store.createTab()
+    realService.addLog(t1.rootEntryId, {}, 'e1')
+    realService.addLog(t2.rootEntryId, {}, 'e2')
+    realService.updateLog('e2', { success: true })
+
+    await store.closeTab(t1.id)
+
+    expect(realService._trees.has(t1.rootEntryId)).toBe(false)
+    expect(realService._allExecutions.has('e1')).toBe(false)
+    const t2Logs = realService.getLogs(t2.rootEntryId)
+    expect(t2Logs.rootExecutions.map(e => e.executionId)).toEqual(['e2'])
+    expect(t2Logs.rootExecutions[0].result).toEqual({ success: true })
+    expect(realService._allExecutions.has('e2')).toBe(true)
   })
 })
 

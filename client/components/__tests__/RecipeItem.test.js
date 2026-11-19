@@ -32,6 +32,7 @@ function createTestPinia(entryManager, entryExecutionService = {}) {
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
   app.provide('entryPersistanceService', {})
+  app.provide('executionLogService', { removeLogs: vi.fn() })
   const pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)
@@ -46,7 +47,8 @@ function mountRecipe(entryManager, entryId, pinia = createTestPinia(entryManager
       provide: {
         entryManager,
         entryExecutionService: {},
-        entryPersistanceService: {}
+        entryPersistanceService: {},
+        executionLogService: { removeLogs: vi.fn() }
       },
       stubs: {
         ConnectionView: ConnectionViewStub,

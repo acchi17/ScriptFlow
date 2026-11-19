@@ -28,6 +28,7 @@ beforeEach(() => {
   app.provide('entryManager', entryManager)
   app.provide('entryExecutionService', entryExecutionService)
   app.provide('entryPersistanceService', entryPersistanceService)
+  app.provide('executionLogService', { removeLogs: vi.fn() })
   pinia = createPinia()
   app.use(pinia)
   setActivePinia(pinia)
