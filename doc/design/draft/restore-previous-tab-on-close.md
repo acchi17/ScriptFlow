@@ -76,13 +76,15 @@ With the full history (FR1) this should not happen while tabs remain, but a defe
 
 Recommendation: **A**. It is a pure safety net, so the simplest rule that keeps today's behaviour is enough.
 
-### [Open] How and where the history is stored
+### [Resolved] How and where the history is stored
 
-- A: A plain (non-reactive) array of tab ids inside the `useTabStore` setup closure, like `nextTabIdNumber`. Not exposed; no rendering depends on it.
+Decision: **A** — a plain (non-reactive) array of tab ids inside the `useTabStore` setup closure, like `nextTabIdNumber`. It is not exposed and no rendering depends on it.
+Reason: the history is internal bookkeeping for `closeTab()`; tests verify it through `activeTabId` (as in the acceptance criteria). It is the smallest change and does not alter the store's public API or the shape of the tab objects.
+It is updated in `setActiveTab()` (move the id to the front, skip when the id is `null`) and in `closeTab()` (remove the closed id in the synchronous part, together with `tabs.value.splice()`).
+
+Rejected alternatives:
 - B: A `ref([])` exposed from the store. Visible in Vue devtools and directly assertable in tests, but adds public state no component needs.
 - C: An `activatedAt` sequence number on each tab object in `tabs`; pick the remaining tab with the largest value. No separate list to keep in sync, but it adds a field to every tab and needs a scan on close.
-
-Recommendation: **A**. The history is internal bookkeeping for `closeTab()`; tests can verify it through `activeTabId` (as in the acceptance criteria). It must be updated in `setActiveTab()` (move the id to the front, skip when the id is `null`) and in `closeTab()` (remove the closed id in the synchronous part, together with `tabs.value.splice()`).
 
 ### [Open] When the next active tab is decided inside `closeTab()`
 
