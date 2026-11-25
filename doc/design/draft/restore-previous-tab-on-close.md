@@ -86,14 +86,15 @@ Rejected alternatives:
 - B: A `ref([])` exposed from the store. Visible in Vue devtools and directly assertable in tests, but adds public state no component needs.
 - C: An `activatedAt` sequence number on each tab object in `tabs`; pick the remaining tab with the largest value. No separate list to keep in sync, but it adds a field to every tab and needs a scan on close.
 
-### [Open] When the next active tab is decided inside `closeTab()`
+### [Resolved] When the next active tab is decided inside `closeTab()`
 
 `closeTab()` awaits `deleteComm()` and `shutdownRunner()` before removing the tab. The user can activate another tab in the meantime, or close other tabs concurrently.
 
-- A: Decide in the synchronous part after the awaits (where `tabs[0]` is chosen today), using the history at that moment, and only if the closed tab is still active then (as today: `activeTabId.value === tabId`).
-- B: Decide at the start of `closeTab()`, before the awaits. Can choose a tab that has been closed or that is stale by the time the tab is removed.
+Decision: **A** — decide in the synchronous part after the awaits (where `tabs[0]` is chosen today), using the history at that moment, and only if the closed tab is still active then (as today: `activeTabId.value === tabId`).
+Reason: referring to the latest state is the more natural behaviour. It also keeps the existing "no await between root removal and tab removal" structure, so the chosen tab can never be one that was closed or deactivated during the awaits.
 
-Recommendation: **A**. It keeps the existing "no await between root removal and tab removal" structure and always reflects the latest state.
+Rejected alternative:
+- B: Decide at the start of `closeTab()`, before the awaits. Can choose a tab that has been closed or that is stale by the time the tab is removed, which would need extra checks.
 
 ### [Open] Updating the completed design document
 
