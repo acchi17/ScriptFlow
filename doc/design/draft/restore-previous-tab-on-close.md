@@ -66,15 +66,16 @@ Decision: the active tab does not change; the closed tab is only removed from th
 
 Decision: memory-only history, no new history-based navigation features, acceptance through `useTabStore` unit tests, no new e2e test (hearing Q5).
 
-### [Open] Safety-net fallback when the history yields no remaining tab
+### [Resolved] Safety-net fallback when the history yields no remaining tab
 
-With the full history (FR1) this should not happen while tabs remain, but a defensive rule keeps `closeTab()` correct if the history is ever out of sync (e.g. a future code path changes `activeTabId` without `setActiveTab()`). Hearing Q2 was not answered.
+With the full history (FR1) this should not happen while tabs remain, but a defensive rule keeps `closeTab()` correct if the history is ever out of sync (e.g. a future code path changes `activeTabId` without `setActiveTab()`). Hearing Q2 was not answered at hearing time.
 
-- A: Leftmost tab, `tabs[0]` (the current behaviour). Smallest change, matches the completed design.
+Decision: **A** — leftmost tab, `tabs[0]` (the current behaviour).
+Reason: the fallback is not expected to occur in practice, so a simple measure is enough. Today `setActiveTab()` is the only place that writes `activeTabId`, and every tab is activated on creation, so the history always contains a remaining tab while any tab exists. `tabs[0]` is the smallest change, keeps `closeTab()` from needing the closed tab's index, and matches the completed design.
+
+Rejected alternatives:
 - B: The tab to the right of the closed tab, or to its left if none. Closer to browser behaviour, but needs the closed tab's index and is never reached in practice.
 - C: The tab to the left, or to its right if none. Same trade-off as B.
-
-Recommendation: **A**. It is a pure safety net, so the simplest rule that keeps today's behaviour is enough.
 
 ### [Resolved] How and where the history is stored
 
