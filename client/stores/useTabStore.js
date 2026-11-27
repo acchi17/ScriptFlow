@@ -35,6 +35,9 @@ export const useTabStore = defineStore('tab', () => {
   const activeTabId = ref(null)
   const nextTabNumber = ref(1)    // sequence number for default labels; never reused
   let nextTabIdNumber = 1         // sequence number for tab ids; independent of labels
+  // Activation history: tab ids, most recently activated first, each id at most once.
+  // Kept in memory only (never persisted) and not exposed from the store.
+  const activationHistory = []
 
   // getters
   const activeTab = computed(() => tabs.value.find(t => t.id === activeTabId.value) ?? null)
@@ -70,8 +73,13 @@ export const useTabStore = defineStore('tab', () => {
 
   /**
    * Closes a tab: releases its socket and script-runner, removes its root entry,
-   * discards its execution log tree (ExecutionLogService.removeLogs()), and removes the tab. Host-side failures are logged and do not prevent the tab from closing.
-   * Never asks for confirmation.
+   * discards its execution log tree (ExecutionLogService.removeLogs()), and removes the tab
+   * (also from the activation history). Host-side failures are logged and do not prevent
+   * the tab from closing. Never asks for confirmation.
+   *
+   * If the closed tab is still the active tab once the host-side cleanup has finished, the
+   * most recently activated remaining tab becomes active. As a safety net, if no remaining
+   * tab is in the history, tabs[0] becomes active; if no tab remains, no tab is active.
    *
    * @param {string} tabId
    * @returns {Promise<void>}
@@ -99,16 +107,38 @@ export const useTabStore = defineStore('tab', () => {
     entryManager.removeEntry(rootId)
     executionLogService.removeLogs(rootId)
     tabs.value.splice(index, 1)
+    removeFromHistory(tabId)
     if (activeTabId.value === tabId) {
-      setActiveTab(tabs.value[0]?.id ?? null)
+      setActiveTab(findNextActiveTabId())
     }
   }
 
+  function removeFromHistory(tabId) {
+    const i = activationHistory.indexOf(tabId)
+    if (i !== -1) activationHistory.splice(i, 1)
+  }
+
   /**
+   * @returns {string|null} the most recently activated tab that still exists, else
+   *   tabs[0] (safety net), else null
+   */
+  function findNextActiveTabId() {
+    const next = activationHistory.find(id => tabs.value.some(t => t.id === id))
+    return next ?? tabs.value[0]?.id ?? null
+  }
+
+  /**
+   * Makes the given tab active and clears the selection / connecting state.
+   * Does nothing if the tab is already active. A non-null id is moved to the front of
+   * the activation history (used by closeTab() to pick the next active tab).
    * @param {string|null} tabId
    */
   function setActiveTab(tabId) {
     if (activeTabId.value === tabId) return
+    if (tabId !== null) {
+      removeFromHistory(tabId)
+      activationHistory.unshift(tabId)
+    }
     activeTabId.value = tabId
     resetState()
   }
@@ -163,7 +193,8 @@ export const useTabStore = defineStore('tab', () => {
   /**
    * Lets the user pick a recipe file and restores it into a newly created (and active) tab
    * labeled with the file name. If restoring fails, the created tab is closed so that no
-   * partially restored recipe is left behind, and the error is rethrown.
+   * partially restored recipe is left behind, and the error is rethrown. Closing it makes
+   * the tab that was active before the Load active again (see closeTab()).
    *
    * @returns {Promise<object|null>} the restore report, or null if the user canceled
    * @throws {Error} if no more tabs can be created, or if picking/restoring fails

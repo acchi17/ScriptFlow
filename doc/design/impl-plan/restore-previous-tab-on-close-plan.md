@@ -56,7 +56,7 @@ graph TD
 
 ---
 
-## [Open] Phase 1: Activate the previously active tab on close
+## [Resolved] Phase 1: Activate the previously active tab on close
 
 **Goal:** Closing the active tab activates the most recently activated remaining tab, for user closes and for the automatic close in `openRecipeInNewTab()`.
 
@@ -125,3 +125,5 @@ graph TD
 - **N2: Where the AC6 test lives.** The design document says the acceptance criteria are verified in `client/stores/__tests__/useTabStore.test.js`. That file provides `entryPersistanceService` as `{}` and explicitly delegates `openRecipeInNewTab()` to `useTabStore.recipe.test.js`, which has the real `EntryPersistanceService` and a failing-restore test already. The plan puts the AC6 test in `useTabStore.recipe.test.js`. If the reviewer prefers `useTabStore.test.js`, it would need a stubbed `entryPersistanceService` with `pickRecipe` / `restoreRecipe` for that test.
 - **N3: The notes in `main-area-multi-tab.md`.** The design document lists "section 2 `closeTab()` description". Section 2 has two such places (the comment in the store code sketch and the `closeTab(tabId)` bullet); the plan adds the note at the bullet and leaves the code-sketch comment alone unless the reviewer wants a note there too. The language of the notes is not specified; the plan writes them in Japanese to match the completed document.
 - **N4: No test for the safety net and the "after the awaits" decision.** The `tabs[0]` safety net cannot be reached through the public API (every tab is in the history from `createTab()`), so the plan does not test it. The "decide after the awaits" behavior is testable with a pending `deleteComm()` mock but is not an acceptance criterion; the plan lists it as optional. Please say if either should be required.
+- **N5: Phase 1 — `main-area-multi-tab.md` notes not added.** The implementation run was instructed not to modify design documents under `doc/design/`, so the superseded-rule notes in `doc/design/completed/main-area-multi-tab.md` (listed under Phase 1 "Files to change") were not added. All code and test changes of Phase 1 are done, and `npm test` and `npm run lint` pass. The notes still need to be added in a separate change that is allowed to edit design documents. The manual `npm run electron:start` checks were not run.
+- **N6: Phase 1 — optional test added.** The optional N4 test ("decides the next active tab after the host-side cleanup") was added to `useTabStore.test.js` `useTabStore.closeTab`, using a pending `deleteComm()` mock.

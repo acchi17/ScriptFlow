@@ -132,6 +132,18 @@ describe('useTabStore.openRecipeInNewTab', () => {
     expect(executionLogService.removeLogs).toHaveBeenCalledWith(createdRootId)
   })
 
+  it('reactivates the tab that was active before the Load (not tabs[0]) when restoring fails', async () => {
+    const first = store.createTab()
+    const previous = store.createTab()
+    const badRecipe = { ...buildSampleRecipe(), formatVersion: 999 }
+    platformService.openRecipe.mockResolvedValue({ fileName: 'broken.json', data: badRecipe })
+
+    await expect(store.openRecipeInNewTab()).rejects.toThrow()
+
+    expect(store.tabs.map(t => t.id)).toEqual([first.id, previous.id])
+    expect(store.activeTabId).toBe(previous.id)
+  })
+
   it('throws and does not restore when no more tabs can be created', async () => {
     for (let i = 0; i < MAX_TABS; i++) store.createTab()
     const tabIds = store.tabs.map(t => t.id)
