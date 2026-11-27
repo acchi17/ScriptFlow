@@ -97,11 +97,12 @@ Reason: referring to the latest state is the more natural behaviour. It also kee
 Rejected alternative:
 - B: Decide at the start of `closeTab()`, before the awaits. Can choose a tab that has been closed or that is stale by the time the tab is removed, which would need extra checks.
 
-### [Open] Updating the completed design document
+### [Resolved] Updating the completed design document
 
 `doc/design/completed/main-area-multi-tab.md` (section 2 `closeTab()` description, section 6 "タブ削除後のアクティブタブ", "テスト" and "失敗時のアクティブタブ") still states the `tabs[0]` rule.
 
-- A: Leave the completed document as a historical record; this design document supersedes it.
-- B: Add a short note in those places pointing to this document.
+Decision: **B** — add a short note in each of those places pointing to this document. The notes are added together with the implementation of this feature, so that the completed document does not point to a behaviour that has not landed yet.
+Reason: document consistency is maintained unless that would mean modifying a very large number of documents. Here only one document with a few one-line notes is affected, and the notes stop readers from taking the outdated `tabs[0]` rule and the Load-failure exception as current.
 
-Recommendation: **B**. A one-line note avoids readers taking the outdated rule as current, at almost no cost.
+Rejected alternative:
+- A: Leave the completed document as a historical record; this design document supersedes it. No edits to completed documents, but readers may take the outdated rules as current.
