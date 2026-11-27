@@ -168,15 +168,61 @@ describe('useTabStore.closeTab', () => {
     expect(errorSpy).toHaveBeenCalledTimes(2)
   })
 
-  it.each([0, 1, 2])('activates tabs[0] when the active tab at index %i is closed', async (index) => {
+  it('activates the previously active tab, not tabs[0], when the active tab is closed', async () => {
     const store = useTabStore()
-    const created = [store.createTab(), store.createTab(), store.createTab()]
-    store.setActiveTab(created[index].id)
+    const [a, b, c] = [store.createTab(), store.createTab(), store.createTab()]
+    store.setActiveTab(a.id)
 
-    await store.closeTab(created[index].id)
+    await store.closeTab(a.id)
 
-    expect(store.tabs).toHaveLength(2)
-    expect(store.activeTabId).toBe(store.tabs[0].id)
+    expect(store.tabs.map(t => t.id)).toEqual([b.id, c.id])
+    expect(store.activeTabId).toBe(c.id)
+  })
+
+  // [closed index, previously active index]: the previous tab is never tabs[0] after the close
+  it.each([[0, 2], [1, 2], [2, 1]])(
+    'activates the previously active tab when the active tab at index %i is closed (previous: index %i)',
+    async (closedIndex, previousIndex) => {
+      const store = useTabStore()
+      const created = [store.createTab(), store.createTab(), store.createTab()]
+      store.setActiveTab(created[previousIndex].id)
+      store.setActiveTab(created[closedIndex].id)
+
+      await store.closeTab(created[closedIndex].id)
+
+      expect(store.tabs).toHaveLength(2)
+      expect(store.activeTabId).toBe(created[previousIndex].id)
+      expect(store.activeTabId).not.toBe(store.tabs[0].id)
+    }
+  )
+
+  it('skips closed tabs in the history when choosing the next active tab', async () => {
+    const store = useTabStore()
+    const [a, b, c] = [store.createTab(), store.createTab(), store.createTab()]
+    store.setActiveTab(a.id)
+    store.setActiveTab(b.id)
+    store.setActiveTab(c.id)
+
+    await store.closeTab(b.id)
+    expect(store.activeTabId).toBe(c.id)
+
+    await store.closeTab(c.id)
+    expect(store.activeTabId).toBe(a.id)
+  })
+
+  it('decides the next active tab after the host-side cleanup', async () => {
+    const store = useTabStore()
+    const [a, b] = [store.createTab(), store.createTab()]
+    let resolveDelete
+    entryExecutionService.deleteComm.mockImplementation(() => new Promise(r => { resolveDelete = r }))
+
+    const closing = store.closeTab(b.id)
+    store.setActiveTab(a.id)
+    resolveDelete(false)
+    await closing
+
+    expect(store.tabs.map(t => t.id)).toEqual([a.id])
+    expect(store.activeTabId).toBe(a.id)
   })
 
   it('keeps the active tab when an inactive tab is closed', async () => {
